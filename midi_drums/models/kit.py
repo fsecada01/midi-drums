@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass, field
 from typing import Dict, Tuple, Optional
-from .pattern import DrumInstrument
+from midi_drums.models.pattern import DrumInstrument
 
 
 @dataclass

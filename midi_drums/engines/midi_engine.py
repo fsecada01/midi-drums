@@ -8,9 +8,9 @@ try:
 except ImportError:
     raise ImportError("midiutil library not found. Install with 'pip install midiutil'.")
 
-from ..models.pattern import Pattern
-from ..models.song import Song
-from ..models.kit import DrumKit
+from midi_drums.models.pattern import Pattern
+from midi_drums.models.song import Song
+from midi_drums.models.kit import DrumKit
 
 
 class MIDIEngine:
@@ -62,7 +62,7 @@ class MIDIEngine:
     def _add_section_to_midi(self, midi: MIDIFile, track: int, channel: int,
                            section, current_bar: int, song: Song) -> None:
         """Add a song section to the MIDI file."""
-        from ..models.song import Section  # Import here to avoid circular imports
+        from midi_drums.models.song import Section  # Import here to avoid circular imports
 
         for bar_num in range(section.bars):
             absolute_bar = current_bar + bar_num

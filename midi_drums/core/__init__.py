@@ -1,5 +1,5 @@
 """Core engine and composition system."""
 
-from .engine import DrumGenerator
+from midi_drums.core.engine import DrumGenerator
 
 __all__ = ["DrumGenerator"]

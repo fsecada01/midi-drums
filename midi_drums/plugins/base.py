@@ -7,8 +7,8 @@ import importlib
 import pkgutil
 import logging
 
-from ..models.pattern import Pattern
-from ..models.song import GenerationParameters, Fill
+from midi_drums.models.pattern import Pattern
+from midi_drums.models.song import GenerationParameters, Fill
 
 
 logger = logging.getLogger(__name__)

@@ -1,8 +1,8 @@
 """Data models for the MIDI drums system."""
 
-from .pattern import Pattern, Beat, TimeSignature, DrumInstrument
-from .song import Song, Section, GenerationParameters
-from .kit import DrumKit
+from midi_drums.models.pattern import Pattern, Beat, TimeSignature, DrumInstrument
+from midi_drums.models.song import Song, Section, GenerationParameters
+from midi_drums.models.kit import DrumKit
 
 __all__ = [
     "Pattern", "Beat", "TimeSignature", "DrumInstrument",

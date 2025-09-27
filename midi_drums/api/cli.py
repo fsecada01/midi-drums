@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 from typing import List
 
-from ..core.engine import DrumGenerator
+from midi_drums.core.engine import DrumGenerator
 
 
 def create_parser() -> argparse.ArgumentParser:

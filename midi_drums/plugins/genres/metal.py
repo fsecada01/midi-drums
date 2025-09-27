@@ -3,9 +3,9 @@
 from typing import List
 import random
 
-from ..base import GenrePlugin
-from ...models.pattern import Pattern, Beat, DrumInstrument, TimeSignature, PatternBuilder
-from ...models.song import GenerationParameters, Fill
+from midi_drums.plugins.base import GenrePlugin
+from midi_drums.models.pattern import Pattern, Beat, DrumInstrument, TimeSignature, PatternBuilder
+from midi_drums.models.song import GenerationParameters, Fill
 
 
 class MetalGenrePlugin(GenrePlugin):

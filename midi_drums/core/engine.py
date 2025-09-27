@@ -4,11 +4,11 @@ from typing import List, Dict, Optional, Tuple
 from pathlib import Path
 import logging
 
-from ..models.pattern import Pattern
-from ..models.song import Song, Section, GenerationParameters
-from ..models.kit import DrumKit
-from ..plugins.base import PluginManager
-from ..engines.midi_engine import MIDIEngine
+from midi_drums.models.pattern import Pattern
+from midi_drums.models.song import Song, Section, GenerationParameters
+from midi_drums.models.kit import DrumKit
+from midi_drums.plugins.base import PluginManager
+from midi_drums.engines.midi_engine import MIDIEngine
 
 
 logger = logging.getLogger(__name__)
@@ -204,7 +204,7 @@ class DrumGenerator:
     def _generate_variations(self, base_pattern: Pattern,
                            params: GenerationParameters) -> List:
         """Generate pattern variations based on complexity."""
-        from ..models.song import PatternVariation
+        from midi_drums.models.song import PatternVariation
 
         variations = []
 
@@ -244,7 +244,7 @@ class DrumGenerator:
         for bar in range(1, bars):
             bar_offset = bar * beats_per_bar
             for beat in original_beats:
-                from ..models.pattern import Beat
+                from midi_drums.models.pattern import Beat
                 import random
                 new_beat = Beat(
                     position=beat.position + bar_offset,

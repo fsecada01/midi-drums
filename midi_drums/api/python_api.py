@@ -3,9 +3,9 @@
 from typing import List, Dict, Optional, Union, Tuple
 from pathlib import Path
 
-from ..core.engine import DrumGenerator
-from ..models.pattern import Pattern
-from ..models.song import Song
+from midi_drums.core.engine import DrumGenerator
+from midi_drums.models.pattern import Pattern
+from midi_drums.models.song import Song
 
 
 class DrumGeneratorAPI:

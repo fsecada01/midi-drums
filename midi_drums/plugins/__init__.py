@@ -1,5 +1,5 @@
 """Plugin system for extensible drum generation."""
 
-from .base import GenrePlugin, DrummerPlugin, PluginManager
+from midi_drums.plugins.base import GenrePlugin, DrummerPlugin, PluginManager
 
 __all__ = ["GenrePlugin", "DrummerPlugin", "PluginManager"]
