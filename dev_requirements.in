@@ -1,0 +1,7 @@
+-c core_requirements.txt
+
+black
+isort
+pytest
+pytest-cov
+ruff

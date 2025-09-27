@@ -1,0 +1,100 @@
+[project]
+name = "midi-drums"
+authors = [
+    { name = "Developer", email = "dev@example.com" },
+]
+readme = "CLAUDE.md"
+requires-python = ">=3.12,<3.14"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Multimedia :: Sound/Audio :: MIDI",
+]
+version = "1.0.0"
+description = "Heavy metal drum track generator for EZDrummer 3"
+dependencies = [
+    "midiutil>=1.2.1",
+]
+
+[dependency-groups]
+dev = [
+    "black>=25.1.0",
+    "isort>=6.0.1",
+    "pytest>=8.4.1",
+    "pytest-cov>=6.2.1",
+    "ruff>=0.12.9",
+]
+
+[tool.ruff]
+fix = true
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".hg",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
+]
+
+line-length = 80
+
+[tool.ruff.lint]
+select = ["E", "F", "B"]
+ignore = ["B008"]
+ignore-init-module-imports = true
+unfixable = []
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F403", "F405", "E501"]
+
+[tool.black]
+line-length = 80
+target-version = ['py312']
+
+[tool.isort]
+profile = "black"
+line_length = 80
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--tb=short",
+    "--strict-markers",
+    "--disable-warnings",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+    "ignore::UserWarning",
+]
+
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"

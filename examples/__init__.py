@@ -1,0 +1,1 @@
+"""Examples for MIDI drums generation."""
