@@ -1,22 +1,24 @@
 """MIDI file generation engine."""
 
-from typing import Optional, List
 from pathlib import Path
+from typing import List, Optional
 
 try:
     from midiutil import MIDIFile
 except ImportError:
-    raise ImportError("midiutil library not found. Install with 'pip install midiutil'.")
+    raise ImportError(
+        "midiutil library not found. Install with 'pip install midiutil'."
+    )
 
+from midi_drums.models.kit import DrumKit
 from midi_drums.models.pattern import Pattern
 from midi_drums.models.song import Song
-from midi_drums.models.kit import DrumKit
 
 
 class MIDIEngine:
     """Engine for generating MIDI files from patterns and songs."""
 
-    def __init__(self, drum_kit: Optional[DrumKit] = None):
+    def __init__(self, drum_kit: DrumKit | None = None):
         """Initialize MIDI engine with optional drum kit configuration."""
         self.drum_kit = drum_kit or DrumKit.create_ezdrummer3_kit()
 
@@ -38,7 +40,7 @@ class MIDIEngine:
                 pitch=midi_note,
                 time=beat.position,
                 duration=beat.duration,
-                volume=beat.velocity
+                volume=beat.velocity,
             )
 
         return midi
@@ -54,15 +56,23 @@ class MIDIEngine:
 
         current_bar = 0
         for section in song.sections:
-            self._add_section_to_midi(midi, track, channel, section, current_bar, song)
+            self._add_section_to_midi(
+                midi, track, channel, section, current_bar, song
+            )
             current_bar += section.bars
 
         return midi
 
-    def _add_section_to_midi(self, midi: MIDIFile, track: int, channel: int,
-                           section, current_bar: int, song: Song) -> None:
+    def _add_section_to_midi(
+        self,
+        midi: MIDIFile,
+        track: int,
+        channel: int,
+        section,
+        current_bar: int,
+        song: Song,
+    ) -> None:
         """Add a song section to the MIDI file."""
-        from midi_drums.models.song import Section  # Import here to avoid circular imports
 
         for bar_num in range(section.bars):
             absolute_bar = current_bar + bar_num
@@ -74,7 +84,9 @@ class MIDIEngine:
             # Check if we should add a fill
             fill = None
             if song.global_parameters:
-                fill = section.should_add_fill(bar_num, song.global_parameters.fill_frequency)
+                fill = section.should_add_fill(
+                    bar_num, song.global_parameters.fill_frequency
+                )
 
             # Add pattern beats to MIDI
             for beat in pattern.beats:
@@ -87,12 +99,16 @@ class MIDIEngine:
                     pitch=midi_note,
                     time=absolute_time,
                     duration=beat.duration,
-                    volume=beat.velocity
+                    volume=beat.velocity,
                 )
 
             # Add fill if present (replaces last part of the bar)
-            if fill and bar_num == section.bars - 1:  # Add fill at end of section
-                fill_start_time = bar_start_time + (song.time_signature.beats_per_bar - 1.0)
+            if (
+                fill and bar_num == section.bars - 1
+            ):  # Add fill at end of section
+                fill_start_time = bar_start_time + (
+                    song.time_signature.beats_per_bar - 1.0
+                )
                 for beat in fill.pattern.beats:
                     if beat.position < 1.0:  # Only add beats within 1 bar
                         midi_note = self.drum_kit.get_midi_note(beat.instrument)
@@ -104,24 +120,26 @@ class MIDIEngine:
                             pitch=midi_note,
                             time=absolute_time,
                             duration=beat.duration,
-                            volume=beat.velocity
+                            volume=beat.velocity,
                         )
 
-    def save_pattern_midi(self, pattern: Pattern, output_path: Path,
-                         tempo: int = 120) -> None:
+    def save_pattern_midi(
+        self, pattern: Pattern, output_path: Path, tempo: int = 120
+    ) -> None:
         """Save a pattern as a MIDI file."""
         midi = self.pattern_to_midi(pattern, tempo)
-        with open(output_path, 'wb') as f:
+        with open(output_path, "wb") as f:
             midi.writeFile(f)
 
     def save_song_midi(self, song: Song, output_path: Path) -> None:
         """Save a complete song as a MIDI file."""
         midi = self.song_to_midi(song)
-        with open(output_path, 'wb') as f:
+        with open(output_path, "wb") as f:
             midi.writeFile(f)
 
-    def export_patterns_to_separate_files(self, patterns: List[Pattern],
-                                         output_dir: Path, tempo: int = 120) -> List[Path]:
+    def export_patterns_to_separate_files(
+        self, patterns: list[Pattern], output_dir: Path, tempo: int = 120
+    ) -> list[Path]:
         """Export multiple patterns to separate MIDI files."""
         output_dir.mkdir(parents=True, exist_ok=True)
         output_files = []
@@ -134,8 +152,9 @@ class MIDIEngine:
 
         return output_files
 
-    def create_multi_track_midi(self, patterns: List[Pattern],
-                               tempo: int = 120) -> MIDIFile:
+    def create_multi_track_midi(
+        self, patterns: list[Pattern], tempo: int = 120
+    ) -> MIDIFile:
         """Create a multi-track MIDI file with each pattern on a separate track."""
         midi = MIDIFile(len(patterns))
         channel = self.drum_kit.channel
@@ -156,14 +175,17 @@ class MIDIEngine:
                     pitch=midi_note,
                     time=beat.position,
                     duration=beat.duration,
-                    volume=beat.velocity
+                    volume=beat.velocity,
                 )
 
         return midi
 
-    def apply_humanization_to_midi(self, midi: MIDIFile,
-                                  timing_variance: float = 0.02,
-                                  velocity_variance: int = 10) -> MIDIFile:
+    def apply_humanization_to_midi(
+        self,
+        midi: MIDIFile,
+        timing_variance: float = 0.02,
+        velocity_variance: int = 10,
+    ) -> MIDIFile:
         """Apply humanization effects to MIDI data.
 
         Note: This is a simplified implementation. Full humanization
@@ -177,8 +199,10 @@ class MIDIEngine:
         """Get information about the MIDI file that would be generated."""
         total_bars = song.total_bars()
         duration_seconds = song.total_duration_seconds()
-        total_beats = sum(len(section.pattern.beats) * section.bars
-                         for section in song.sections)
+        total_beats = sum(
+            len(section.pattern.beats) * section.bars
+            for section in song.sections
+        )
 
         return {
             "total_bars": total_bars,
@@ -190,8 +214,8 @@ class MIDIEngine:
                 {
                     "name": section.name,
                     "bars": section.bars,
-                    "pattern_beats": len(section.pattern.beats)
+                    "pattern_beats": len(section.pattern.beats),
                 }
                 for section in song.sections
-            ]
+            ],
         }

@@ -1,15 +1,14 @@
 """Main drum generation engine and composition system."""
 
-from typing import List, Dict, Optional, Tuple
-from pathlib import Path
 import logging
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
 
-from midi_drums.models.pattern import Pattern
-from midi_drums.models.song import Song, Section, GenerationParameters
-from midi_drums.models.kit import DrumKit
-from midi_drums.plugins.base import PluginManager
 from midi_drums.engines.midi_engine import MIDIEngine
-
+from midi_drums.models.kit import DrumKit
+from midi_drums.models.pattern import Pattern
+from midi_drums.models.song import GenerationParameters, Section, Song
+from midi_drums.plugins.base import PluginManager
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +16,7 @@ logger = logging.getLogger(__name__)
 class DrumGenerator:
     """Main drum generation engine."""
 
-    def __init__(self, config_path: Optional[Path] = None):
+    def __init__(self, config_path: Path | None = None):
         """Initialize drum generator with optional configuration."""
         self.plugin_manager = PluginManager()
         self.drum_kit = DrumKit.create_ezdrummer3_kit()
@@ -30,17 +29,24 @@ class DrumGenerator:
         """Load all available plugins."""
         try:
             self.plugin_manager.discover_plugins()
-            logger.info(f"Loaded genres: {self.plugin_manager.get_available_genres()}")
-            logger.info(f"Loaded drummers: {self.plugin_manager.get_available_drummers()}")
+            logger.info(
+                f"Loaded genres: {self.plugin_manager.get_available_genres()}"
+            )
+            logger.info(
+                f"Loaded drummers: {self.plugin_manager.get_available_drummers()}"
+            )
         except Exception as e:
             logger.error(f"Failed to load plugins: {e}")
 
-    def create_song(self,
-                   genre: str,
-                   style: str = "default",
-                   tempo: int = 120,
-                   structure: Optional[List[Tuple[str, int]]] = None,
-                   **kwargs) -> Song:
+    def create_song(
+        self,
+        genre: str,
+        style: str = "default",
+        tempo: int = 120,
+        structure: list[tuple[str, int]] | None = None,
+        drum_kit: DrumKit | None = None,
+        **kwargs,
+    ) -> Song:
         """Create a complete song structure.
 
         Args:
@@ -48,11 +54,17 @@ class DrumGenerator:
             style: Style within genre (e.g., 'death', 'power' for metal)
             tempo: Tempo in BPM
             structure: List of (section_name, bars) tuples. If None, uses default structure.
+            drum_kit: Optional DrumKit for MIDI mapping. If None, uses current kit.
             **kwargs: Additional parameters for GenerationParameters
 
         Returns:
             Complete Song object with generated patterns
         """
+        # Update MIDI engine if new drum kit provided
+        if drum_kit:
+            self.midi_engine = MIDIEngine(drum_kit)
+            self.drum_kit = drum_kit
+
         # Create generation parameters
         params = GenerationParameters(genre=genre, style=style, **kwargs)
 
@@ -66,19 +78,19 @@ class DrumGenerator:
                 ("chorus", 8),
                 ("bridge", 4),
                 ("chorus", 8),
-                ("outro", 4)
+                ("outro", 4),
             ]
 
         # Create song with basic structure
         song = Song(
-            name=f"{genre}_{style}_song",
-            tempo=tempo,
-            global_parameters=params
+            name=f"{genre}_{style}_song", tempo=tempo, global_parameters=params
         )
 
         # Generate patterns for each section
         for section_name, bars in structure:
-            pattern = self.generate_pattern(genre, section_name, bars, style=style, **kwargs)
+            pattern = self.generate_pattern(
+                genre, section_name, bars, style=style, **kwargs
+            )
             if pattern:
                 section = Section(section_name, pattern, bars)
 
@@ -92,15 +104,15 @@ class DrumGenerator:
 
                 song.add_section(section)
             else:
-                logger.warning(f"Failed to generate pattern for {genre}/{section_name}")
+                logger.warning(
+                    f"Failed to generate pattern for {genre}/{section_name}"
+                )
 
         return song
 
-    def generate_pattern(self,
-                        genre: str,
-                        section: str = "verse",
-                        bars: int = 4,
-                        **kwargs) -> Optional[Pattern]:
+    def generate_pattern(
+        self, genre: str, section: str = "verse", bars: int = 4, **kwargs
+    ) -> Pattern | None:
         """Generate a single pattern.
 
         Args:
@@ -122,7 +134,9 @@ class DrumGenerator:
 
         # Apply drummer style if specified
         if params.drummer:
-            styled_pattern = self.plugin_manager.apply_drummer_style(pattern, params.drummer)
+            styled_pattern = self.plugin_manager.apply_drummer_style(
+                pattern, params.drummer
+            )
             if styled_pattern:
                 pattern = styled_pattern
 
@@ -138,9 +152,9 @@ class DrumGenerator:
 
         return pattern
 
-    def apply_drummer_style(self,
-                           pattern: Pattern,
-                           drummer: str) -> Optional[Pattern]:
+    def apply_drummer_style(
+        self, pattern: Pattern, drummer: str
+    ) -> Pattern | None:
         """Apply drummer-specific style modifications to a pattern."""
         return self.plugin_manager.apply_drummer_style(pattern, drummer)
 
@@ -149,34 +163,58 @@ class DrumGenerator:
         self.midi_engine.save_song_midi(song, output_path)
         logger.info(f"Exported MIDI to: {output_path}")
 
-    def export_pattern_midi(self, pattern: Pattern, output_path: Path,
-                           tempo: int = 120) -> None:
+    def export_pattern_midi(
+        self,
+        pattern: Pattern,
+        output_path: Path,
+        tempo: int = 120,
+        drum_kit: DrumKit | None = None,
+    ) -> None:
         """Export single pattern as MIDI file."""
-        self.midi_engine.save_pattern_midi(pattern, output_path, tempo)
+        # Use provided drum kit or current one
+        engine = self.midi_engine
+        if drum_kit:
+            engine = MIDIEngine(drum_kit)
+
+        engine.save_pattern_midi(pattern, output_path, tempo)
         logger.info(f"Exported pattern MIDI to: {output_path}")
 
-    def get_available_genres(self) -> List[str]:
+    def get_available_genres(self) -> list[str]:
         """Get list of available genres."""
         return self.plugin_manager.get_available_genres()
 
-    def get_available_drummers(self) -> List[str]:
+    def get_available_drummers(self) -> list[str]:
         """Get list of available drummers."""
         return self.plugin_manager.get_available_drummers()
 
-    def get_styles_for_genre(self, genre: str) -> List[str]:
+    def get_styles_for_genre(self, genre: str) -> list[str]:
         """Get available styles for a genre."""
         return self.plugin_manager.get_styles_for_genre(genre)
 
-    def get_song_info(self, song: Song) -> Dict:
+    def get_song_info(self, song: Song) -> dict:
         """Get comprehensive information about a song."""
         info = self.midi_engine.get_midi_info(song)
-        info.update({
-            "genre": song.global_parameters.genre if song.global_parameters else "unknown",
-            "style": song.global_parameters.style if song.global_parameters else "default",
-            "drummer": song.global_parameters.drummer if song.global_parameters else None,
-            "sections_count": len(song.sections),
-            "unique_sections": list(set(s.name for s in song.sections))
-        })
+        info.update(
+            {
+                "genre": (
+                    song.global_parameters.genre
+                    if song.global_parameters
+                    else "unknown"
+                ),
+                "style": (
+                    song.global_parameters.style
+                    if song.global_parameters
+                    else "default"
+                ),
+                "drummer": (
+                    song.global_parameters.drummer
+                    if song.global_parameters
+                    else None
+                ),
+                "sections_count": len(song.sections),
+                "unique_sections": list({s.name for s in song.sections}),
+            }
+        )
         return info
 
     def set_drum_kit(self, kit: DrumKit) -> None:
@@ -187,10 +225,10 @@ class DrumGenerator:
     def create_drum_kit(self, kit_type: str) -> DrumKit:
         """Create a drum kit configuration by type."""
         kit_creators = {
-            'ezdrummer3': DrumKit.create_ezdrummer3_kit,
-            'metal': DrumKit.create_metal_kit,
-            'jazz': DrumKit.create_jazz_kit,
-            'standard': DrumKit.create_ezdrummer3_kit  # Alias
+            "ezdrummer3": DrumKit.create_ezdrummer3_kit,
+            "metal": DrumKit.create_metal_kit,
+            "jazz": DrumKit.create_jazz_kit,
+            "standard": DrumKit.create_ezdrummer3_kit,  # Alias
         }
 
         creator = kit_creators.get(kit_type.lower())
@@ -201,8 +239,9 @@ class DrumGenerator:
             return DrumKit.create_ezdrummer3_kit()
 
     # Private helper methods
-    def _generate_variations(self, base_pattern: Pattern,
-                           params: GenerationParameters) -> List:
+    def _generate_variations(
+        self, base_pattern: Pattern, params: GenerationParameters
+    ) -> list:
         """Generate pattern variations based on complexity."""
         from midi_drums.models.song import PatternVariation
 
@@ -214,15 +253,20 @@ class DrumGenerator:
             simplified.name = f"{base_pattern.name}_simple"
 
             # Remove some hi-hat hits for variation
-            simplified.beats = [beat for beat in simplified.beats
-                              if not (beat.instrument.name.endswith('HH') and
-                                    beat.position % 0.5 != 0)]
+            simplified.beats = [
+                beat
+                for beat in simplified.beats
+                if not (
+                    beat.instrument.name.endswith("HH")
+                    and beat.position % 0.5 != 0
+                )
+            ]
 
             variations.append(PatternVariation(simplified, 0.3))
 
         return variations
 
-    def _generate_fills(self, genre: str, params: GenerationParameters) -> List:
+    def _generate_fills(self, genre: str, params: GenerationParameters) -> list:
         """Generate fill patterns for the genre."""
         plugin = self.plugin_manager.registry.get_genre_plugin(genre)
         if plugin:
@@ -244,23 +288,28 @@ class DrumGenerator:
         for bar in range(1, bars):
             bar_offset = bar * beats_per_bar
             for beat in original_beats:
-                from midi_drums.models.pattern import Beat
                 import random
+
+                from midi_drums.models.pattern import Beat
+
                 new_beat = Beat(
                     position=beat.position + bar_offset,
                     instrument=beat.instrument,
-                    velocity=max(1, min(127, beat.velocity + random.randint(-5, 5))),  # Slight variation with clamping
+                    velocity=max(
+                        1, min(127, beat.velocity + random.randint(-5, 5))
+                    ),  # Slight variation with clamping
                     duration=beat.duration,
                     ghost_note=beat.ghost_note,
-                    accent=beat.accent
+                    accent=beat.accent,
                 )
                 extended_pattern.beats.append(new_beat)
 
         return extended_pattern
 
     @classmethod
-    def quick_generate(cls, genre: str = "metal", style: str = "heavy",
-                      tempo: int = 155) -> Song:
+    def quick_generate(
+        cls, genre: str = "metal", style: str = "heavy", tempo: int = 155
+    ) -> Song:
         """Quick song generation with sensible defaults.
 
         This replicates the functionality of the original script.
@@ -272,5 +321,5 @@ class DrumGenerator:
             tempo=tempo,
             complexity=0.7,
             dynamics=0.6,
-            humanization=0.3
+            humanization=0.3,
         )
