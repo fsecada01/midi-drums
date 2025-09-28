@@ -1,11 +1,15 @@
 """Metal genre plugin with various metal substyles."""
 
-from typing import List
 import random
 
+from midi_drums.models.pattern import (
+    DrumInstrument,
+    Pattern,
+    PatternBuilder,
+    TimeSignature,
+)
+from midi_drums.models.song import Fill, GenerationParameters
 from midi_drums.plugins.base import GenrePlugin
-from midi_drums.models.pattern import Pattern, Beat, DrumInstrument, TimeSignature, PatternBuilder
-from midi_drums.models.song import GenerationParameters, Fill
 
 
 class MetalGenrePlugin(GenrePlugin):
@@ -16,10 +20,20 @@ class MetalGenrePlugin(GenrePlugin):
         return "metal"
 
     @property
-    def supported_styles(self) -> List[str]:
-        return ["heavy", "death", "power", "progressive", "thrash", "doom", "breakdown"]
+    def supported_styles(self) -> list[str]:
+        return [
+            "heavy",
+            "death",
+            "power",
+            "progressive",
+            "thrash",
+            "doom",
+            "breakdown",
+        ]
 
-    def generate_pattern(self, section: str, parameters: GenerationParameters) -> Pattern:
+    def generate_pattern(
+        self, section: str, parameters: GenerationParameters
+    ) -> Pattern:
         """Generate metal pattern based on section and style."""
         style = parameters.style
         time_sig = TimeSignature(4, 4)  # Most metal is 4/4
@@ -40,7 +54,7 @@ class MetalGenrePlugin(GenrePlugin):
             # Default to verse pattern
             return self._generate_verse_pattern(style, parameters, time_sig)
 
-    def get_common_fills(self) -> List[Fill]:
+    def get_common_fills(self) -> list[Fill]:
         """Get common metal fill patterns."""
         fills = []
 
@@ -48,8 +62,14 @@ class MetalGenrePlugin(GenrePlugin):
         tom_roll = PatternBuilder("metal_tom_roll")
         for i in range(16):  # 16th notes
             pos = i * 0.25
-            instrument = DrumInstrument.SNARE if i % 3 == 0 else (
-                DrumInstrument.MID_TOM if i % 2 == 0 else DrumInstrument.FLOOR_TOM
+            instrument = (
+                DrumInstrument.SNARE
+                if i % 3 == 0
+                else (
+                    DrumInstrument.MID_TOM
+                    if i % 2 == 0
+                    else DrumInstrument.FLOOR_TOM
+                )
             )
             velocity = 100 + random.randint(-10, 15)
             tom_roll.pattern.add_beat(pos, instrument, velocity)
@@ -64,8 +84,9 @@ class MetalGenrePlugin(GenrePlugin):
 
         return fills
 
-    def _generate_intro_pattern(self, style: str, params: GenerationParameters,
-                               time_sig: TimeSignature) -> Pattern:
+    def _generate_intro_pattern(
+        self, style: str, params: GenerationParameters, time_sig: TimeSignature
+    ) -> Pattern:
         """Generate intro pattern - typically builds energy."""
         builder = PatternBuilder(f"metal_{style}_intro", time_sig)
 
@@ -87,8 +108,9 @@ class MetalGenrePlugin(GenrePlugin):
 
         return builder.build()
 
-    def _generate_verse_pattern(self, style: str, params: GenerationParameters,
-                               time_sig: TimeSignature) -> Pattern:
+    def _generate_verse_pattern(
+        self, style: str, params: GenerationParameters, time_sig: TimeSignature
+    ) -> Pattern:
         """Generate verse pattern based on style."""
         builder = PatternBuilder(f"metal_{style}_verse", time_sig)
 
@@ -103,8 +125,9 @@ class MetalGenrePlugin(GenrePlugin):
         else:
             return self._heavy_metal_verse(builder, params)
 
-    def _generate_chorus_pattern(self, style: str, params: GenerationParameters,
-                                time_sig: TimeSignature) -> Pattern:
+    def _generate_chorus_pattern(
+        self, style: str, params: GenerationParameters, time_sig: TimeSignature
+    ) -> Pattern:
         """Generate chorus pattern - typically more intense than verse."""
         builder = PatternBuilder(f"metal_{style}_chorus", time_sig)
 
@@ -115,8 +138,9 @@ class MetalGenrePlugin(GenrePlugin):
         else:
             return self._heavy_metal_chorus(builder, params)
 
-    def _generate_breakdown_pattern(self, style: str, params: GenerationParameters,
-                                   time_sig: TimeSignature) -> Pattern:
+    def _generate_breakdown_pattern(
+        self, style: str, params: GenerationParameters, time_sig: TimeSignature
+    ) -> Pattern:
         """Generate breakdown pattern - syncopated, heavy."""
         builder = PatternBuilder(f"metal_{style}_breakdown", time_sig)
 
@@ -134,9 +158,11 @@ class MetalGenrePlugin(GenrePlugin):
 
         return builder.build()
 
-    def _generate_bridge_pattern(self, style: str, params: GenerationParameters,
-                                time_sig: TimeSignature) -> Pattern:
-        """Generate bridge pattern - often simpler or different from verse/chorus."""
+    def _generate_bridge_pattern(
+        self, style: str, params: GenerationParameters, time_sig: TimeSignature
+    ) -> Pattern:
+        """Generate bridge pattern - often simpler or different from
+        verse/chorus."""
         # For simplicity, use a modified verse pattern
         pattern = self._generate_verse_pattern(style, params, time_sig)
         pattern.name = f"metal_{style}_bridge"
@@ -154,8 +180,9 @@ class MetalGenrePlugin(GenrePlugin):
         pattern.beats = reduced_beats
         return pattern
 
-    def _generate_outro_pattern(self, style: str, params: GenerationParameters,
-                               time_sig: TimeSignature) -> Pattern:
+    def _generate_outro_pattern(
+        self, style: str, params: GenerationParameters, time_sig: TimeSignature
+    ) -> Pattern:
         """Generate outro pattern."""
         builder = PatternBuilder(f"metal_{style}_outro", time_sig)
 
@@ -171,7 +198,9 @@ class MetalGenrePlugin(GenrePlugin):
         return builder.build()
 
     # Style-specific implementations
-    def _heavy_metal_verse(self, builder: PatternBuilder, params: GenerationParameters) -> Pattern:
+    def _heavy_metal_verse(
+        self, builder: PatternBuilder, params: GenerationParameters
+    ) -> Pattern:
         """Classic heavy metal verse pattern."""
         # Kick on 1, 1.75, 3
         builder.kick(0.0, 110)
@@ -188,7 +217,9 @@ class MetalGenrePlugin(GenrePlugin):
 
         return builder.build()
 
-    def _death_metal_verse(self, builder: PatternBuilder, params: GenerationParameters) -> Pattern:
+    def _death_metal_verse(
+        self, builder: PatternBuilder, params: GenerationParameters
+    ) -> Pattern:
         """Death metal verse with blast beats."""
         # Blast beat pattern - alternating kick/snare on 16ths
         for i in range(8):
@@ -202,7 +233,9 @@ class MetalGenrePlugin(GenrePlugin):
 
         return builder.build()
 
-    def _power_metal_verse(self, builder: PatternBuilder, params: GenerationParameters) -> Pattern:
+    def _power_metal_verse(
+        self, builder: PatternBuilder, params: GenerationParameters
+    ) -> Pattern:
         """Power metal verse - driving and melodic."""
         # Steady kick quarters
         for i in [0.0, 1.0, 2.0, 3.0]:
@@ -219,7 +252,9 @@ class MetalGenrePlugin(GenrePlugin):
 
         return builder.build()
 
-    def _doom_metal_verse(self, builder: PatternBuilder, params: GenerationParameters) -> Pattern:
+    def _doom_metal_verse(
+        self, builder: PatternBuilder, params: GenerationParameters
+    ) -> Pattern:
         """Doom metal verse - slow and heavy."""
         # Simple but heavy kick pattern
         builder.kick(0.0, 120)
@@ -235,7 +270,9 @@ class MetalGenrePlugin(GenrePlugin):
 
         return builder.build()
 
-    def _progressive_metal_verse(self, builder: PatternBuilder, params: GenerationParameters) -> Pattern:
+    def _progressive_metal_verse(
+        self, builder: PatternBuilder, params: GenerationParameters
+    ) -> Pattern:
         """Progressive metal verse - complex timing."""
         # Complex kick pattern
         for pos in [0.0, 0.75, 1.5, 2.25, 3.0]:
@@ -253,7 +290,9 @@ class MetalGenrePlugin(GenrePlugin):
 
         return builder.build()
 
-    def _heavy_metal_chorus(self, builder: PatternBuilder, params: GenerationParameters) -> Pattern:
+    def _heavy_metal_chorus(
+        self, builder: PatternBuilder, params: GenerationParameters
+    ) -> Pattern:
         """Heavy metal chorus - double kick shuffle."""
         # Double kick pattern
         for beat in range(4):
@@ -271,7 +310,9 @@ class MetalGenrePlugin(GenrePlugin):
 
         return builder.build()
 
-    def _death_metal_chorus(self, builder: PatternBuilder, params: GenerationParameters) -> Pattern:
+    def _death_metal_chorus(
+        self, builder: PatternBuilder, params: GenerationParameters
+    ) -> Pattern:
         """Death metal chorus - intense blast beats."""
         # Faster blast beat for chorus intensity
         for i in range(16):
@@ -287,7 +328,9 @@ class MetalGenrePlugin(GenrePlugin):
 
         return builder.build()
 
-    def _power_metal_chorus(self, builder: PatternBuilder, params: GenerationParameters) -> Pattern:
+    def _power_metal_chorus(
+        self, builder: PatternBuilder, params: GenerationParameters
+    ) -> Pattern:
         """Power metal chorus - anthemic and driving."""
         # Driving double kick
         for beat in range(4):

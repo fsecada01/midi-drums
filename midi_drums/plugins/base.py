@@ -1,15 +1,13 @@
 """Base classes for plugin system."""
 
-from abc import ABC, abstractmethod
-from typing import List, Dict, Optional, Type
-from pathlib import Path
 import importlib
-import pkgutil
 import logging
+import pkgutil
+from abc import ABC, abstractmethod
+from pathlib import Path
 
 from midi_drums.models.pattern import Pattern
-from midi_drums.models.song import GenerationParameters, Fill
-
+from midi_drums.models.song import Fill, GenerationParameters
 
 logger = logging.getLogger(__name__)
 
@@ -25,14 +23,14 @@ class GenrePlugin(ABC):
 
     @property
     @abstractmethod
-    def supported_styles(self) -> List[str]:
+    def supported_styles(self) -> list[str]:
         """List of style variations supported by this genre."""
         pass
 
     @abstractmethod
-    def generate_pattern(self,
-                        section: str,
-                        parameters: GenerationParameters) -> Pattern:
+    def generate_pattern(
+        self, section: str, parameters: GenerationParameters
+    ) -> Pattern:
         """Generate a pattern for the specified section and parameters.
 
         Args:
@@ -45,11 +43,11 @@ class GenrePlugin(ABC):
         pass
 
     @abstractmethod
-    def get_common_fills(self) -> List[Fill]:
+    def get_common_fills(self) -> list[Fill]:
         """Get common fill patterns for this genre."""
         pass
 
-    def get_section_variations(self, section: str) -> List[Pattern]:
+    def get_section_variations(self, section: str) -> list[Pattern]:
         """Get pattern variations for a specific section.
 
         Default implementation returns empty list.
@@ -83,7 +81,7 @@ class DrummerPlugin(ABC):
 
     @property
     @abstractmethod
-    def compatible_genres(self) -> List[str]:
+    def compatible_genres(self) -> list[str]:
         """List of genres this drummer style works well with."""
         pass
 
@@ -100,7 +98,7 @@ class DrummerPlugin(ABC):
         pass
 
     @abstractmethod
-    def get_signature_fills(self) -> List[Fill]:
+    def get_signature_fills(self) -> list[Fill]:
         """Get fill patterns characteristic of this drummer."""
         pass
 
@@ -108,7 +106,7 @@ class DrummerPlugin(ABC):
         """Check if this drummer style is compatible with the genre."""
         return genre in self.compatible_genres
 
-    def get_style_parameters(self) -> Dict[str, float]:
+    def get_style_parameters(self) -> dict[str, float]:
         """Get style-specific parameter adjustments.
 
         Returns dict with parameter names and their adjusted values.
@@ -121,14 +119,16 @@ class PluginRegistry:
     """Registry for managing genre and drummer plugins."""
 
     def __init__(self):
-        self._genre_plugins: Dict[str, GenrePlugin] = {}
-        self._drummer_plugins: Dict[str, DrummerPlugin] = {}
+        self._genre_plugins: dict[str, GenrePlugin] = {}
+        self._drummer_plugins: dict[str, DrummerPlugin] = {}
 
     def register_genre_plugin(self, plugin: GenrePlugin) -> None:
         """Register a genre plugin."""
         genre_name = plugin.genre_name.lower()
         if genre_name in self._genre_plugins:
-            logger.warning(f"Overriding existing genre plugin for '{genre_name}'")
+            logger.warning(
+                f"Overriding existing genre plugin for '{genre_name}'"
+            )
         self._genre_plugins[genre_name] = plugin
         logger.info(f"Registered genre plugin: {genre_name}")
 
@@ -136,35 +136,40 @@ class PluginRegistry:
         """Register a drummer plugin."""
         drummer_name = plugin.drummer_name.lower()
         if drummer_name in self._drummer_plugins:
-            logger.warning(f"Overriding existing drummer plugin for '{drummer_name}'")
+            logger.warning(
+                f"Overriding existing drummer plugin for '{drummer_name}'"
+            )
         self._drummer_plugins[drummer_name] = plugin
         logger.info(f"Registered drummer plugin: {drummer_name}")
 
-    def get_genre_plugin(self, genre: str) -> Optional[GenrePlugin]:
+    def get_genre_plugin(self, genre: str) -> GenrePlugin | None:
         """Get genre plugin by name."""
         return self._genre_plugins.get(genre.lower())
 
-    def get_drummer_plugin(self, drummer: str) -> Optional[DrummerPlugin]:
+    def get_drummer_plugin(self, drummer: str) -> DrummerPlugin | None:
         """Get drummer plugin by name."""
         return self._drummer_plugins.get(drummer.lower())
 
-    def get_available_genres(self) -> List[str]:
+    def get_available_genres(self) -> list[str]:
         """Get list of available genre names."""
         return list(self._genre_plugins.keys())
 
-    def get_available_drummers(self) -> List[str]:
+    def get_available_drummers(self) -> list[str]:
         """Get list of available drummer names."""
         return list(self._drummer_plugins.keys())
 
-    def get_styles_for_genre(self, genre: str) -> List[str]:
+    def get_styles_for_genre(self, genre: str) -> list[str]:
         """Get available styles for a genre."""
         plugin = self.get_genre_plugin(genre)
         return plugin.supported_styles if plugin else []
 
-    def get_compatible_drummers_for_genre(self, genre: str) -> List[str]:
+    def get_compatible_drummers_for_genre(self, genre: str) -> list[str]:
         """Get drummers compatible with the given genre."""
-        return [name for name, plugin in self._drummer_plugins.items()
-                if plugin.is_compatible_with_genre(genre)]
+        return [
+            name
+            for name, plugin in self._drummer_plugins.items()
+            if plugin.is_compatible_with_genre(genre)
+        ]
 
 
 class PluginManager:
@@ -173,17 +178,18 @@ class PluginManager:
     def __init__(self):
         self.registry = PluginRegistry()
 
-    def discover_plugins(self, plugin_dirs: Optional[List[Path]] = None) -> None:
+    def discover_plugins(self, plugin_dirs: list[Path] | None = None) -> None:
         """Auto-discover and load plugins from specified directories.
 
         Args:
-            plugin_dirs: List of directories to search. If None, searches default locations.
+            plugin_dirs: List of directories to search. If None, searches
+                default locations.
         """
         if plugin_dirs is None:
             # Default plugin directories
             plugin_dirs = [
                 Path(__file__).parent / "genres",
-                Path(__file__).parent / "drummers"
+                Path(__file__).parent / "drummers",
             ]
 
         for plugin_dir in plugin_dirs:
@@ -196,13 +202,16 @@ class PluginManager:
 
         # Add the directory to Python path temporarily
         import sys
+
         if str(plugin_dir.parent) not in sys.path:
             sys.path.insert(0, str(plugin_dir.parent))
 
         try:
             # Import all Python modules in the directory
             package_name = plugin_dir.name
-            for finder, name, ispkg in pkgutil.iter_modules([str(plugin_dir)]):
+            for _finder, name, _ispkg in pkgutil.iter_modules(
+                [str(plugin_dir)]
+            ):
                 try:
                     module_name = f"{package_name}.{name}"
                     module = importlib.import_module(module_name)
@@ -216,9 +225,11 @@ class PluginManager:
         """Register all plugin classes found in a module."""
         for attr_name in dir(module):
             attr = getattr(module, attr_name)
-            if (isinstance(attr, type) and
-                issubclass(attr, (GenrePlugin, DrummerPlugin)) and
-                attr not in (GenrePlugin, DrummerPlugin)):
+            if (
+                isinstance(attr, type)
+                and issubclass(attr, (GenrePlugin, DrummerPlugin))
+                and attr not in (GenrePlugin, DrummerPlugin)
+            ):
                 try:
                     plugin_instance = attr()
                     if isinstance(plugin_instance, GenrePlugin):
@@ -226,12 +237,13 @@ class PluginManager:
                     elif isinstance(plugin_instance, DrummerPlugin):
                         self.registry.register_drummer_plugin(plugin_instance)
                 except Exception as e:
-                    logger.error(f"Failed to instantiate plugin {attr_name}: {e}")
+                    logger.error(
+                        f"Failed to instantiate plugin {attr_name}: {e}"
+                    )
 
-    def generate_pattern(self,
-                        genre: str,
-                        section: str,
-                        parameters: GenerationParameters) -> Optional[Pattern]:
+    def generate_pattern(
+        self, genre: str, section: str, parameters: GenerationParameters
+    ) -> Pattern | None:
         """Generate a pattern using the appropriate genre plugin."""
         plugin = self.registry.get_genre_plugin(genre)
         if not plugin:
@@ -248,9 +260,9 @@ class PluginManager:
             logger.error(f"Error generating pattern for {genre}/{section}: {e}")
             return None
 
-    def apply_drummer_style(self,
-                           pattern: Pattern,
-                           drummer: str) -> Optional[Pattern]:
+    def apply_drummer_style(
+        self, pattern: Pattern, drummer: str
+    ) -> Pattern | None:
         """Apply drummer style to a pattern."""
         plugin = self.registry.get_drummer_plugin(drummer)
         if not plugin:
@@ -264,14 +276,14 @@ class PluginManager:
             return None
 
     # Convenience methods for accessing registry data
-    def get_available_genres(self) -> List[str]:
+    def get_available_genres(self) -> list[str]:
         """Get list of available genres."""
         return self.registry.get_available_genres()
 
-    def get_available_drummers(self) -> List[str]:
+    def get_available_drummers(self) -> list[str]:
         """Get list of available drummers."""
         return self.registry.get_available_drummers()
 
-    def get_styles_for_genre(self, genre: str) -> List[str]:
+    def get_styles_for_genre(self, genre: str) -> list[str]:
         """Get available styles for a genre."""
         return self.registry.get_styles_for_genre(genre)

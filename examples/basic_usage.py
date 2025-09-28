@@ -5,6 +5,7 @@ Demonstrates the new modular architecture.
 """
 
 from pathlib import Path
+
 from midi_drums.api.python_api import DrumGeneratorAPI
 
 
@@ -15,11 +16,7 @@ def example_metal_song():
     api = DrumGeneratorAPI()
 
     # Create a death metal song
-    song = api.metal_song(
-        style="heavy",
-        tempo=155,
-        complexity=0.7
-    )
+    song = api.metal_song(style="heavy", tempo=155, complexity=0.7)
 
     # Save as MIDI
     output_file = "metal_song_new.mid"
@@ -75,9 +72,24 @@ def example_batch_generation():
 
     # Define multiple song specifications
     songs_specs = [
-        {'genre': 'metal', 'style': 'heavy', 'tempo': 140, 'name': 'heavy_metal'},
-        {'genre': 'metal', 'style': 'death', 'tempo': 180, 'name': 'death_metal'},
-        {'genre': 'metal', 'style': 'power', 'tempo': 160, 'name': 'power_metal'},
+        {
+            "genre": "metal",
+            "style": "heavy",
+            "tempo": 140,
+            "name": "heavy_metal",
+        },
+        {
+            "genre": "metal",
+            "style": "death",
+            "tempo": 180,
+            "name": "death_metal",
+        },
+        {
+            "genre": "metal",
+            "style": "power",
+            "tempo": 160,
+            "name": "power_metal",
+        },
     ]
 
     output_dir = Path("generated_songs")
@@ -111,6 +123,7 @@ def main():
     except Exception as e:
         print(f"❌ Error running examples: {e}")
         import traceback
+
         traceback.print_exc()
 
 

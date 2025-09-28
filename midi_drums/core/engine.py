@@ -2,7 +2,6 @@
 
 import logging
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 
 from midi_drums.engines.midi_engine import MIDIEngine
 from midi_drums.models.kit import DrumKit
@@ -33,7 +32,8 @@ class DrumGenerator:
                 f"Loaded genres: {self.plugin_manager.get_available_genres()}"
             )
             logger.info(
-                f"Loaded drummers: {self.plugin_manager.get_available_drummers()}"
+                f"Loaded drummers: "
+                f"{self.plugin_manager.get_available_drummers()}"
             )
         except Exception as e:
             logger.error(f"Failed to load plugins: {e}")
@@ -53,8 +53,10 @@ class DrumGenerator:
             genre: Genre name (e.g., 'metal', 'rock', 'jazz')
             style: Style within genre (e.g., 'death', 'power' for metal)
             tempo: Tempo in BPM
-            structure: List of (section_name, bars) tuples. If None, uses default structure.
-            drum_kit: Optional DrumKit for MIDI mapping. If None, uses current kit.
+            structure: List of (section_name, bars) tuples. If None, uses
+                default structure.
+            drum_kit: Optional DrumKit for MIDI mapping. If None, uses
+                current kit.
             **kwargs: Additional parameters for GenerationParameters
 
         Returns:

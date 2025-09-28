@@ -1,7 +1,6 @@
 """Drum kit configuration and instrument mapping."""
 
 from dataclasses import dataclass, field
-from typing import Dict
 
 from midi_drums.models.pattern import DrumInstrument
 
@@ -90,7 +89,8 @@ class DrumKit:
         return cls(
             name="EZDrummer 3 Kit",
             channel=9,
-            # EZDrummer 3 uses standard GM mappings, so no custom mappings needed
+            # EZDrummer 3 uses standard GM mappings, so no custom mappings
+            # needed
             custom_mappings={},
         )
 
@@ -222,7 +222,8 @@ class DrumKit:
         if preset_name_lower not in preset_map:
             available_presets = ", ".join(sorted(preset_map.keys()))
             raise ValueError(
-                f"Unknown preset '{preset_name}'. Available presets: {available_presets}"
+                f"Unknown preset '{preset_name}'. "
+                f"Available presets: {available_presets}"
             )
 
         return preset_map[preset_name_lower]()
@@ -235,9 +236,13 @@ class DrumKit:
             Dictionary mapping preset names to descriptions
         """
         return {
-            "ezdrummer3": "EZDrummer 3 (Toontrack) - GM Extended compatible",
-            "studio_drummer3": "Studio Drummer 3 (Native Instruments) - Multiple kit mappings",
-            "addictive_drums": "Addictive Drums 2 (XLN Audio) - GM compatible with keymap",
+            "ezdrummer3": ("EZDrummer 3 (Toontrack) - GM Extended compatible"),
+            "studio_drummer3": (
+                "Studio Drummer 3 (Native Instruments) - Multiple kit mappings"
+            ),
+            "addictive_drums": (
+                "Addictive Drums 2 (XLN Audio) - GM compatible with keymap"
+            ),
             "bfd3": "BFD3 (FXpansion) - Flexible mapping system",
             "gm_drums": "General MIDI Drums - Standard GM drum mapping",
             "modo_drums": "MODO Drums (IK Multimedia) - GM convention",

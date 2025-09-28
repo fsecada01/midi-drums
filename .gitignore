@@ -205,3 +205,4 @@ dev_requirements.txt
 
 # Local settings
 .claude/
+memo.txt

@@ -1,0 +1,56 @@
+repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v5.0.0
+  hooks:
+    - id: check-added-large-files
+      args: ['--maxkb=10000']
+    - id: check-ast
+    - id: check-builtin-literals
+    - id: check-byte-order-marker
+    - id: check-case-conflict
+    - id: check-docstring-first
+    - id: check-executables-have-shebangs
+    - id: check-json
+    - id: check-merge-conflict
+    # - id: check-shebang-scripts-are-executable
+    - id: check-symlinks
+    - id: check-toml
+    - id: check-vcs-permalinks
+    - id: check-xml
+    - id: check-yaml
+    - id: debug-statements
+      exclude: tests/
+    - id: destroyed-symlinks
+    # - id: detect-aws-credentials
+    - id: detect-private-key
+    - id: end-of-file-fixer
+      exclude: tests/test_changes/
+      files: \.(py|sh|rst|yml|yaml)$
+    - id: pretty-format-json
+      args: [--autofix]
+    - id: sort-simple-yaml
+    - id: trailing-whitespace
+
+- repo: https://github.com/charliermarsh/ruff-pre-commit
+  # Ruff version.
+  rev: "v0.11.0"
+  hooks:
+    - id: ruff
+
+- repo: https://github.com/pycqa/isort
+  rev: 6.0.1
+  hooks:
+    - id: isort
+      name: isort (python)
+
+- repo: https://github.com/psf/black
+  rev: 25.1.0
+  hooks:
+    - id: black
+      exclude: tests/
+
+- repo: https://github.com/asottile/pyupgrade
+  rev: v3.19.1
+  hooks:
+    - id: pyupgrade
+      args: [--py312-plus]

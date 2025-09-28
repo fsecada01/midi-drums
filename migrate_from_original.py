@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """
-Migration script to demonstrate equivalence with original generate_metal_drum_track.py
+Migration script to demonstrate equivalence with original
+generate_metal_drum_track.py
 """
 
 from pathlib import Path
+
 from midi_drums import DrumGenerator
 
 
@@ -31,11 +33,11 @@ def generate_original_equivalent():
             ("verse", 16),
             ("fill", 1),
             ("chorus", 16),
-            ("outro", 1)
+            ("outro", 1),
         ],
         complexity=0.7,
         dynamics=0.6,
-        humanization=0.3
+        humanization=0.3,
     )
 
     # Export with same filename
@@ -43,7 +45,7 @@ def generate_original_equivalent():
     generator.export_midi(song, output_file)
 
     print(f"✅ Generated: {output_file}")
-    print(f"📊 Song info:")
+    print("📊 Song info:")
     info = generator.get_song_info(song)
     for key, value in info.items():
         print(f"   {key}: {value}")
@@ -85,7 +87,9 @@ def demonstrate_new_capabilities():
         # Generate different metal styles
         for style in styles[:3]:  # First 3 styles
             try:
-                pattern = generator.generate_pattern("metal", "verse", style=style)
+                pattern = generator.generate_pattern(
+                    "metal", "verse", style=style
+                )
                 if pattern:
                     filename = f"metal_{style}_verse.mid"
                     generator.export_pattern_midi(pattern, Path(filename))
@@ -113,4 +117,5 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"❌ Error during migration: {e}")
         import traceback
+
         traceback.print_exc()

@@ -16,10 +16,12 @@ def create_parser() -> argparse.ArgumentParser:
         epilog="""
 Examples:
   # Generate a metal song
-  python -m midi_drums.api.cli generate --genre metal --style death --tempo 180 --output song.mid
+  python -m midi_drums.api.cli generate --genre metal --style death \
+      --tempo 180 --output song.mid
 
   # Generate a single pattern
-  python -m midi_drums.api.cli pattern --genre jazz --section verse --output pattern.mid
+  python -m midi_drums.api.cli pattern --genre jazz --section verse \
+      --output pattern.mid
 
   # List available options
   python -m midi_drums.api.cli list genres
@@ -65,7 +67,11 @@ Examples:
         "--mapping",
         "--vst",
         default="ezdrummer3",
-        help="MIDI mapping preset (ezdrummer3, studio_drummer3, addictive_drums, bfd3, gm_drums, modo_drums, ml_drums, metal, jazz)",
+        help=(
+            "MIDI mapping preset (ezdrummer3, studio_drummer3, "
+            "addictive_drums, bfd3, gm_drums, modo_drums, ml_drums, "
+            "metal, jazz)"
+        ),
     )
 
     # Generate pattern command
@@ -100,7 +106,11 @@ Examples:
         "--mapping",
         "--vst",
         default="ezdrummer3",
-        help="MIDI mapping preset (ezdrummer3, studio_drummer3, addictive_drums, bfd3, gm_drums, modo_drums, ml_drums, metal, jazz)",
+        help=(
+            "MIDI mapping preset (ezdrummer3, studio_drummer3, "
+            "addictive_drums, bfd3, gm_drums, modo_drums, ml_drums, "
+            "metal, jazz)"
+        ),
     )
 
     # List command
@@ -119,9 +129,7 @@ Examples:
     styles_parser.add_argument("--genre", required=True, help="Genre name")
 
     # Info command
-    info_parser = subparsers.add_parser(
-        "info", help="Get information about the system"
-    )
+    subparsers.add_parser("info", help="Get information about the system")
 
     return parser
 

@@ -1,7 +1,6 @@
 """High-level Python API for drum generation."""
 
 from pathlib import Path
-from typing import Dict, List, Optional, Union
 
 from midi_drums.core.engine import DrumGenerator
 from midi_drums.models.kit import DrumKit

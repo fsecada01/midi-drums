@@ -6,16 +6,22 @@ Test script to verify the new MIDI drums architecture works correctly.
 import sys
 from pathlib import Path
 
+
 def test_imports():
     """Test that all modules can be imported."""
     print("🧪 Testing imports...")
 
     try:
-        from midi_drums import DrumGenerator, Pattern, Beat, Song
-        from midi_drums.api.python_api import DrumGeneratorAPI
-        from midi_drums.models.pattern import PatternBuilder, DrumInstrument
-        from midi_drums.models.song import GenerationParameters
-        from midi_drums.plugins.genres.metal import MetalGenrePlugin
+        # Test that imports work (imports are only used for testing)
+        from midi_drums import Beat, DrumGenerator  # noqa: F401
+        from midi_drums.api.python_api import DrumGeneratorAPI  # noqa: F401
+        from midi_drums.models.pattern import DrumInstrument  # noqa: F401
+        from midi_drums.models.pattern import PatternBuilder  # noqa: F401
+        from midi_drums.models.song import GenerationParameters  # noqa: F401
+        from midi_drums.plugins.genres.metal import (  # noqa: F401
+            MetalGenrePlugin,
+        )
+
         print("✅ All core imports successful")
         return True
     except ImportError as e:
@@ -28,20 +34,24 @@ def test_pattern_creation():
     print("🧪 Testing pattern creation...")
 
     try:
-        from midi_drums.models.pattern import PatternBuilder, DrumInstrument
+        from midi_drums.models.pattern import PatternBuilder
 
         # Create a simple pattern
         builder = PatternBuilder("test_pattern")
-        pattern = (builder
-                  .kick(0.0, 110)
-                  .snare(1.0, 115)
-                  .hihat(0.0, 80)
-                  .hihat(0.5, 75)
-                  .hihat(1.0, 80)
-                  .hihat(1.5, 75)
-                  .build())
+        pattern = (
+            builder.kick(0.0, 110)
+            .snare(1.0, 115)
+            .hihat(0.0, 80)
+            .hihat(0.5, 75)
+            .hihat(1.0, 80)
+            .hihat(1.5, 75)
+            .build()
+        )
 
-        print(f"✅ Created pattern: {pattern.name} with {len(pattern.beats)} beats")
+        print(
+            f"✅ Created pattern: {pattern.name} with "
+            f"{len(pattern.beats)} beats"
+        )
 
         # Test humanization
         humanized = pattern.humanize()
@@ -58,8 +68,8 @@ def test_metal_plugin():
     print("🧪 Testing metal plugin...")
 
     try:
-        from midi_drums.plugins.genres.metal import MetalGenrePlugin
         from midi_drums.models.song import GenerationParameters
+        from midi_drums.plugins.genres.metal import MetalGenrePlugin
 
         plugin = MetalGenrePlugin()
         params = GenerationParameters(genre="metal", style="heavy")
@@ -100,7 +110,10 @@ def test_engine():
 
         # Test song creation
         song = generator.create_song("metal", "heavy", 155)
-        print(f"✅ Engine generated song: {song.name} with {len(song.sections)} sections")
+        print(
+            f"✅ Engine generated song: {song.name} with "
+            f"{len(song.sections)} sections"
+        )
 
         return True
     except Exception as e:
@@ -186,7 +199,7 @@ def cleanup_test_files():
         "test_pattern.mid",
         "test_song.mid",
         "metal_heavy_verse.mid",
-        "metal_death_chorus.mid"
+        "metal_death_chorus.mid",
     ]
 
     for file in test_files:

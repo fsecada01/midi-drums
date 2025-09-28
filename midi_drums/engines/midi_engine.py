@@ -1,14 +1,13 @@
 """MIDI file generation engine."""
 
 from pathlib import Path
-from typing import List, Optional
 
 try:
     from midiutil import MIDIFile
 except ImportError:
     raise ImportError(
         "midiutil library not found. Install with 'pip install midiutil'."
-    )
+    ) from None
 
 from midi_drums.models.kit import DrumKit
 from midi_drums.models.pattern import Pattern
@@ -155,7 +154,8 @@ class MIDIEngine:
     def create_multi_track_midi(
         self, patterns: list[Pattern], tempo: int = 120
     ) -> MIDIFile:
-        """Create a multi-track MIDI file with each pattern on a separate track."""
+        """Create a multi-track MIDI file with each pattern on a
+        separate track."""
         midi = MIDIFile(len(patterns))
         channel = self.drum_kit.channel
 
