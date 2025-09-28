@@ -78,7 +78,7 @@ class DrumGenerator:
 
         # Generate patterns for each section
         for section_name, bars in structure:
-            pattern = self.generate_pattern(genre, section_name, bars, **kwargs)
+            pattern = self.generate_pattern(genre, section_name, bars, style=style, **kwargs)
             if pattern:
                 section = Section(section_name, pattern, bars)
 
@@ -249,7 +249,7 @@ class DrumGenerator:
                 new_beat = Beat(
                     position=beat.position + bar_offset,
                     instrument=beat.instrument,
-                    velocity=beat.velocity + random.randint(-5, 5),  # Slight variation
+                    velocity=max(1, min(127, beat.velocity + random.randint(-5, 5))),  # Slight variation with clamping
                     duration=beat.duration,
                     ghost_note=beat.ghost_note,
                     accent=beat.accent
