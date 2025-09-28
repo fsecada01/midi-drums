@@ -23,12 +23,15 @@ MIDI Drums Generator is a powerful Python system that creates professional-quali
 
 🎪 **Multi-Genre Support**
 - **Metal**: Heavy, Death, Power, Progressive, Doom, Thrash, Breakdown
-- **Expandable**: Plugin architecture for Rock, Jazz, Electronic, and more
+- **Rock**: Classic, Blues, Alternative, Progressive, Punk, Hard, Pop
+- **Jazz**: Swing, Bebop, Fusion, Latin, Ballad, Hard Bop, Contemporary
+- **Funk**: Classic, P-Funk, Shuffle, New Orleans, Fusion, Minimal, Heavy
+- **Expandable**: Plugin architecture for Electronic and more
 
 🥁 **Drummer Imitation**
-- Apply characteristic styles of famous drummers
-- Signature fills and playing techniques
-- Compatible across multiple genres
+- **7 Famous Drummers**: Bonham, Porcaro, Weckl, Chambers, Roeder, Dee, Hoglan
+- Signature fills and playing techniques based on research
+- Compatible across multiple genres with authentic styles
 
 🏗️ **Flexible Song Structure**
 - Configurable sections (verse, chorus, bridge, breakdown)
@@ -76,20 +79,28 @@ api = DrumGeneratorAPI()
 song = api.create_song("metal", "death", tempo=180)
 api.save_as_midi(song, "death_metal_track.mid")
 
-print("🎵 Generated: death_metal_track.mid")
+# Create a jazz swing pattern with Dave Weckl style
+jazz_song = api.create_song("jazz", "swing", tempo=120, drummer="weckl")
+api.save_as_midi(jazz_song, "jazz_swing_weckl.mid")
+
+print("🎵 Generated: death_metal_track.mid & jazz_swing_weckl.mid")
 ```
 
 ### Command Line Usage
 
 ```bash
-# Generate a complete song
+# Generate songs across different genres
 python -m midi_drums generate --genre metal --style heavy --tempo 155 --output metal_song.mid
+python -m midi_drums generate --genre rock --style classic --tempo 140 --output rock_song.mid
+python -m midi_drums generate --genre jazz --style swing --tempo 120 --output jazz_song.mid
+python -m midi_drums generate --genre funk --style classic --tempo 110 --output funk_song.mid
 
-# Generate a single pattern
-python -m midi_drums pattern --genre metal --section breakdown --output breakdown.mid
+# Generate patterns with drummer styles
+python -m midi_drums pattern --genre rock --section verse --drummer bonham --output bonham_verse.mid
 
 # List available options
 python -m midi_drums list genres
+python -m midi_drums list drummers
 ```
 
 ## 📖 Documentation
@@ -128,10 +139,46 @@ The system follows a layered, plugin-based architecture:
 - **Doom**: Slow, heavy, powerful patterns
 - **Breakdown**: Syncopated patterns for breakdown sections
 
-#### 🔮 Future Genres
-- **Rock**: Classic, Blues, Punk, Alternative, Progressive
-- **Jazz**: Swing, Bebop, Fusion, Latin
+#### 🎸 Rock Genre
+- **Classic**: 70s classic rock (Led Zeppelin, Deep Purple)
+- **Blues**: Blues rock with shuffles and triplets
+- **Alternative**: 90s alternative rock syncopation
+- **Progressive**: Complex progressive rock patterns
+- **Punk**: Fast, aggressive punk rock
+- **Hard**: Hard rock with heavy emphasis
+- **Pop**: Pop rock with clean patterns
+
+#### 🎷 Jazz Genre
+- **Swing**: Traditional swing with ride patterns
+- **Bebop**: Fast, complex bebop rhythms
+- **Fusion**: Jazz fusion with electric energy
+- **Latin**: Latin jazz with clave patterns
+- **Ballad**: Soft, brushed ballad patterns
+- **Hard Bop**: Aggressive hard bop rhythms
+- **Contemporary**: Modern contemporary jazz
+
+#### 🕺 Funk Genre
+- **Classic**: James Brown "the one" emphasis
+- **P-Funk**: Parliament-Funkadelic grooves
+- **Shuffle**: Bernard Purdie shuffle patterns
+- **New Orleans**: Second line funk patterns
+- **Fusion**: Jazz-funk fusion styles
+- **Minimal**: Stripped-down pocket grooves
+- **Heavy**: Heavy funk with rock influence
+
+#### 🥁 Available Drummers
+- **John Bonham**: Triplet vocabulary, behind-the-beat timing
+- **Jeff Porcaro**: Half-time shuffle, studio precision
+- **Dave Weckl**: Linear playing, fusion mastery
+- **Dennis Chambers**: Funk mastery, incredible chops
+- **Jason Roeder**: Atmospheric sludge, minimal creativity
+- **Mikkey Dee**: Speed/precision, versatile power
+- **Gene Hoglan**: Mechanical precision, blast beats
+
+#### 🔮 Future Expansions
 - **Electronic**: House, Techno, Drum'n'Bass, Dubstep
+- **World**: Latin, Reggae, Afrobeat
+- **More Drummers**: Neil Peart, Buddy Rich, Stewart Copeland
 
 ## 🎵 Examples
 
@@ -142,26 +189,26 @@ from midi_drums.api.python_api import DrumGeneratorAPI
 
 api = DrumGeneratorAPI()
 
-# Metal song with custom parameters
-song = api.metal_song(
-    style="progressive",
-    tempo=140,
-    complexity=0.9
-)
-api.save_as_midi(song, "prog_metal.mid")
+# Multi-genre songs with custom parameters
+metal_song = api.create_song("metal", "progressive", tempo=140, complexity=0.9)
+rock_song = api.create_song("rock", "classic", tempo=130, drummer="bonham")
+jazz_song = api.create_song("jazz", "swing", tempo=120, drummer="weckl")
+funk_song = api.create_song("funk", "classic", tempo=110, drummer="chambers")
 
-# Batch generation
+# Batch generation across genres
 specs = [
     {'genre': 'metal', 'style': 'death', 'tempo': 180},
-    {'genre': 'metal', 'style': 'power', 'tempo': 160},
-    {'genre': 'metal', 'style': 'doom', 'tempo': 90}
+    {'genre': 'rock', 'style': 'blues', 'tempo': 95, 'drummer': 'porcaro'},
+    {'genre': 'jazz', 'style': 'fusion', 'tempo': 135, 'drummer': 'weckl'},
+    {'genre': 'funk', 'style': 'pfunk', 'tempo': 105, 'drummer': 'chambers'}
 ]
 files = api.batch_generate(specs, "output/")
 
-# Individual patterns
-verse = api.generate_pattern("metal", "verse", "heavy")
-chorus = api.generate_pattern("metal", "chorus", "death")
-breakdown = api.generate_pattern("metal", "breakdown", "heavy")
+# Individual patterns with drummer styles
+verse = api.generate_pattern("rock", "verse", "classic")
+bonham_verse = api.apply_drummer_style(verse, "bonham")
+jazz_swing = api.generate_pattern("jazz", "verse", "swing")
+funk_breakdown = api.generate_pattern("funk", "breakdown", "heavy")
 ```
 
 ### Direct Module Usage
@@ -191,17 +238,21 @@ generator.export_midi(song, "custom_song.mid")
 ### CLI Examples
 
 ```bash
-# Generate songs with different styles
+# Generate songs across all genres
 python -m midi_drums generate --genre metal --style death --tempo 180 --complexity 0.8 --output death.mid
-python -m midi_drums generate --genre metal --style power --tempo 160 --dynamics 0.9 --output power.mid
+python -m midi_drums generate --genre rock --style classic --tempo 140 --drummer bonham --output rock_bonham.mid
+python -m midi_drums generate --genre jazz --style swing --tempo 120 --drummer weckl --output jazz_weckl.mid
+python -m midi_drums generate --genre funk --style classic --tempo 110 --drummer chambers --output funk_chambers.mid
 
-# Generate patterns for specific sections
-python -m midi_drums pattern --genre metal --section verse --style progressive --bars 8 --output verse.mid
-python -m midi_drums pattern --genre metal --section breakdown --style heavy --output breakdown.mid
+# Generate patterns with drummer styles
+python -m midi_drums pattern --genre rock --section verse --style blues --drummer porcaro --output porcaro_verse.mid
+python -m midi_drums pattern --genre jazz --section bridge --style fusion --drummer weckl --output weckl_bridge.mid
 
 # System information
 python -m midi_drums info
-python -m midi_drums list styles --genre metal
+python -m midi_drums list genres
+python -m midi_drums list styles --genre jazz
+python -m midi_drums list drummers
 ```
 
 ## 🔌 Plugin System
@@ -352,14 +403,16 @@ We welcome contributions! Here's how you can help:
 ### 🎵 Add New Genres
 1. Create a new plugin in `midi_drums/plugins/genres/`
 2. Implement the `GenrePlugin` interface
-3. Add comprehensive patterns for different sections
+3. Add comprehensive patterns for different sections and styles
 4. Include characteristic fills and variations
+5. Examples: Rock, Jazz, and Funk genres with 7 styles each
 
 ### 🥁 Add Drummer Styles
 1. Create a drummer plugin in `midi_drums/plugins/drummers/`
 2. Implement the `DrummerPlugin` interface
-3. Add signature playing techniques and fills
+3. Add signature playing techniques and fills based on research
 4. Make it compatible with multiple genres
+5. Examples: 7 drummers already implemented with authentic styles
 
 ### 🐛 Report Issues
 - Found a bug? Open an issue on GitHub
@@ -384,22 +437,27 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📈 Roadmap
 
-### Phase 1: Core Expansion 🚧
-- [ ] Rock genre plugin with 5+ styles
-- [ ] Jazz genre plugin (swing, bebop, fusion)
-- [ ] First drummer plugins (Bonham, Peart)
+### Phase 1: Core Expansion ✅
+- [x] Rock genre plugin with 7 styles
+- [x] Jazz genre plugin with 7 styles (swing, bebop, fusion, latin, etc.)
+- [x] Funk genre plugin with 7 styles
+- [x] 7 drummer plugins (Bonham, Porcaro, Weckl, Chambers, Roeder, Dee, Hoglan)
+- [x] Comprehensive testing and validation system
 
-### Phase 2: Advanced Features 🔮
+### Phase 2: Advanced Features 🚧
+- [ ] Electronic genre plugin (House, Techno, Drum'n'Bass)
+- [ ] More drummer plugins (Neil Peart, Buddy Rich, Stewart Copeland)
 - [ ] Real-time audio synthesis
 - [ ] AI-driven pattern variations
 - [ ] Advanced humanization algorithms
 - [ ] Groove template system
 
-### Phase 3: Integration 🌐
+### Phase 3: Integration 🔮
 - [ ] REST API for web services
 - [ ] DAW integration (VST/AU plugins)
 - [ ] Pattern marketplace
 - [ ] Visual pattern editor
+- [ ] World music genres (Latin, Reggae, Afrobeat)
 
 ---
 

@@ -7,8 +7,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 This is a comprehensive MIDI drum generation system with a modular, plugin-based architecture. It supports multiple genres, styles, drummer imitations, and song structures. The system evolved from a simple single-file metal generator (`generate_metal_drum_track.py`) into a full-featured, extensible platform.
 
 ### Key Features
-- **Multi-Genre Support**: Metal (heavy, death, power, progressive, doom), expandable to rock, jazz, electronic
-- **Drummer Imitation**: Plugin system for applying characteristic styles of famous drummers
+- **Multi-Genre Support**: Metal (7 styles), Rock (7 styles), Jazz (7 styles), Funk (7 styles), expandable to electronic
+- **Drummer Imitation**: 7 drummer plugins with authentic styles (Bonham, Porcaro, Weckl, Chambers, Roeder, Dee, Hoglan)
 - **Song Structure**: Configurable sections (verse, chorus, bridge, breakdown, intro, outro)
 - **Pattern Variations**: Humanization, fills, complexity control, and dynamic variations
 - **Multiple Interfaces**: Python API, CLI, and direct module usage
@@ -85,8 +85,18 @@ midi_drums/
 ├── plugins/
 │   ├── base.py          # GenrePlugin, DrummerPlugin, PluginManager
 │   ├── genres/
-│   │   └── metal.py     # MetalGenrePlugin with 7 styles
-│   ├── drummers/        # Future drummer style plugins
+│   │   ├── metal.py     # MetalGenrePlugin with 7 styles
+│   │   ├── rock.py      # RockGenrePlugin with 7 styles
+│   │   ├── jazz.py      # JazzGenrePlugin with 7 styles
+│   │   └── funk.py      # FunkGenrePlugin with 7 styles
+│   ├── drummers/        # 7 drummer style plugins
+│   │   ├── bonham.py    # John Bonham - triplets, behind-beat
+│   │   ├── porcaro.py   # Jeff Porcaro - shuffle, ghost notes
+│   │   ├── weckl.py     # Dave Weckl - linear, fusion
+│   │   ├── chambers.py  # Dennis Chambers - funk mastery
+│   │   ├── roeder.py    # Jason Roeder - atmospheric sludge
+│   │   ├── dee.py       # Mikkey Dee - speed/precision
+│   │   └── hoglan.py    # Gene Hoglan - blast beats
 │   └── __init__.py
 ├── engines/
 │   ├── midi_engine.py   # MIDI file generation
@@ -141,23 +151,28 @@ specs = [
 files = api.batch_generate(specs, "output_dir/")
 
 # List available options
-print("Genres:", api.list_genres())
-print("Metal styles:", api.list_styles("metal"))
-print("Drummers:", api.list_drummers())
+print("Genres:", api.list_genres())  # ['metal', 'rock', 'jazz', 'funk']
+print("Rock styles:", api.list_styles("rock"))  # 7 rock styles
+print("Jazz styles:", api.list_styles("jazz"))  # 7 jazz styles
+print("Drummers:", api.list_drummers())  # 7 drummer personalities
 ```
 
 ### CLI Interface
 ```bash
-# Generate complete songs
+# Generate complete songs across genres
 python -m midi_drums generate --genre metal --style death --tempo 180 --output song.mid
-python -m midi_drums generate --genre metal --style progressive --complexity 0.9 --output prog.mid
+python -m midi_drums generate --genre rock --style classic --drummer bonham --output rock_song.mid
+python -m midi_drums generate --genre jazz --style swing --drummer weckl --output jazz_song.mid
+python -m midi_drums generate --genre funk --style classic --drummer chambers --output funk_song.mid
 
-# Generate single patterns
-python -m midi_drums pattern --genre metal --section breakdown --bars 8 --output fill.mid
+# Generate single patterns with drummer styles
+python -m midi_drums pattern --genre rock --section verse --style blues --drummer porcaro --output verse.mid
+python -m midi_drums pattern --genre jazz --section bridge --style fusion --drummer weckl --output bridge.mid
 
 # List available options
-python -m midi_drums list genres
-python -m midi_drums list styles --genre metal
+python -m midi_drums list genres  # metal, rock, jazz, funk
+python -m midi_drums list styles --genre jazz  # 7 jazz styles
+python -m midi_drums list drummers  # 7 drummer personalities
 python -m midi_drums info
 
 # Get help
@@ -205,12 +220,47 @@ if pattern:
 - **doom**: Slow, heavy, powerful patterns
 - **breakdown**: Syncopated patterns for breakdown sections
 
+### Rock Genre (RockGenrePlugin)
+- **classic**: 70s classic rock (Led Zeppelin, Deep Purple)
+- **blues**: Blues rock with shuffles and triplets
+- **alternative**: 90s alternative rock syncopation
+- **progressive**: Complex progressive rock patterns
+- **punk**: Fast, aggressive punk rock
+- **hard**: Hard rock with heavy emphasis
+- **pop**: Pop rock with clean patterns
+
+### Jazz Genre (JazzGenrePlugin)
+- **swing**: Traditional swing with ride patterns
+- **bebop**: Fast, complex bebop rhythms
+- **fusion**: Jazz fusion with electric energy
+- **latin**: Latin jazz with clave patterns
+- **ballad**: Soft, brushed ballad patterns
+- **hard_bop**: Aggressive hard bop rhythms
+- **contemporary**: Modern contemporary jazz
+
+### Funk Genre (FunkGenrePlugin)
+- **classic**: James Brown "the one" emphasis
+- **pfunk**: Parliament-Funkadelic grooves
+- **shuffle**: Bernard Purdie shuffle patterns
+- **new_orleans**: Second line funk patterns
+- **fusion**: Jazz-funk fusion styles
+- **minimal**: Stripped-down pocket grooves
+- **heavy**: Heavy funk with rock influence
+
+### Available Drummers
+- **John Bonham (bonham)**: Triplet vocabulary, behind-the-beat timing, guitar-following patterns
+- **Jeff Porcaro (porcaro)**: Half-time shuffle mastery, ghost notes, studio precision
+- **Dave Weckl (weckl)**: Linear playing, sophisticated coordination, fusion expertise
+- **Dennis Chambers (chambers)**: Funk mastery, incredible chops, pocket stretching
+- **Jason Roeder (roeder)**: Atmospheric sludge, minimal creativity, crushing weight
+- **Mikkey Dee (dee)**: Speed/precision, versatile power, twisted backbeats
+- **Gene Hoglan (hoglan)**: Mechanical precision, blast beats, progressive complexity
+
 ### Future Expandability
 The plugin system is designed for easy addition of:
-- **Rock**: classic, blues, punk, alternative, progressive
-- **Jazz**: swing, bebop, fusion, latin
 - **Electronic**: house, techno, drum'n'bass, dubstep
 - **World**: latin, reggae, afrobeat, etc.
+- **More Drummers**: Neil Peart, Buddy Rich, Stewart Copeland, etc.
 
 ## Plugin Development Guide
 
@@ -306,7 +356,9 @@ class BonhamPlugin(DrummerPlugin):
 
 ### Current Tests
 - `test_new_architecture.py`: Comprehensive integration tests
-- Tests import system, pattern creation, plugin functionality, MIDI export
+- `test_all_drummer_plugins.py`: Complete drummer plugin validation
+- `test_new_genre_plugins.py`: Genre plugin testing (Rock, Jazz, Funk)
+- Tests: import system, pattern creation, plugin functionality, MIDI export, drummer compatibility
 
 ### Future Test Structure
 ```
@@ -353,17 +405,21 @@ tests/
 
 ## Future Development Priorities
 
-### Phase 1: Core Expansion
-1. **Rock Genre Plugin**: Complete rock genre with 5+ styles
-2. **Jazz Genre Plugin**: Swing, bebop, fusion styles
-3. **Drummer Plugins**: Bonham, Peart, Baker, Rich implementations
-4. **Real-time Generation**: Live performance capabilities
+### Phase 1: Core Expansion ✅ COMPLETED
+1. **Rock Genre Plugin**: ✅ Complete with 7 styles (classic, blues, alternative, progressive, punk, hard, pop)
+2. **Jazz Genre Plugin**: ✅ Complete with 7 styles (swing, bebop, fusion, latin, ballad, hard_bop, contemporary)
+3. **Funk Genre Plugin**: ✅ Complete with 7 styles (classic, pfunk, shuffle, new_orleans, fusion, minimal, heavy)
+4. **Drummer Plugins**: ✅ 7 implemented (Bonham, Porcaro, Weckl, Chambers, Roeder, Dee, Hoglan)
+5. **Comprehensive Testing**: ✅ Full test suites for all plugins and compatibility
 
-### Phase 2: Advanced Features
-1. **Audio Engine**: Real audio synthesis alongside MIDI
-2. **Pattern Variations**: AI-driven pattern evolution
-3. **Groove Templates**: Preset combinations for quick generation
-4. **Advanced Humanization**: Machine learning-based timing
+### Phase 2: Advanced Features 🚧 IN PROGRESS
+1. **Electronic Genre Plugin**: House, Techno, Drum'n'Bass, Dubstep styles
+2. **More Drummer Plugins**: Neil Peart, Buddy Rich, Stewart Copeland
+3. **Audio Engine**: Real audio synthesis alongside MIDI
+4. **Pattern Variations**: AI-driven pattern evolution
+5. **Groove Templates**: Preset combinations for quick generation
+6. **Advanced Humanization**: Machine learning-based timing
+7. **Real-time Generation**: Live performance capabilities
 
 ### Phase 3: Integration
 1. **REST API**: Web service for remote generation
@@ -381,9 +437,18 @@ tests/
 
 ### Adding a New Genre
 1. Create `midi_drums/plugins/genres/[genre].py`
-2. Implement `GenrePlugin` interface
+2. Implement `GenrePlugin` interface with 7+ styles
 3. Add to plugin discovery system
 4. Create comprehensive test suite
+5. Examples: Rock, Jazz, Funk genres with authentic patterns
+
+### Adding a New Drummer
+1. Create `midi_drums/plugins/drummers/[drummer].py`
+2. Implement `DrummerPlugin` interface
+3. Research authentic playing techniques and signature patterns
+4. Add signature fills and style modifications
+5. Test compatibility across multiple genres
+6. Examples: 7 drummers with research-based implementations
 
 ### Adding MIDI Export Features
 1. Extend `midi_drums/engines/midi_engine.py`
