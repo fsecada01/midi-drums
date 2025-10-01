@@ -38,6 +38,22 @@ class JazzGenrePlugin(GenrePlugin):
             "contemporary",  # Modern jazz patterns
         ]
 
+    @property
+    def intensity_profile(self) -> dict[str, float]:
+        """Jazz genre intensity characteristics.
+
+        Jazz emphasizes sophistication, dynamics, and space. Lower aggression
+        and power, but high complexity. Ride cymbal focus creates lighter touch.
+        """
+        return {
+            "aggression": 0.3,  # Low aggression, conversational
+            "speed": 0.7,  # Varies widely (ballad to bebop)
+            "density": 0.6,  # Ride pattern creates constant texture
+            "power": 0.4,  # Light to moderate touch
+            "complexity": 0.85,  # High rhythmic sophistication
+            "darkness": 0.3,  # Generally bright, open tonality
+        }
+
     def generate_pattern(
         self, section: str, parameters: GenerationParameters
     ) -> Pattern:

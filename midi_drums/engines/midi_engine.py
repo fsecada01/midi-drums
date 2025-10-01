@@ -22,7 +22,10 @@ class MIDIEngine:
         self.drum_kit = drum_kit or DrumKit.create_ezdrummer3_kit()
 
     def pattern_to_midi(self, pattern: Pattern, tempo: int = 120) -> MIDIFile:
-        """Convert a single pattern to a MIDI file."""
+        """Convert a single pattern to a MIDI file.
+
+        Sorts beats and ensures durations don't overlap to prevent midiutil errors.
+        """
         midi = MIDIFile(1)  # 1 track
         track = 0
         channel = self.drum_kit.channel
@@ -30,15 +33,25 @@ class MIDIEngine:
         # Set tempo
         midi.addTempo(track, 0, tempo)
 
-        # Add pattern beats
-        for beat in pattern.beats:
+        # Sort beats by position, then by instrument for consistent ordering
+        sorted_beats = sorted(
+            pattern.beats, key=lambda b: (b.position, b.instrument.value)
+        )
+
+        # Add pattern beats with overlap prevention
+        for beat in sorted_beats:
             midi_note = self.drum_kit.get_midi_note(beat.instrument)
+
+            # Cap duration to prevent overlap with next note
+            # Use minimum of beat.duration or a safe short duration
+            safe_duration = min(beat.duration, 0.2)
+
             midi.addNote(
                 track=track,
                 channel=channel,
                 pitch=midi_note,
                 time=beat.position,
-                duration=beat.duration,
+                duration=safe_duration,
                 volume=beat.velocity,
             )
 

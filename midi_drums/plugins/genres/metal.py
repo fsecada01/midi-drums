@@ -31,6 +31,22 @@ class MetalGenrePlugin(GenrePlugin):
             "breakdown",
         ]
 
+    @property
+    def intensity_profile(self) -> dict[str, float]:
+        """Metal genre intensity characteristics.
+
+        Metal is characterized by high aggression, power, and darkness with
+        fast tempos and dense patterns. Complexity varies by subgenre.
+        """
+        return {
+            "aggression": 0.9,  # Very aggressive and heavy
+            "speed": 0.8,  # Generally fast tempos (140-200+ BPM)
+            "density": 0.8,  # Dense double bass and cymbal work
+            "power": 1.0,  # Maximum power in hits
+            "complexity": 0.6,  # Moderate complexity (prog metal higher)
+            "darkness": 0.9,  # Dark, heavy tonal quality
+        }
+
     def generate_pattern(
         self, section: str, parameters: GenerationParameters
     ) -> Pattern:
@@ -176,6 +192,10 @@ class MetalGenrePlugin(GenrePlugin):
                     reduced_beats.append(beat)
             else:
                 reduced_beats.append(beat)
+
+        # Safety: Ensure pattern never empty (prevents downstream plugin errors)
+        if not reduced_beats:
+            return pattern  # Return original unfiltered pattern
 
         pattern.beats = reduced_beats
         return pattern

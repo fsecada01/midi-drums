@@ -27,6 +27,34 @@ class GenrePlugin(ABC):
         """List of style variations supported by this genre."""
         pass
 
+    @property
+    def intensity_profile(self) -> dict[str, float]:
+        """Return genre's intensity characteristics (0.0-1.0 scale).
+
+        Defines the characteristic "feel" of this genre across multiple dimensions.
+        Used for genre context adaptation when blending patterns.
+
+        Returns:
+            Dictionary mapping intensity dimensions to values (0.0-1.0):
+                - aggression: How aggressive/heavy (0.0=gentle, 1.0=extreme)
+                - speed: Typical tempo tendency (0.0=slow, 1.0=very fast)
+                - density: Note density (0.0=sparse, 1.0=very dense)
+                - power: Kick/snare intensity (0.0=light, 1.0=maximum)
+                - complexity: Pattern complexity (0.0=simple, 1.0=very complex)
+                - darkness: Tonal darkness (0.0=bright, 1.0=dark/heavy)
+
+        Default implementation returns neutral (0.5) for all dimensions.
+        Override in genre plugins to define characteristic profile.
+        """
+        return {
+            "aggression": 0.5,
+            "speed": 0.5,
+            "density": 0.5,
+            "power": 0.5,
+            "complexity": 0.5,
+            "darkness": 0.5,
+        }
+
     @abstractmethod
     def generate_pattern(
         self, section: str, parameters: GenerationParameters
@@ -46,6 +74,107 @@ class GenrePlugin(ABC):
     def get_common_fills(self) -> list[Fill]:
         """Get common fill patterns for this genre."""
         pass
+
+    def apply_context_blend(
+        self,
+        pattern: Pattern,
+        context_profile: dict[str, float],
+        blend_amount: float,
+    ) -> Pattern:
+        """Adapt pattern to match context genre characteristics.
+
+        Blends this genre's pattern with characteristics from a context genre,
+        allowing patterns to adapt to overall song aesthetics while maintaining
+        their core identity.
+
+        Args:
+            pattern: Base pattern to adapt
+            context_profile: Intensity profile of context genre
+            blend_amount: Blending strength (0.0=no blend, 1.0=full blend)
+
+        Returns:
+            Adapted pattern with blended characteristics
+
+        Example:
+            Progressive pattern in metal song context:
+            - Base: progressive complexity with moderate power
+            - Context: metal's high aggression and power
+            - Result: Complex progressive with heavier, more aggressive feel
+        """
+        from midi_drums.models.pattern import DrumInstrument
+
+        if blend_amount <= 0.0:
+            return pattern
+
+        adapted = pattern.copy()
+        blend_amount = min(1.0, max(0.0, blend_amount))
+
+        # Calculate blended intensity values
+        own_profile = self.intensity_profile
+        blended_power = (
+            own_profile["power"]
+            + (context_profile["power"] - own_profile["power"]) * blend_amount
+        )
+        blended_aggression = (
+            own_profile["aggression"]
+            + (context_profile["aggression"] - own_profile["aggression"])
+            * blend_amount
+        )
+        blended_density = (
+            own_profile["density"]
+            + (context_profile["density"] - own_profile["density"])
+            * blend_amount
+        )
+
+        # Apply power adjustment to kick and snare
+        power_boost = int((blended_power - own_profile["power"]) * 20)
+        for beat in adapted.beats:
+            if beat.instrument in [DrumInstrument.KICK, DrumInstrument.SNARE]:
+                beat.velocity = max(1, min(127, beat.velocity + power_boost))
+
+        # Apply aggression (tighter timing for high aggression)
+        if blended_aggression > 0.7 and blend_amount > 0.2:
+            quantize_strength = blend_amount * 0.5
+            for beat in adapted.beats:
+                # Quantize to nearest 16th note
+                quantized_pos = round(beat.position / 0.25) * 0.25
+                # Blend between original and quantized
+                beat.position = (
+                    beat.position
+                    + (quantized_pos - beat.position) * quantize_strength
+                )
+
+        # Apply density (add ghost notes on snare for dense contexts)
+        if blended_density > own_profile["density"] and blend_amount > 0.3:
+            density_increase = (
+                blended_density - own_profile["density"]
+            ) * blend_amount
+            if density_increase > 0.2:
+                # Add subtle ghost notes between main snare hits
+                import random
+
+                new_beats = []
+                snare_positions = [
+                    b.position
+                    for b in adapted.beats
+                    if b.instrument == DrumInstrument.SNARE
+                ]
+                for pos in snare_positions:
+                    if random.random() < density_increase:
+                        # Add ghost note before main hit
+                        from midi_drums.models.pattern import Beat
+
+                        ghost = Beat(
+                            position=max(0, pos - 0.125),
+                            instrument=DrumInstrument.SNARE,
+                            velocity=max(40, int(50 * (1 - blend_amount))),
+                            duration=0.05,
+                            ghost_note=True,
+                        )
+                        new_beats.append(ghost)
+                adapted.beats.extend(new_beats)
+
+        return adapted
 
     def get_section_variations(self, section: str) -> list[Pattern]:
         """Get pattern variations for a specific section.
@@ -287,3 +416,7 @@ class PluginManager:
     def get_styles_for_genre(self, genre: str) -> list[str]:
         """Get available styles for a genre."""
         return self.registry.get_styles_for_genre(genre)
+
+    def get_genre_plugin(self, genre: str) -> GenrePlugin | None:
+        """Get genre plugin by name."""
+        return self.registry.get_genre_plugin(genre)

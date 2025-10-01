@@ -37,6 +37,22 @@ class FunkGenrePlugin(GenrePlugin):
             "heavy",  # Heavy, dense funk patterns
         ]
 
+    @property
+    def intensity_profile(self) -> dict[str, float]:
+        """Funk genre intensity characteristics.
+
+        Funk emphasizes groove, syncopation, and "the one". Moderate power with
+        high density from ghost notes. Complexity comes from rhythmic interplay.
+        """
+        return {
+            "aggression": 0.5,  # Moderate, groove-focused not aggressive
+            "speed": 0.5,  # Medium tempos (90-115 BPM typical)
+            "density": 0.75,  # High density from ghost notes
+            "power": 0.65,  # Moderate power, emphasis on groove
+            "complexity": 0.7,  # High syncopation and rhythmic interplay
+            "darkness": 0.4,  # Slightly warm but not dark
+        }
+
     def generate_pattern(
         self, section: str, parameters: GenerationParameters
     ) -> Pattern:

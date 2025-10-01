@@ -115,16 +115,31 @@ class DrumGenerator:
     def generate_pattern(
         self, genre: str, section: str = "verse", bars: int = 4, **kwargs
     ) -> Pattern | None:
-        """Generate a single pattern.
+        """Generate a single pattern with optional genre context adaptation.
 
         Args:
             genre: Genre name
             section: Section type
             bars: Number of bars (for multi-bar patterns)
-            **kwargs: Additional generation parameters
+            **kwargs: Additional generation parameters including:
+                - song_genre_context: Overall song genre for adaptation
+                - context_blend: Blend amount (0.0-1.0)
+                - drummer: Drummer style to apply
+                - humanization: Humanization amount
+                - etc.
 
         Returns:
             Generated Pattern or None if generation failed
+
+        Example:
+            # Generate progressive pattern adapted to metal context
+            pattern = generator.generate_pattern(
+                genre="metal",
+                style="progressive",
+                section="bridge",
+                song_genre_context="metal",
+                context_blend=0.3
+            )
         """
         # Create parameters
         params = GenerationParameters(genre=genre, **kwargs)
@@ -133,6 +148,25 @@ class DrumGenerator:
         pattern = self.plugin_manager.generate_pattern(genre, section, params)
         if not pattern:
             return None
+
+        # Apply genre context blending if specified
+        if params.song_genre_context and params.context_blend > 0:
+            # Only blend if context genre is different from pattern genre
+            if params.song_genre_context != genre:
+                context_plugin = self.plugin_manager.get_genre_plugin(
+                    params.song_genre_context
+                )
+                genre_plugin = self.plugin_manager.get_genre_plugin(genre)
+
+                if context_plugin and genre_plugin:
+                    context_profile = context_plugin.intensity_profile
+                    pattern = genre_plugin.apply_context_blend(
+                        pattern, context_profile, params.context_blend
+                    )
+                    logger.debug(
+                        f"Applied {params.song_genre_context} context "
+                        f"(blend={params.context_blend}) to {genre} pattern"
+                    )
 
         # Apply drummer style if specified
         if params.drummer:

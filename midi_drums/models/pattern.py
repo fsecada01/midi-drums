@@ -1,9 +1,12 @@
 """Pattern data models and core drum pattern structures."""
 
+import logging
 import random
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 class DrumInstrument(Enum):
@@ -147,7 +150,16 @@ class Pattern:
         )
 
     def copy(self) -> "Pattern":
-        """Create a deep copy of the pattern."""
+        """Create a deep copy of the pattern.
+
+        Logs warning if pattern has no beats to aid debugging.
+        """
+        if not self.beats:
+            logger.warning(
+                f"Pattern '{self.name}' has no beats - copying empty pattern. "
+                "This may cause issues with drummer plugins."
+            )
+
         return Pattern(
             name=self.name,
             beats=[

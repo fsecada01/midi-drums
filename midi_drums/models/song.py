@@ -18,6 +18,11 @@ class GenerationParameters:
     humanization: float = 0.3  # 0.0-1.0, affects timing/velocity variation
     fill_frequency: float = 0.2  # 0.0-1.0, how often fills occur
     swing_ratio: float = 0.0  # 0.0-1.0, swing feel
+
+    # Genre context adaptation (NEW)
+    song_genre_context: str | None = None  # Overall song genre for adaptation
+    context_blend: float = 0.0  # 0.0-1.0, how much to blend with context
+
     custom_parameters: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self):
@@ -28,6 +33,7 @@ class GenerationParameters:
             ("humanization", self.humanization),
             ("fill_frequency", self.fill_frequency),
             ("swing_ratio", self.swing_ratio),
+            ("context_blend", self.context_blend),
         ]:
             if not 0.0 <= value <= 1.0:
                 raise ValueError(

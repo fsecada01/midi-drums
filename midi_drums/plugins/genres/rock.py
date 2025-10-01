@@ -38,6 +38,22 @@ class RockGenrePlugin(GenrePlugin):
             "pop",  # Pop rock with clean patterns
         ]
 
+    @property
+    def intensity_profile(self) -> dict[str, float]:
+        """Rock genre intensity characteristics.
+
+        Rock emphasizes strong backbeat, moderate aggression, and straightforward
+        patterns. Power and dynamics vary by subgenre (hard rock vs pop rock).
+        """
+        return {
+            "aggression": 0.6,  # Moderate aggression (less than metal)
+            "speed": 0.6,  # Moderate tempos (100-140 BPM typical)
+            "density": 0.6,  # Moderate density, steady groove
+            "power": 0.75,  # Strong but not maximum power
+            "complexity": 0.5,  # Generally straightforward (prog higher)
+            "darkness": 0.5,  # Neutral tonality
+        }
+
     def generate_pattern(
         self, section: str, parameters: GenerationParameters
     ) -> Pattern:
