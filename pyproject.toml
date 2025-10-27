@@ -25,6 +25,15 @@ dev = [
     "pytest-cov>=6.2.1",
     "ruff>=0.12.9",
 ]
+ai = [
+    "langchain>=0.3.0",
+    "langchain-openai>=0.3.0",
+    "pydantic-ai>=0.0.14",
+    "librosa>=0.10.0",
+    "numpy>=1.24.0",
+    "soundfile>=0.12.0",
+    "anthropic>=0.39.0",
+]
 
 [tool.ruff]
 fix = true

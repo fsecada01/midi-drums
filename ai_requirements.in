@@ -1,0 +1,16 @@
+-c core_requirements.txt
+
+# Langchain for agent-based composition and NL processing
+langchain>=0.3.0
+langchain-openai>=0.3.0
+
+# Pydantic AI for type-safe structured outputs
+pydantic-ai>=0.0.14
+
+# Audio analysis for WAV/MIDI pattern extraction
+librosa>=0.10.0
+numpy>=1.24.0
+soundfile>=0.12.0
+
+# LLM providers
+anthropic>=0.39.0
