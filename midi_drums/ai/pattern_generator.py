@@ -4,6 +4,7 @@ This module uses Pydantic AI to generate drum patterns from natural language
 descriptions with full type safety and validation.
 """
 
+from loguru import logger
 from pydantic_ai import Agent
 from pydantic_ai.models.anthropic import AnthropicModel
 
@@ -31,11 +32,14 @@ class PydanticPatternGenerator:
             api_key: Optional Anthropic API key. If not provided, will use
                     ANTHROPIC_API_KEY environment variable.
         """
+        logger.info("Initializing Pydantic AI Pattern Generator")
+
         # Initialize Anthropic model
         self.model = AnthropicModel(
             "claude-sonnet-4-20250514",  # Latest Claude Sonnet
             api_key=api_key,
         )
+        logger.debug("Anthropic model initialized: claude-sonnet-4-20250514")
 
         # Create agent for pattern characteristic inference
         self.characteristics_agent = Agent(
@@ -43,9 +47,11 @@ class PydanticPatternGenerator:
             result_type=PatternCharacteristics,
             system_prompt=self._build_system_prompt(),
         )
+        logger.debug("Pattern characteristics agent created")
 
         # Initialize drum generator for actual pattern creation
         self.drum_generator = DrumGenerator()
+        logger.info("Pydantic AI Pattern Generator ready")
 
     def _build_system_prompt(self) -> str:
         """Build comprehensive system prompt for pattern analysis."""
@@ -130,8 +136,17 @@ description context.
             >>> print(f"Genre: {chars.genre}, Style: {chars.style}")
             Genre: metal, Style: death
         """
+        logger.info(f"Analyzing pattern description: '{description[:50]}...'")
         result = await self.characteristics_agent.run(description)
-        return result.data
+        chars = result.data
+
+        logger.success(
+            f"Pattern analyzed: {chars.genre}/{chars.style} "
+            f"(intensity={chars.intensity:.2f})"
+        )
+        logger.debug(f"AI Reasoning: {chars.reasoning}")
+
+        return chars
 
     def generate_pattern(
         self,
@@ -166,6 +181,10 @@ description context.
             )
 
         # Generate pattern using existing architecture
+        logger.info(
+            f"Generating {characteristics.genre}/{characteristics.style} "
+            f"{request.section} pattern ({request.bars} bars)"
+        )
         pattern = self.drum_generator.generate_pattern(
             genre=characteristics.genre,
             section=request.section,
@@ -174,16 +193,24 @@ description context.
         )
 
         if pattern is None:
+            logger.error(
+                f"Failed to generate pattern for {characteristics.genre}/"
+                f"{characteristics.style}"
+            )
             raise ValueError(
                 f"Failed to generate pattern for {characteristics.genre}/"
                 f"{characteristics.style}"
             )
 
+        logger.debug(f"Base pattern generated: {len(pattern.beats)} beats")
+
         # Apply drummer style if requested
         if request.drummer_style:
+            logger.info(f"Applying {request.drummer_style} drummer style")
             pattern = self.drum_generator.apply_drummer_style(
                 pattern, request.drummer_style
             )
+            logger.debug(f"Drummer style applied: {len(pattern.beats)} beats")
 
         # Build response metadata
         response = PatternGenerationResponse(
@@ -195,6 +222,11 @@ description context.
             ),
             confidence=0.85,  # High confidence with Claude analysis
             suggestions=self._generate_suggestions(characteristics),
+        )
+
+        logger.success(
+            f"Pattern generation complete: {pattern.name} "
+            f"(confidence={response.confidence:.2f})"
         )
 
         return pattern, response

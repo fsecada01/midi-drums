@@ -10,6 +10,7 @@ from langchain.agents import AgentExecutor, create_tool_calling_agent
 from langchain.tools import BaseTool, StructuredTool
 from langchain_anthropic import ChatAnthropic
 from langchain_core.prompts import ChatPromptTemplate
+from loguru import logger
 from pydantic import BaseModel, Field
 
 from midi_drums.core.engine import DrumGenerator
@@ -72,12 +73,15 @@ class PatternCompositionAgent:
             api_key: Optional Anthropic API key. If not provided, will use
                     ANTHROPIC_API_KEY environment variable.
         """
+        logger.info("Initializing Langchain Pattern Composition Agent")
+
         # Initialize LLM
         self.llm = ChatAnthropic(
             model="claude-sonnet-4-20250514",
             api_key=api_key,
             temperature=0.7,  # Creativity for composition
         )
+        logger.debug("LLM initialized: claude-sonnet-4-20250514 (temp=0.7)")
 
         # Initialize drum generator
         self.drum_generator = DrumGenerator()
@@ -85,12 +89,15 @@ class PatternCompositionAgent:
         # Pattern storage for reference across agent calls
         self.pattern_cache: dict[str, Pattern] = {}
         self.song_cache: dict[str, Song] = {}
+        logger.debug("Pattern and song caches initialized")
 
         # Create tools
         self.tools = self._create_tools()
+        logger.info(f"Agent tools created: {len(self.tools)} tools available")
 
         # Create agent
         self.agent = self._create_agent()
+        logger.success("Langchain Pattern Composition Agent ready")
 
     def _create_tools(self) -> list[BaseTool]:
         """Create Langchain tools for drum generation."""
@@ -379,7 +386,19 @@ Be helpful, creative, and musically knowledgeable!
             ... )
             >>> print(result['output'])
         """
+        logger.info(f"Agent request: '{user_request[:60]}...'")
+        logger.debug(
+            f"Cache state: {len(self.pattern_cache)} patterns, "
+            f"{len(self.song_cache)} songs"
+        )
+
         result = self.agent.invoke({"input": user_request})
+
+        logger.success("Agent composition complete")
+        logger.debug(
+            f"Agent response length: {len(result.get('output', ''))} chars"
+        )
+
         return result
 
     def get_pattern(self, pattern_id: str) -> Pattern | None:
