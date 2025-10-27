@@ -5,9 +5,9 @@ authors = [
 ]
 readme = "CLAUDE.md"
 requires-python = ">=3.12,<3.14"
+license = { text = "MIT" }
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Topic :: Multimedia :: Sound/Audio :: MIDI",
 ]
@@ -28,7 +28,8 @@ dev = [
 ]
 ai = [
     "langchain>=0.3.0",
-    "langchain-openai>=0.3.0",
+    "langchain-anthropic>=0.3.0",
+    "langchain-core>=0.3.0",
     "pydantic-ai>=0.0.14",
     "librosa>=0.10.0",
     "numpy>=1.24.0",
@@ -107,5 +108,5 @@ filterwarnings = [
 ]
 
 [build-system]
-requires = ["setuptools>=61", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
