@@ -6,13 +6,13 @@ Langchain's agent framework with access to the MIDI Drums Generator as tools.
 
 from typing import Any
 
-from langchain.agents import AgentExecutor, create_tool_calling_agent
+from langchain.agents import AgentExecutor, create_react_agent
+from langchain.prompts import ChatPromptTemplate
 from langchain.tools import BaseTool, StructuredTool
-from langchain_anthropic import ChatAnthropic
-from langchain_core.prompts import ChatPromptTemplate
 from loguru import logger
 from pydantic import BaseModel, Field
 
+from midi_drums.ai.backends import AIBackendConfig, AIBackendFactory
 from midi_drums.core.engine import DrumGenerator
 from midi_drums.models.pattern import Pattern
 from midi_drums.models.song import Song
@@ -66,22 +66,28 @@ class PatternCompositionAgent:
     - Provide musical suggestions and alternatives
     """
 
-    def __init__(self, api_key: str | None = None):
+    def __init__(
+        self,
+        api_key: str | None = None,
+        backend_config: AIBackendConfig | None = None,
+    ):
         """Initialize the pattern composition agent.
 
         Args:
-            api_key: Optional Anthropic API key. If not provided, will use
-                    ANTHROPIC_API_KEY environment variable.
+            api_key: Optional API key (deprecated, use backend_config or env vars)
+            backend_config: AI backend configuration. If None, uses env vars.
         """
         logger.info("Initializing Langchain Pattern Composition Agent")
 
-        # Initialize LLM
-        self.llm = ChatAnthropic(
-            model="claude-sonnet-4-20250514",
-            api_key=api_key,
-            temperature=0.7,  # Creativity for composition
-        )
-        logger.debug("LLM initialized: claude-sonnet-4-20250514 (temp=0.7)")
+        # Handle legacy api_key parameter
+        if api_key and not backend_config:
+            logger.warning(
+                "api_key parameter is deprecated. Use backend_config or env vars."
+            )
+            backend_config = AIBackendConfig(api_key=api_key)
+
+        # Initialize LLM using backend factory
+        self.llm = AIBackendFactory.create_langchain_llm(backend_config)
 
         # Initialize drum generator
         self.drum_generator = DrumGenerator()
@@ -359,7 +365,7 @@ Be helpful, creative, and musically knowledgeable!
             ]
         )
 
-        agent = create_tool_calling_agent(self.llm, self.tools, prompt)
+        agent = create_react_agent(self.llm, self.tools, prompt)
 
         return AgentExecutor(
             agent=agent,

@@ -8,7 +8,8 @@ approaches.
 import asyncio
 from pathlib import Path
 
-from midi_drums.ai.agents.pattern_agent import PatternCompositionAgent
+from midi_drums.ai.agents.pattern_agent_v2 import PatternCompositionAgentV2
+from midi_drums.ai.backends import AIBackendConfig
 from midi_drums.ai.pattern_generator import PydanticPatternGenerator
 from midi_drums.ai.schemas import (
     PatternGenerationRequest,
@@ -24,12 +25,21 @@ class DrumGeneratorAI:
     This class provides both type-safe (Pydantic AI) and agent-based
     (Langchain) approaches to AI-powered drum pattern and song generation.
 
+    Backend configuration is flexible via environment variables:
+        AI_PROVIDER: anthropic (default), openai, groq, cohere
+        AI_MODEL: Model identifier (defaults per provider)
+        ANTHROPIC_API_KEY, OPENAI_API_KEY, etc.: Provider API keys
+
     Examples:
-        # Type-safe pattern generation
-        >>> ai = DrumGeneratorAI(api_key="your-key")
+        # Type-safe pattern generation (uses env vars)
+        >>> ai = DrumGeneratorAI()
         >>> pattern, response = await ai.generate_pattern_from_text(
         ...     "aggressive metal breakdown with double bass"
         ... )
+
+        # Custom backend configuration
+        >>> config = AIBackendConfig(provider="openai", model="gpt-4o")
+        >>> ai = DrumGeneratorAI(backend_config=config)
 
         # Agent-based composition
         >>> result = ai.compose_with_agent(
@@ -40,31 +50,43 @@ class DrumGeneratorAI:
         >>> ai.export_pattern(pattern, "breakdown.mid", tempo=180)
     """
 
-    def __init__(self, api_key: str | None = None):
+    def __init__(
+        self,
+        api_key: str | None = None,
+        backend_config: AIBackendConfig | None = None,
+    ):
         """Initialize the AI drum generator.
 
         Args:
-            api_key: Optional Anthropic API key. If not provided, will use
-                    ANTHROPIC_API_KEY environment variable.
+            api_key: Optional API key (deprecated, use backend_config or env vars)
+            backend_config: AI backend configuration. If None, uses env vars.
         """
-        self.api_key = api_key
+        # Handle legacy api_key parameter
+        if api_key and not backend_config:
+            backend_config = AIBackendConfig(api_key=api_key)
 
-        # Initialize both AI approaches
+        self.backend_config = backend_config
+
+        # Initialize AI approaches (lazy-loaded)
         self._pydantic_gen: PydanticPatternGenerator | None = None
-        self._agent: PatternCompositionAgent | None = None
+        self._agent: PatternCompositionAgentV2 | None = None
 
     @property
     def pydantic_generator(self) -> PydanticPatternGenerator:
         """Lazy-load Pydantic AI pattern generator."""
         if self._pydantic_gen is None:
-            self._pydantic_gen = PydanticPatternGenerator(self.api_key)
+            self._pydantic_gen = PydanticPatternGenerator(
+                backend_config=self.backend_config
+            )
         return self._pydantic_gen
 
     @property
-    def agent(self) -> PatternCompositionAgent:
-        """Lazy-load Langchain composition agent."""
+    def agent(self) -> PatternCompositionAgentV2:
+        """Lazy-load Langchain composition agent (V2)."""
         if self._agent is None:
-            self._agent = PatternCompositionAgent(self.api_key)
+            self._agent = PatternCompositionAgentV2(
+                backend_config=self.backend_config
+            )
         return self._agent
 
     async def generate_pattern_from_text(

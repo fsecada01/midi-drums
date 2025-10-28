@@ -6,8 +6,8 @@ descriptions with full type safety and validation.
 
 from loguru import logger
 from pydantic_ai import Agent
-from pydantic_ai.models.anthropic import AnthropicModel
 
+from midi_drums.ai.backends import AIBackendConfig, AIBackendFactory
 from midi_drums.ai.schemas import (
     PatternCharacteristics,
     PatternGenerationRequest,
@@ -20,26 +20,33 @@ from midi_drums.models.pattern import Pattern
 class PydanticPatternGenerator:
     """Type-safe pattern generator using Pydantic AI.
 
-    This class uses Pydantic AI with Claude to analyze natural language
-    pattern descriptions and generate structured, validated pattern
+    This class uses Pydantic AI with configurable backends to analyze natural
+    language pattern descriptions and generate structured, validated pattern
     specifications that integrate with the existing MIDI Drums architecture.
     """
 
-    def __init__(self, api_key: str | None = None):
+    def __init__(
+        self,
+        api_key: str | None = None,
+        backend_config: AIBackendConfig | None = None,
+    ):
         """Initialize the Pydantic AI pattern generator.
 
         Args:
-            api_key: Optional Anthropic API key. If not provided, will use
-                    ANTHROPIC_API_KEY environment variable.
+            api_key: Optional API key (deprecated, use backend_config or env vars)
+            backend_config: AI backend configuration. If None, uses env vars.
         """
         logger.info("Initializing Pydantic AI Pattern Generator")
 
-        # Initialize Anthropic model
-        self.model = AnthropicModel(
-            "claude-sonnet-4-20250514",  # Latest Claude Sonnet
-            api_key=api_key,
-        )
-        logger.debug("Anthropic model initialized: claude-sonnet-4-20250514")
+        # Handle legacy api_key parameter
+        if api_key and not backend_config:
+            logger.warning(
+                "api_key parameter is deprecated. Use backend_config or env vars."
+            )
+            backend_config = AIBackendConfig(api_key=api_key)
+
+        # Initialize model using backend factory
+        self.model = AIBackendFactory.create_pydantic_model(backend_config)
 
         # Create agent for pattern characteristic inference
         self.characteristics_agent = Agent(
