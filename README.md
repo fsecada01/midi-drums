@@ -51,6 +51,12 @@ MIDI Drums Generator is a powerful Python system that creates professional-quali
 - Command-line interface for batch processing
 - Direct module usage for custom applications
 
+🤖 **AI-Powered Generation** (NEW!)
+- Natural language pattern generation with Pydantic AI
+- Intelligent composition with Langchain agents
+- Provider-agnostic backend (Anthropic, OpenAI, Groq, Cohere)
+- Environment-driven configuration for production use
+
 ## ⚡ Code Quality & Architecture
 
 The MIDI Drums Generator underwent comprehensive refactoring achieving **extraordinary code reduction** while maintaining 100% functional equivalence:
@@ -149,6 +155,103 @@ python -m midi_drums pattern --genre rock --section verse --drummer bonham --out
 python -m midi_drums list genres
 python -m midi_drums list drummers
 ```
+
+## 🤖 AI-Powered Generation
+
+Generate drum patterns from natural language using AI! The system supports multiple AI providers with environment-driven configuration.
+
+### Setup
+
+```bash
+# Install AI dependencies
+pip install -r ai_requirements.txt
+
+# Configure your preferred AI provider
+export AI_PROVIDER="anthropic"  # or openai, groq, cohere
+export ANTHROPIC_API_KEY="your-api-key"
+export AI_MODEL="claude-sonnet-4-20250514"  # optional, has smart defaults
+```
+
+### Natural Language Pattern Generation
+
+```python
+from midi_drums.ai import DrumGeneratorAI
+
+# Initialize AI generator (uses environment variables)
+ai = DrumGeneratorAI()
+
+# Generate from natural language descriptions
+pattern, response = await ai.generate_pattern_from_text(
+    "aggressive metal breakdown with double bass and blast beats",
+    section="breakdown",
+    tempo=180,
+    bars=4
+)
+
+# AI analyzes and infers characteristics
+print(f"Genre: {response.characteristics.genre}")
+print(f"Style: {response.characteristics.style}")
+print(f"Intensity: {response.characteristics.intensity}")
+print(f"Double bass: {response.characteristics.use_double_bass}")
+
+# Export to MIDI
+ai.export_pattern(pattern, "ai_breakdown.mid", tempo=180)
+```
+
+### Agent-Based Composition
+
+```python
+# Use Langchain agent for multi-step reasoning
+result = ai.compose_with_agent(
+    "Create a progressive metal song with verse and chorus patterns, "
+    "then apply the Bonham drummer style to make it more dynamic"
+)
+
+print(result['output'])  # Agent's creative response
+```
+
+### Multi-Provider Support
+
+```python
+from midi_drums.ai import AIBackendConfig, AIProvider
+
+# Switch providers programmatically
+openai_config = AIBackendConfig(
+    provider=AIProvider.OPENAI,
+    model="gpt-4o",
+    api_key="sk-...",
+    temperature=0.7
+)
+
+ai_openai = DrumGeneratorAI(backend_config=openai_config)
+
+# Or use Groq for fast, cost-effective generation
+groq_config = AIBackendConfig(
+    provider=AIProvider.GROQ,
+    model="llama-3.3-70b-versatile",
+    api_key="gsk-..."
+)
+
+ai_groq = DrumGeneratorAI(backend_config=groq_config)
+```
+
+### Supported AI Providers
+
+| Provider | Models | Best For |
+|----------|--------|----------|
+| **Anthropic** | Claude Sonnet 4 | High-quality, nuanced generation |
+| **OpenAI** | GPT-4o, GPT-4 Turbo | Versatile, well-tested |
+| **Groq** | Llama 3.3 70B | Fast inference, cost-effective |
+| **Cohere** | Command R+ | Enterprise use cases |
+
+**Environment Variables:**
+- `AI_PROVIDER` - Provider selection (default: anthropic)
+- `AI_MODEL` - Model identifier (provider-specific defaults)
+- `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GROQ_API_KEY`, `COHERE_API_KEY`
+- `AI_TEMPERATURE` - Generation temperature (0.0-2.0, default: 0.7)
+- `AI_MAX_TOKENS` - Maximum output tokens (default: 4096)
+
+See [claudedocs/AI_BACKEND_MIGRATION.md](claudedocs/AI_BACKEND_MIGRATION.md) for complete documentation.
 
 ## 📖 Documentation
 
@@ -395,12 +498,58 @@ class BonhamPluginRefactored(DrummerPlugin):
 bin/py_update.sh  # Linux/macOS
 bin/py_update.bat # Windows
 
-# Run tests
-python test_new_architecture.py
+# Or using uv (recommended)
+uv sync --all-groups  # Syncs dev, ai, and core dependencies
 
 # Run linting
 bin/linting.sh  # Linux/macOS
 bin/linting.bat # Windows
+```
+
+### Testing
+
+The project uses **pytest** with comprehensive test coverage:
+
+```bash
+# Run all tests
+pytest
+
+# Run specific test categories
+pytest -m unit          # Unit tests (no API key needed)
+pytest -m integration   # Integration tests
+pytest -m ai           # AI tests (requires API key)
+
+# Run tests in parallel
+pytest -n auto
+
+# Run with coverage
+pytest --cov=midi_drums --cov-report=html
+
+# Skip AI tests if no API key
+pytest -m "not requires_api"
+```
+
+**Test Organization:**
+- `tests/unit/` - Unit tests for individual components (8 files)
+- `tests/integration/` - End-to-end integration tests (6 files)
+- `tests/ai/` - AI-powered generation tests (4 files)
+- `tests/conftest.py` - Shared fixtures and configuration
+
+**Test Markers:**
+- `@pytest.mark.unit` - Fast unit tests, no external dependencies
+- `@pytest.mark.integration` - Integration tests
+- `@pytest.mark.ai` - AI functionality tests
+- `@pytest.mark.requires_api` - Tests requiring API keys (auto-skipped if unavailable)
+- `@pytest.mark.slow` - Long-running tests
+
+```python
+# Example test run output
+============================= test session starts =============================
+8 passed in 10.69s ==============================
+✅ Backend abstraction tests
+✅ Configuration validation
+✅ Environment variable loading
+✅ Provider fallback handling
 ```
 
 ### Project Structure
