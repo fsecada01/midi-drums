@@ -9,10 +9,18 @@ from __future__ import annotations
 
 import os
 from enum import Enum
+from pathlib import Path
 from typing import Any
 
+from dotenv import load_dotenv
 from loguru import logger
 from pydantic import BaseModel, Field
+
+# Load .env file if it exists
+dotenv_path = Path(__file__).parent.parent.parent / ".env"
+if dotenv_path.exists():
+    load_dotenv(dotenv_path)
+    logger.debug(f"Loaded environment variables from {dotenv_path}")
 
 
 class AIProvider(str, Enum):
@@ -98,9 +106,10 @@ class AIBackendConfig(BaseModel):
             f"(temp={config.temperature}, max_tokens={config.max_tokens})"
         )
         if not config.api_key:
+            provider_key = f"{config.provider.value.upper()}_API_KEY"
             logger.warning(
                 f"No API key found for {config.provider.value}. "
-                f"Set {config.provider.value.upper()}_API_KEY environment variable."
+                f"Set {provider_key} environment variable."
             )
 
         return config
