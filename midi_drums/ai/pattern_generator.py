@@ -51,7 +51,7 @@ class PydanticPatternGenerator:
         # Create agent for pattern characteristic inference
         self.characteristics_agent = Agent(
             self.model,
-            result_type=PatternCharacteristics,
+            output_type=PatternCharacteristics,
             system_prompt=self._build_system_prompt(),
         )
         logger.debug("Pattern characteristics agent created")
@@ -145,7 +145,7 @@ description context.
         """
         logger.info(f"Analyzing pattern description: '{description[:50]}...'")
         result = await self.characteristics_agent.run(description)
-        chars = result.data
+        chars = result.output
 
         logger.success(
             f"Pattern analyzed: {chars.genre}/{chars.style} "

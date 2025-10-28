@@ -143,12 +143,11 @@ class AIBackendFactory:
 
         elif config.provider == AIProvider.OPENAI:
             from pydantic_ai.models.openai import OpenAIModel
+            from pydantic_ai.providers.openai import OpenAIProvider
 
             logger.debug(f"Creating OpenAI model: {config.model}")
-            return OpenAIModel(
-                config.model,
-                api_key=config.api_key,
-            )
+            provider = OpenAIProvider(api_key=config.api_key)
+            return OpenAIModel(config.model, provider=provider)
 
         elif config.provider == AIProvider.GROQ:
             from pydantic_ai.models.groq import GroqModel

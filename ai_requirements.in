@@ -3,6 +3,7 @@
 # Langchain for agent-based composition and NL processing
 langchain>=0.3.0
 langchain-anthropic>=0.3.0
+langchain-openai>=0.2.0
 langchain-core>=0.3.0
 
 # Pydantic AI for type-safe structured outputs

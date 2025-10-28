@@ -84,7 +84,9 @@ class DrumGeneratorAI:
     def agent(self) -> PatternCompositionAgent:
         """Lazy-load Langchain composition agent."""
         if self._agent is None:
-            self._agent = PatternCompositionAgent(backend_config=self.backend_config)
+            self._agent = PatternCompositionAgent(
+                backend_config=self.backend_config
+            )
         return self._agent
 
     async def generate_pattern_from_text(
@@ -223,10 +225,12 @@ class DrumGeneratorAI:
             return self.agent.export_pattern(pattern, output_path, tempo)
 
         # Handle Pattern object from Pydantic generator
+        from pathlib import Path
+
         from midi_drums.engines.midi_engine import MIDIEngine
 
         engine = MIDIEngine()
-        engine.pattern_to_midi(pattern, output_path, tempo)
+        engine.save_pattern_midi(pattern, Path(output_path), tempo)
         return True
 
     def export_song(self, song: Song | str, output_path: str | Path) -> bool:
@@ -252,10 +256,12 @@ class DrumGeneratorAI:
             return self.agent.export_song(song, output_path)
 
         # Handle Song object
+        from pathlib import Path
+
         from midi_drums.engines.midi_engine import MIDIEngine
 
         engine = MIDIEngine()
-        engine.song_to_midi(song, output_path)
+        engine.save_song_midi(song, Path(output_path))
         return True
 
     def get_pattern_from_agent(self, pattern_id: str) -> Pattern | None:
