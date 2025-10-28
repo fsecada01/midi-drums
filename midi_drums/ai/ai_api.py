@@ -8,7 +8,7 @@ approaches.
 import asyncio
 from pathlib import Path
 
-from midi_drums.ai.agents.pattern_agent_v2 import PatternCompositionAgentV2
+from midi_drums.ai.agents.pattern_agent import PatternCompositionAgent
 from midi_drums.ai.backends import AIBackendConfig
 from midi_drums.ai.pattern_generator import PydanticPatternGenerator
 from midi_drums.ai.schemas import (
@@ -69,7 +69,7 @@ class DrumGeneratorAI:
 
         # Initialize AI approaches (lazy-loaded)
         self._pydantic_gen: PydanticPatternGenerator | None = None
-        self._agent: PatternCompositionAgentV2 | None = None
+        self._agent: PatternCompositionAgent | None = None
 
     @property
     def pydantic_generator(self) -> PydanticPatternGenerator:
@@ -81,12 +81,10 @@ class DrumGeneratorAI:
         return self._pydantic_gen
 
     @property
-    def agent(self) -> PatternCompositionAgentV2:
-        """Lazy-load Langchain composition agent (V2)."""
+    def agent(self) -> PatternCompositionAgent:
+        """Lazy-load Langchain composition agent."""
         if self._agent is None:
-            self._agent = PatternCompositionAgentV2(
-                backend_config=self.backend_config
-            )
+            self._agent = PatternCompositionAgent(backend_config=self.backend_config)
         return self._agent
 
     async def generate_pattern_from_text(

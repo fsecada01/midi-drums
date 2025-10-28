@@ -1,16 +1,13 @@
-"""Langchain agent for intelligent pattern composition and evolution.
+"""Langchain agent for intelligent pattern composition.
 
-This agent orchestrates pattern generation, evolution, and composition using
-Langchain's agent framework with access to the MIDI Drums Generator as tools.
+This agent uses Langchain 1.0's create_agent function with tools for drum
+pattern generation, composition, and evolution.
 """
 
 from typing import Any
 
-from langchain.agents import AgentExecutor, create_react_agent
-from langchain.prompts import ChatPromptTemplate
-from langchain.tools import BaseTool, StructuredTool
+from langchain.agents import create_agent
 from loguru import logger
-from pydantic import BaseModel, Field
 
 from midi_drums.ai.backends import AIBackendConfig, AIBackendFactory
 from midi_drums.core.engine import DrumGenerator
@@ -18,52 +15,17 @@ from midi_drums.models.pattern import Pattern
 from midi_drums.models.song import Song
 
 
-# Tool input schemas
-class GeneratePatternInput(BaseModel):
-    """Input for generate_pattern tool."""
-
-    genre: str = Field(description="Genre (metal, rock, jazz, funk)")
-    style: str = Field(
-        description="Style within genre (e.g., 'death', 'swing')"
-    )
-    section: str = Field(
-        description="Section (verse, chorus, bridge, breakdown)"
-    )
-    bars: int = Field(default=4, description="Number of bars (1-16)")
-
-
-class ApplyDrummerStyleInput(BaseModel):
-    """Input for apply_drummer_style tool."""
-
-    pattern_id: str = Field(
-        description="ID of pattern to modify (use from previous generation)"
-    )
-    drummer: str = Field(
-        description="Drummer style (bonham, porcaro, weckl, chambers, etc.)"
-    )
-
-
-class CreateSongInput(BaseModel):
-    """Input for create_song tool."""
-
-    genre: str = Field(description="Primary genre")
-    style: str = Field(description="Primary style")
-    tempo: int = Field(default=120, description="Tempo in BPM")
-    structure_description: str = Field(
-        description="Description of song structure (e.g., 'verse chorus verse "
-        "chorus bridge chorus')"
-    )
-
-
 class PatternCompositionAgent:
-    """Langchain agent for intelligent drum pattern composition.
+    """Langchain 1.0 agent for intelligent drum pattern composition.
 
-    This agent can:
-    - Generate patterns from natural language
-    - Apply drummer styles and modifications
-    - Compose complete songs with multiple sections
-    - Evolve and vary existing patterns
-    - Provide musical suggestions and alternatives
+    This class uses Langchain's create_agent function with a set of tools
+    for generating patterns, applying drummer styles, and creating songs.
+
+    Features:
+    - Multi-step reasoning about musical composition
+    - Tool-based pattern generation and manipulation
+    - Support for all genres, styles, and drummers
+    - Caching of generated patterns and songs
     """
 
     def __init__(
@@ -77,7 +39,7 @@ class PatternCompositionAgent:
             api_key: Optional API key (deprecated, use backend_config or env vars)
             backend_config: AI backend configuration. If None, uses env vars.
         """
-        logger.info("Initializing Langchain Pattern Composition Agent")
+        logger.info("Initializing Langchain Pattern Composition Agent V2")
 
         # Handle legacy api_key parameter
         if api_key and not backend_config:
@@ -86,8 +48,11 @@ class PatternCompositionAgent:
             )
             backend_config = AIBackendConfig(api_key=api_key)
 
-        # Initialize LLM using backend factory
-        self.llm = AIBackendFactory.create_langchain_llm(backend_config)
+        # Get backend config
+        self.backend_config = backend_config or AIBackendConfig.from_env()
+
+        # Initialize LLM using backend factory (returns init_chat_model result)
+        self.llm = AIBackendFactory.create_langchain_llm(self.backend_config)
 
         # Initialize drum generator
         self.drum_generator = DrumGenerator()
@@ -101,14 +66,20 @@ class PatternCompositionAgent:
         self.tools = self._create_tools()
         logger.info(f"Agent tools created: {len(self.tools)} tools available")
 
-        # Create agent
+        # Create agent using Langchain 1.0 create_agent
         self.agent = self._create_agent()
-        logger.success("Langchain Pattern Composition Agent ready")
+        logger.success("Langchain Pattern Composition Agent V2 ready")
 
-    def _create_tools(self) -> list[BaseTool]:
-        """Create Langchain tools for drum generation."""
+    def _create_tools(self) -> list:
+        """Create Langchain tools for drum generation.
 
-        def generate_pattern_tool(
+        Returns:
+            List of tools the agent can use
+        """
+        from langchain.tools import tool
+
+        @tool
+        def generate_pattern(
             genre: str, style: str, section: str, bars: int = 4
         ) -> str:
             """Generate a drum pattern with specified characteristics.
@@ -116,281 +87,192 @@ class PatternCompositionAgent:
             Args:
                 genre: Musical genre (metal, rock, jazz, funk)
                 style: Specific style within genre
-                section: Song section type
-                bars: Number of bars in pattern
+                section: Song section type (verse, chorus, bridge, breakdown, etc.)
+                bars: Number of bars in pattern (1-16)
 
             Returns:
                 Description of generated pattern with ID for reference
             """
+            logger.info(
+                f"Tool: generate_pattern({genre}/{style}/{section}, {bars} bars)"
+            )
+
             pattern = self.drum_generator.generate_pattern(
                 genre=genre, section=section, style=style, bars=bars
             )
 
-            if pattern is None:
-                return f"Error: Could not generate {genre}/{style} pattern"
+            if not pattern:
+                return (
+                    f"Failed to generate {genre}/{style} pattern for {section}"
+                )
 
-            # Store pattern for later reference
-            pattern_id = f"{genre}_{style}_{section}_{len(
-                self.pattern_cache
-            )}"
+            # Cache the pattern
+            pattern_id = f"pattern_{len(self.pattern_cache)}"
             self.pattern_cache[pattern_id] = pattern
 
-            return (
-                f"Generated {genre} {style} {section} pattern (ID: "
-                f"{pattern_id}) with {len(pattern.beats)} beats across {bars}"
-                f" bars. Pattern name: {pattern.name}"
+            logger.success(
+                f"Generated pattern: {pattern_id} ({len(pattern.beats)} beats)"
             )
 
-        def apply_drummer_style_tool(pattern_id: str, drummer: str) -> str:
-            """Apply a specific drummer's style to an existing pattern.
+            return (
+                f"Generated {genre}/{style} {section} pattern "
+                f"(ID: {pattern_id}, {len(pattern.beats)} beats, {bars} bars). "
+                f"Use this ID to reference or apply drummer styles."
+            )
+
+        @tool
+        def apply_drummer_style(pattern_id: str, drummer: str) -> str:
+            """Apply a drummer's signature style to an existing pattern.
 
             Args:
-                pattern_id: ID of pattern from previous generation
-                drummer: Drummer style to apply
+                pattern_id: ID of pattern to modify (from generate_pattern)
+                drummer: Drummer style (bonham, porcaro, weckl, chambers, roeder, dee, hoglan)
 
             Returns:
-                Description of modified pattern
+                Description of styled pattern with new ID
             """
-            if pattern_id not in self.pattern_cache:
-                return f"Error: Pattern ID '{pattern_id}' not found"
+            logger.info(f"Tool: apply_drummer_style({pattern_id}, {drummer})")
 
-            pattern = self.pattern_cache[pattern_id]
+            if pattern_id not in self.pattern_cache:
+                return (
+                    f"Pattern {pattern_id} not found. Generate a pattern first."
+                )
+
+            original_pattern = self.pattern_cache[pattern_id]
             styled_pattern = self.drum_generator.apply_drummer_style(
-                pattern, drummer
+                original_pattern, drummer
             )
 
-            if styled_pattern is None:
-                return f"Error: Could not apply {drummer} style"
+            if not styled_pattern:
+                return f"Failed to apply {drummer} style (drummer not found)"
 
-            # Store styled version with new ID
+            # Cache the styled pattern
             styled_id = f"{pattern_id}_{drummer}"
             self.pattern_cache[styled_id] = styled_pattern
 
+            logger.success(f"Applied {drummer} style: {styled_id}")
+
             return (
-                f"Applied {drummer} drummer style to {pattern_id}. "
-                f"New pattern ID: {styled_id}. "
-                f"Pattern now has {len(styled_pattern.beats)} beats with "
-                f"{drummer}'s characteristic techniques."
+                f"Applied {drummer} style to {pattern_id} "
+                f"(New ID: {styled_id}). "
+                f"Pattern now has {drummer}'s signature characteristics."
             )
 
-        def list_genres_tool() -> str:
-            """List all available genres and their styles."""
-            genres = self.drum_generator.get_available_genres()
-            result = "Available genres and styles:\n\n"
-
-            for genre in genres:
-                styles = self.drum_generator.get_genre_styles(genre)
-                result += f"**{genre.upper()}**: {', '.join(styles)}\n"
-
-            return result
-
-        def list_drummers_tool() -> str:
-            """List all available drummer styles with descriptions."""
-            drummers = self.drum_generator.get_available_drummers()
-            descriptions = {
-                "bonham": "John Bonham - triplet vocabulary, behind-the-beat "
-                "timing",
-                "porcaro": "Jeff Porcaro - half-time shuffle, studio "
-                "precision",
-                "weckl": "Dave Weckl - linear playing, fusion expertise",
-                "chambers": "Dennis Chambers - funk mastery, incredible chops",
-                "roeder": "Jason Roeder - atmospheric sludge, minimal "
-                "creativity",
-                "dee": "Mikkey Dee - speed/precision, versatile power",
-                "hoglan": "Gene Hoglan - mechanical precision, blast beats",
-            }
-
-            result = "Available drummer styles:\n\n"
-            for drummer in drummers:
-                desc = descriptions.get(drummer, "No description available")
-                result += f"- **{drummer}**: {desc}\n"
-
-            return result
-
-        def create_song_tool(
-            genre: str, style: str, tempo: int, structure_description: str
+        @tool
+        def create_song(
+            genre: str, style: str, tempo: int = 120, structure: str = "default"
         ) -> str:
-            """Create a complete song with multiple sections.
+            """Create a complete multi-section song.
 
             Args:
-                genre: Primary musical genre
-                style: Primary style within genre
-                tempo: Tempo in BPM
-                structure_description: Natural language song structure
+                genre: Primary genre
+                style: Primary style
+                tempo: Tempo in BPM (40-300)
+                structure: Song structure description or "default"
 
             Returns:
-                Description of created song
+                Description of created song with ID
             """
-            # Parse structure description into sections
-            # Simple parsing: "verse chorus verse chorus bridge chorus"
-            section_map = {
-                "verse": ("verse", 8),
-                "chorus": ("chorus", 8),
-                "bridge": ("bridge", 4),
-                "breakdown": ("breakdown", 4),
-                "intro": ("intro", 4),
-                "outro": ("outro", 4),
-            }
+            logger.info(
+                f"Tool: create_song({genre}/{style}, {tempo} BPM, {structure})"
+            )
 
-            structure = []
-            words = structure_description.lower().split()
-
-            for word in words:
-                if word in section_map:
-                    structure.append(section_map[word])
-
-            # Default structure if parsing fails
-            if not structure:
-                structure = [
-                    ("intro", 4),
-                    ("verse", 8),
-                    ("chorus", 8),
-                    ("verse", 8),
-                    ("chorus", 8),
-                    ("outro", 4),
-                ]
-
-            # Create song
             song = self.drum_generator.create_song(
                 genre=genre,
                 style=style,
                 tempo=tempo,
-                structure=structure,
-                complexity=0.7,
+                # Use default structure for now (could parse structure string)
             )
 
-            # Store song
-            song_id = f"{genre}_{style}_song_{len(self.song_cache)}"
+            # Cache the song
+            song_id = f"song_{len(self.song_cache)}"
             self.song_cache[song_id] = song
 
-            total_bars = sum(s.bars for s in song.sections)
-            duration = (total_bars * 4 * 60) / tempo  # Rough estimate
-
-            return (
-                f"Created {genre} {style} song (ID: {song_id}) at {tempo} BPM."
-                f" Structure: {len(song.sections)} sections, {total_bars} "
-                f"total bars, ~{duration:.1f} seconds. "
-                f"Sections: {', '.join(s.section_type for s in song.sections)}"
+            logger.success(
+                f"Created song: {song_id} ({len(song.sections)} sections, {tempo} BPM)"
             )
 
-        # Create structured tools
+            section_desc = ", ".join(
+                f"{s.type}({s.bars})" for s in song.sections[:5]
+            )
+            if len(song.sections) > 5:
+                section_desc += f", +{len(song.sections) - 5} more"
+
+            return (
+                f"Created {genre}/{style} song at {tempo} BPM "
+                f"(ID: {song_id}, {len(song.sections)} sections: {section_desc}). "
+                f"Use this ID to export to MIDI."
+            )
+
+        @tool
+        def list_genres() -> str:
+            """List all available genres.
+
+            Returns:
+                Comma-separated list of genres
+            """
+            genres = self.drum_generator.get_available_genres()
+            return f"Available genres: {', '.join(genres)}"
+
+        @tool
+        def list_drummers() -> str:
+            """List all available drummer styles.
+
+            Returns:
+                Comma-separated list of drummers with descriptions
+            """
+            drummers = self.drum_generator.get_available_drummers()
+            return (
+                f"Available drummers: {', '.join(drummers)}. "
+                f"Each has unique signature characteristics."
+            )
+
         return [
-            StructuredTool.from_function(
-                func=generate_pattern_tool,
-                name="generate_pattern",
-                description="Generate a drum pattern with specific genre, "
-                "style, and section",
-                args_schema=GeneratePatternInput,
-            ),
-            StructuredTool.from_function(
-                func=apply_drummer_style_tool,
-                name="apply_drummer_style",
-                description="Apply a specific drummer's playing style to an "
-                "existing pattern",
-                args_schema=ApplyDrummerStyleInput,
-            ),
-            StructuredTool.from_function(
-                func=list_genres_tool,
-                name="list_genres",
-                description="List all available musical genres and their "
-                "styles",
-            ),
-            StructuredTool.from_function(
-                func=list_drummers_tool,
-                name="list_drummers",
-                description="List all available drummer styles with "
-                "descriptions",
-            ),
-            StructuredTool.from_function(
-                func=create_song_tool,
-                name="create_song",
-                description="Create a complete song with multiple sections "
-                "and structure",
-                args_schema=CreateSongInput,
-            ),
+            generate_pattern,
+            apply_drummer_style,
+            create_song,
+            list_genres,
+            list_drummers,
         ]
 
-    def _create_agent(self) -> AgentExecutor:
-        """Create the Langchain agent with tools."""
+    def _create_agent(self):
+        """Create Langchain 1.0 agent using create_agent.
 
-        prompt = ChatPromptTemplate.from_messages(
-            [
-                (
-                    "system",
-                    """You are an expert drum composition assistant with deep
-knowledge of drumming, musical genres, and song structure.
+        Returns:
+            Configured agent
+        """
+        logger.debug("Creating agent with create_agent()")
 
-You have access to tools that can generate drum patterns, apply drummer
-styles, and create complete songs using the MIDI Drums Generator system.
-
-## Your Capabilities:
-
-1. **Pattern Generation**: Create drum patterns for any genre/style/section
-2. **Drummer Styles**: Apply authentic playing styles from famous drummers
-3. **Song Composition**: Build complete multi-section songs
-4. **Musical Guidance**: Suggest appropriate styles, structures, and techniques
-
-## Available Genres:
-- **Metal**: heavy, death, power, progressive, thrash, doom, breakdown
-- **Rock**: classic, blues, alternative, progressive, punk, hard, pop
-- **Jazz**: swing, bebop, fusion, latin, ballad, hard_bop, contemporary
-- **Funk**: classic, pfunk, shuffle, new_orleans, fusion, minimal, heavy
-
-## Available Drummers:
-- bonham, porcaro, weckl, chambers, roeder, dee, hoglan
-
-## Guidelines:
-
-- **Understand Intent**: Analyze what the user wants musically
-- **Make Intelligent Choices**: Select appropriate genres, styles, and drummers
-- **Be Creative**: Suggest variations and alternatives
-- **Explain Decisions**: Tell users why you chose specific options
-- **Use Tools Wisely**: Chain tool calls to build complex compositions
-- **Provide Context**: Explain musical terms and techniques
-
-When users ask for patterns or songs:
-1. First understand their musical goals
-2. Choose appropriate genre, style, and section
-3. Generate the pattern/song using tools
-4. Optionally apply drummer styles for authenticity
-5. Suggest variations or improvements
-6. Provide the pattern/song ID for export
-
-Be helpful, creative, and musically knowledgeable!
-""",
-                ),
-                ("placeholder", "{chat_history}"),
-                ("human", "{input}"),
-                ("placeholder", "{agent_scratchpad}"),
-            ]
-        )
-
-        agent = create_react_agent(self.llm, self.tools, prompt)
-
-        return AgentExecutor(
-            agent=agent,
+        # Use Langchain 1.0 create_agent
+        agent = create_agent(
+            model=self.llm,
             tools=self.tools,
-            verbose=True,
-            max_iterations=10,
-            handle_parsing_errors=True,
+            system_prompt=(
+                "You are an expert drum pattern composer and music producer. "
+                "You help users create professional drum patterns and songs across "
+                "multiple genres (metal, rock, jazz, funk) with various styles and "
+                "drummer personalities.\n\n"
+                "When composing:\n"
+                "1. Ask clarifying questions if the request is vague\n"
+                "2. Suggest appropriate styles and drummers based on the user's goals\n"
+                "3. Explain your creative decisions\n"
+                "4. Reference generated pattern/song IDs for the user\n\n"
+                "Available tools allow you to generate patterns, apply drummer styles, "
+                "create complete songs, and list available options."
+            ),
         )
+
+        logger.debug("Agent created successfully")
+        return agent
 
     def compose(self, user_request: str) -> dict[str, Any]:
         """Process a user composition request using the agent.
 
         Args:
-            user_request: Natural language request for pattern/song composition
+            user_request: Natural language composition request
 
         Returns:
-            Agent response with generated patterns/songs
-
-        Example:
-            >>> agent = PatternCompositionAgent()
-            >>> result = agent.compose(
-            ...     "create an aggressive death metal breakdown with "
-            ...     "double bass"
-            ... )
-            >>> print(result['output'])
+            Dictionary with agent response and metadata
         """
         logger.info(f"Agent request: '{user_request[:60]}...'")
         logger.debug(
@@ -398,70 +280,48 @@ Be helpful, creative, and musically knowledgeable!
             f"{len(self.song_cache)} songs"
         )
 
-        result = self.agent.invoke({"input": user_request})
-
-        logger.success("Agent composition complete")
-        logger.debug(
-            f"Agent response length: {len(result.get('output', ''))} chars"
+        # Invoke agent with messages
+        result = self.agent.invoke(
+            {"messages": [{"role": "user", "content": user_request}]}
         )
 
-        return result
+        logger.success("Agent composition complete")
+
+        # Extract final response
+        final_response = ""
+        if "messages" in result:
+            # Get last message
+            last_message = result["messages"][-1]
+            final_response = (
+                last_message.content
+                if hasattr(last_message, "content")
+                else str(last_message)
+            )
+
+        return {
+            "output": final_response,
+            "pattern_cache": list(self.pattern_cache.keys()),
+            "song_cache": list(self.song_cache.keys()),
+        }
 
     def get_pattern(self, pattern_id: str) -> Pattern | None:
-        """Retrieve a generated pattern by ID.
+        """Retrieve cached pattern by ID.
 
         Args:
-            pattern_id: Pattern ID from agent response
+            pattern_id: Pattern identifier from agent
 
         Returns:
-            Pattern object or None if not found
+            Pattern if found, None otherwise
         """
         return self.pattern_cache.get(pattern_id)
 
     def get_song(self, song_id: str) -> Song | None:
-        """Retrieve a generated song by ID.
+        """Retrieve cached song by ID.
 
         Args:
-            song_id: Song ID from agent response
+            song_id: Song identifier from agent
 
         Returns:
-            Song object or None if not found
+            Song if found, None otherwise
         """
         return self.song_cache.get(song_id)
-
-    def export_pattern(
-        self, pattern_id: str, output_path: str, tempo: int = 120
-    ) -> bool:
-        """Export a generated pattern to MIDI file.
-
-        Args:
-            pattern_id: Pattern ID from agent
-            output_path: Path for MIDI file output
-            tempo: Tempo in BPM
-
-        Returns:
-            True if successful, False otherwise
-        """
-        pattern = self.get_pattern(pattern_id)
-        if pattern is None:
-            return False
-
-        self.drum_generator.export_pattern_midi(pattern, output_path, tempo)
-        return True
-
-    def export_song(self, song_id: str, output_path: str) -> bool:
-        """Export a generated song to MIDI file.
-
-        Args:
-            song_id: Song ID from agent
-            output_path: Path for MIDI file output
-
-        Returns:
-            True if successful, False otherwise
-        """
-        song = self.get_song(song_id)
-        if song is None:
-            return False
-
-        self.drum_generator.export_midi(song, output_path)
-        return True

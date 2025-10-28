@@ -43,7 +43,7 @@ Quick Start:
     >>> ai.export_pattern(pattern, "breakdown.mid", tempo=180)
 """
 
-from midi_drums.ai.agents.pattern_agent_v2 import PatternCompositionAgentV2
+from midi_drums.ai.agents.pattern_agent import PatternCompositionAgent
 from midi_drums.ai.ai_api import DrumGeneratorAI
 from midi_drums.ai.backends import AIBackendConfig, AIBackendFactory, AIProvider
 from midi_drums.ai.pattern_generator import PydanticPatternGenerator
@@ -53,13 +53,9 @@ from midi_drums.ai.schemas import (
     SongCompositionRequest,
 )
 
-# Alias for backwards compatibility
-PatternCompositionAgent = PatternCompositionAgentV2
-
 __all__ = [
     "DrumGeneratorAI",
     "PatternCompositionAgent",
-    "PatternCompositionAgentV2",
     "PydanticPatternGenerator",
     "PatternGenerationRequest",
     "PatternGenerationResponse",
