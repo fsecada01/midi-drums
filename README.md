@@ -331,16 +331,35 @@ midi-drums reaper export \
     --drummer hoglan \
     --marker-color "#FF0000" \
     --template my_template.rpp
+
+# Add markers from existing metadata (recommended)
+midi-drums reaper add-markers \
+    --metadata output/my_song/metadata.json \
+    --output project.rpp
+
+# Auto-detect metadata from MIDI directory
+midi-drums reaper add-markers \
+    --song output/my_song/complete.mid \
+    --output project.rpp \
+    --marker-color "#00FF00"
+
+# Manual structure specification
+midi-drums reaper add-markers \
+    --structure "intro:4,verse:8,chorus:8,outro:4" \
+    --tempo 120 \
+    --output project.rpp
 ```
 
 ### Features
 
 - ✅ **Automatic section markers** - Intro, verse, chorus, bridge, etc.
 - ✅ **Time-accurate positioning** - Markers at exact bar positions
+- ✅ **Metadata-based workflow** - Use existing metadata.json files or auto-detect
 - ✅ **Template support** - Use existing Reaper projects as base
 - ✅ **Custom marker colors** - Hex color codes supported
 - ✅ **Immutable operations** - Original files never modified
 - ✅ **MIDI export** - Optionally export MIDI alongside Reaper project
+- ✅ **Flexible workflows** - Metadata file, auto-detection, or manual specification
 
 See [docs/REAPER_INTEGRATION.md](docs/REAPER_INTEGRATION.md) for complete documentation.
 
