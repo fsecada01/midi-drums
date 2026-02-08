@@ -114,7 +114,7 @@ def test_langchain_agent():
     print("=" * 70)
 
     ai = DrumGeneratorAI()
-    output_dir = Path("output")
+    Path("output")
 
     # Test agent-based composition
     print("\n[5] Langchain Agent: Multi-step composition workflow...")

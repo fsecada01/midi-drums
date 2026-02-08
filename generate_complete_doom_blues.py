@@ -210,7 +210,7 @@ def main():
         "description": "Unique fusion combining three legendary drummer styles for doom metal/blues",
     }
 
-    metadata = generate_metadata(song, output_dir, drummer_info)
+    generate_metadata(song, output_dir, drummer_info)
 
     # Export full song
     logger.info("\nExporting complete song...")

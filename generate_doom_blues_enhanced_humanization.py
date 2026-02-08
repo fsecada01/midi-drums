@@ -250,7 +250,7 @@ def main():
         },
     }
 
-    metadata = generate_metadata(song, output_dir, humanization_info)
+    generate_metadata(song, output_dir, humanization_info)
 
     # Export full song
     logger.info("\\nExporting complete song...")

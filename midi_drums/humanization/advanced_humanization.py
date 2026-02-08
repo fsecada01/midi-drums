@@ -5,7 +5,6 @@ inspired by Toontrack MIDI libraries and real drummer analysis.
 """
 
 import random
-from typing import Dict
 
 from midi_drums.models.pattern import Beat, DrumInstrument, Pattern
 
