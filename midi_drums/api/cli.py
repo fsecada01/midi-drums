@@ -194,15 +194,38 @@ Examples:
 
     # Reaper add-markers command
     reaper_markers = reaper_subparsers.add_parser(
-        "add-markers", help="Add markers to existing Reaper project from song"
+        "add-markers",
+        help="Add markers to Reaper project based on song structure",
     )
     reaper_markers.add_argument(
         "--song",
-        required=True,
-        help="Input song (MIDI file or generated song)",
+        help=(
+            "Input MIDI file (optional). If metadata.json exists in the same "
+            "directory, it will be used automatically."
+        ),
     )
     reaper_markers.add_argument(
         "--output", "-o", required=True, help="Output Reaper project (.rpp)"
+    )
+    reaper_markers.add_argument(
+        "--metadata",
+        help=(
+            "Path to metadata.json file (contains structure, tempo, "
+            "time signature)"
+        ),
+    )
+    reaper_markers.add_argument(
+        "--structure",
+        help=(
+            'Song structure as "section:bars,section:bars". '
+            'Example: "intro:4,verse:8,chorus:8,verse:8,outro:4". '
+            "Required if --metadata not provided."
+        ),
+    )
+    reaper_markers.add_argument(
+        "--tempo",
+        type=int,
+        help="Tempo in BPM (default: 120, or from metadata)",
     )
     reaper_markers.add_argument(
         "--template", help="Input Reaper template (.rpp) to use as base"
@@ -211,6 +234,10 @@ Examples:
         "--marker-color",
         default="#FF5733",
         help="Hex color for markers (default: #FF5733)",
+    )
+    reaper_markers.add_argument(
+        "--time-signature",
+        help="Time signature (default: 4/4, or from metadata)",
     )
 
     return parser
@@ -406,31 +433,151 @@ def handle_reaper_export_command(args, generator: DrumGenerator) -> None:
 def handle_reaper_add_markers_command(args, generator: DrumGenerator) -> None:
     """Handle Reaper add-markers command."""
     try:
-        # Load song from MIDI file
-        # Note: This requires implementing MIDI file loading
-        # For now, we'll show an error message
-        print(
-            "Error: Loading song from MIDI file not yet implemented",
-            file=sys.stderr,
-        )
-        print(
-            "Use 'reaper export' to generate both MIDI and Reaper project",
-            file=sys.stderr,
-        )
-        sys.exit(1)
+        import json
 
-        # TODO: Implement MIDI file loading
-        # song = generator.load_from_midi(args.song)
-        # exporter = ReaperExporter()
-        # exporter.export_with_markers(
-        #     song=song,
-        #     output_rpp=args.output,
-        #     input_rpp=args.template,
-        #     marker_color=args.marker_color,
-        # )
+        from midi_drums.models.song import Section, Song, TimeSignature
+
+        # Auto-detect metadata from song directory if not explicitly provided
+        metadata_file = args.metadata
+        if not metadata_file and args.song:
+            song_path = Path(args.song)
+            potential_metadata = song_path.parent / "metadata.json"
+            if potential_metadata.exists():
+                metadata_file = str(potential_metadata)
+                print(
+                    f"Auto-detected metadata file: {potential_metadata.name}",
+                    file=sys.stderr,
+                )
+
+        # Determine data source: metadata file or manual arguments
+        if metadata_file:
+            # Read from metadata file
+            try:
+                metadata_path = Path(metadata_file)
+                if not metadata_path.exists():
+                    print(
+                        f"Error: Metadata file not found: {metadata_file}",
+                        file=sys.stderr,
+                    )
+                    sys.exit(1)
+
+                with open(metadata_path) as f:
+                    metadata = json.load(f)
+
+                # Extract song information
+                song_info = metadata.get("song", {})
+                tempo = (
+                    args.tempo if args.tempo else song_info.get("tempo", 120)
+                )
+                time_sig_str = (
+                    args.time_signature
+                    if args.time_signature
+                    else song_info.get("time_signature", "4/4")
+                )
+                song_name = song_info.get("name", "markers")
+
+                # Extract structure
+                structure_data = metadata.get("structure", [])
+                if not structure_data:
+                    print(
+                        "Error: No structure found in metadata file",
+                        file=sys.stderr,
+                    )
+                    sys.exit(1)
+
+                sections = []
+                for section_data in structure_data:
+                    sections.append(
+                        Section(
+                            name=section_data["name"],
+                            bars=section_data["bars"],
+                            pattern=None,  # No pattern needed for markers only
+                        )
+                    )
+
+                print(f"Loaded structure from metadata: {metadata_file}")
+
+            except (json.JSONDecodeError, KeyError) as e:
+                print(f"Error reading metadata file: {e}", file=sys.stderr)
+                sys.exit(1)
+
+        else:
+            # Parse manual structure specification
+            if not args.structure:
+                print(
+                    "Error: Either --metadata or --structure must be provided",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+
+            try:
+                sections = []
+                for part in args.structure.split(","):
+                    section_name, bars = part.strip().split(":")
+                    sections.append(
+                        Section(
+                            name=section_name.strip(),
+                            bars=int(bars),
+                            pattern=None,  # No pattern needed for markers only
+                        )
+                    )
+                tempo = args.tempo if args.tempo else 120
+                time_sig_str = (
+                    args.time_signature if args.time_signature else "4/4"
+                )
+                song_name = "markers"
+
+            except (ValueError, AttributeError) as e:
+                print(f"Error parsing structure: {e}", file=sys.stderr)
+                print(
+                    'Expected format: "section:bars,section:bars"',
+                    file=sys.stderr,
+                )
+                print('Example: "intro:4,verse:8,chorus:8"', file=sys.stderr)
+                sys.exit(1)
+
+        # Parse time signature
+        try:
+            numerator, denominator = map(int, time_sig_str.split("/"))
+            time_sig = TimeSignature(numerator, denominator)
+        except (ValueError, AttributeError):
+            print(f"Invalid time signature: {time_sig_str}", file=sys.stderr)
+            print('Expected format: "4/4" or "3/4"', file=sys.stderr)
+            sys.exit(1)
+
+        # Create song structure for marker calculation
+        song = Song(
+            name=song_name,
+            tempo=tempo,
+            time_signature=time_sig,
+            sections=sections,
+        )
+
+        # Export to Reaper
+        exporter = ReaperExporter()
+        exporter.export_with_markers(
+            song=song,
+            output_rpp=args.output,
+            input_rpp=args.template,
+            marker_color=args.marker_color,
+        )
+
+        print(f"Created Reaper project: {args.output}")
+        print(f"Song: {song_name}")
+        print(f"Tempo: {tempo} BPM")
+        print(f"Time signature: {time_sig_str}")
+        print(f"Sections: {len(sections)}")
+        print(f"Markers added: {len(sections)}")
+
+        if args.song:
+            print(f"\nNote: MIDI file '{args.song}' provided for reference")
+            print("Import it manually in Reaper or copy to project directory")
 
     except Exception as e:
         print(f"Error adding markers: {e}", file=sys.stderr)
+        import traceback
+
+        traceback.print_exc()
         sys.exit(1)
 
 

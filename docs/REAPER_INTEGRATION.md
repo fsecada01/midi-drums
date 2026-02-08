@@ -524,17 +524,31 @@ python -m midi_drums.api.cli reaper export \
     --name "Death Metal Song"
 ```
 
-**Add markers to existing project** (future):
+**Add markers to existing project**:
 ```bash
-# Note: Currently stubbed - requires MIDI loading implementation
-python -m midi_drums.api.cli reaper add-markers \
-    --song existing_drums.mid \
+# From metadata file (recommended - auto-includes tempo, time signature, structure)
+midi-drums reaper add-markers \
+    --metadata output/my_song/metadata.json \
     --output project_with_markers.rpp \
     --template my_project.rpp \
     --marker-color "#00FF00"
+
+# Auto-detect metadata from MIDI file directory
+midi-drums reaper add-markers \
+    --song output/my_song/complete.mid \
+    --output project_with_markers.rpp \
+    --template my_project.rpp
+
+# Manual structure specification (if no metadata available)
+midi-drums reaper add-markers \
+    --structure "intro:4,verse:8,chorus:8,verse:8,outro:4" \
+    --tempo 120 \
+    --time-signature "4/4" \
+    --output project_with_markers.rpp \
+    --template my_project.rpp
 ```
 
-**Available options**:
+**Available options for `reaper export`**:
 - `--genre`: Genre (metal, rock, jazz, funk)
 - `--style`: Style within genre
 - `--tempo`: Tempo in BPM (default: 120)
@@ -546,6 +560,16 @@ python -m midi_drums.api.cli reaper add-markers \
 - `--marker-color`: Hex color for markers (default: #FF5733)
 - `--template`: Input Reaper template to use as base
 - `--name`: Custom song name
+
+**Available options for `reaper add-markers`**:
+- `--metadata`: Path to metadata.json file (contains structure, tempo, time signature)
+- `--song`: MIDI file path (auto-detects metadata.json in same directory)
+- `--structure`: Manual structure specification ("section:bars,section:bars")
+- `--tempo`: Tempo in BPM (default: 120, or from metadata)
+- `--time-signature`: Time signature (default: 4/4, or from metadata)
+- `--output, -o`: Output Reaper project file (.rpp)
+- `--template`: Input Reaper template to use as base
+- `--marker-color`: Hex color for markers (default: #FF5733)
 
 ## Success Criteria
 
@@ -564,13 +588,15 @@ python -m midi_drums.api.cli reaper add-markers \
 - ✅ Custom marker colors (hex codes)
 - ✅ Multiple output formats (.rpp + .mid)
 
-### Workflow B (Reaper → MIDI) 🚧 PLANNED
+### Workflow B (Reaper → MIDI) 🚧 PARTIALLY COMPLETE
 
-- ⏳ Parse markers from existing .rpp files
-- ⏳ Generate Song structure from marker data
-- ⏳ Create aligned MIDI patterns
-- ⏳ CLI implementation (`midi-drums reaper add-markers`)
-- ⏳ Requires MIDI import functionality
+- ✅ CLI implementation (`midi-drums reaper add-markers`)
+- ✅ Metadata-based structure import
+- ✅ Auto-detection of metadata from MIDI directory
+- ✅ Manual structure specification support
+- ⏳ Parse markers from existing .rpp files (planned)
+- ⏳ Generate Song structure from RPP marker data (planned)
+- ⏳ Create aligned MIDI patterns from RPP markers (planned)
 
 ## References
 
@@ -590,6 +616,9 @@ python -m midi_drums.api.cli reaper add-markers \
 6. ✅ Documentation and examples
 7. ✅ Template support
 8. ✅ CLI tool installation (`uv tool install`)
+9. ✅ `reaper add-markers` command with metadata support
+10. ✅ Auto-detection of metadata from MIDI directory
+11. ✅ Manual structure specification fallback
 
 ### In Progress 🚧
 
@@ -597,13 +626,8 @@ python -m midi_drums.api.cli reaper add-markers \
 
 ### Planned 📋
 
-1. Implement MIDI file import/parsing
-2. Workflow B: Parse Reaper markers → Generate MIDI
-3. CLI command: `midi-drums reaper add-markers`
-4. Additional Reaper project manipulation (tempo, time signature)
+1. Parse markers from existing .rpp files
+2. Generate Song structure from RPP marker data
+3. Create aligned MIDI patterns from RPP markers
+4. Additional Reaper project manipulation (tempo, time signature sync)
 5. MIDI track insertion directly in RPP (currently exports separately)
-3. ⬜ Implement `ReaperEngine` class
-4. ⬜ Implement `ReaperExporter` API
-5. ⬜ Write comprehensive tests
-6. ⬜ Create example scripts
-7. ⬜ Update main documentation
