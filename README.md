@@ -48,8 +48,9 @@ MIDI Drums Generator is a powerful Python system that creates professional-quali
 
 🔧 **Multiple Interfaces**
 - Python API for integration
-- Command-line interface for batch processing
+- Command-line interface (CLI tool installable with `uv tool install`)
 - Direct module usage for custom applications
+- Reaper DAW integration for professional workflows
 
 🤖 **AI-Powered Generation** (NEW!)
 - Natural language pattern generation with Pydantic AI
@@ -105,6 +106,20 @@ pattern = behind_beat.apply(triplets.apply(pattern))
 
 ### Installation
 
+**Option 1: Install as CLI tool (Recommended)**
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/midi-drums.git
+cd midi-drums
+
+# Install as a global CLI tool
+uv tool install .
+
+# Now use 'midi-drums' command anywhere
+midi-drums --help
+```
+
+**Option 2: Development installation**
 ```bash
 # Clone the repository
 git clone https://github.com/yourusername/midi-drums.git
@@ -141,19 +156,29 @@ print("🎵 Generated: death_metal_track.mid & jazz_swing_weckl.mid")
 
 ### Command Line Usage
 
+**If installed with `uv tool install`:**
 ```bash
 # Generate songs across different genres
-python -m midi_drums generate --genre metal --style heavy --tempo 155 --output metal_song.mid
-python -m midi_drums generate --genre rock --style classic --tempo 140 --output rock_song.mid
-python -m midi_drums generate --genre jazz --style swing --tempo 120 --output jazz_song.mid
-python -m midi_drums generate --genre funk --style classic --tempo 110 --output funk_song.mid
+midi-drums generate --genre metal --style heavy --tempo 155 --output metal_song.mid
+midi-drums generate --genre rock --style classic --tempo 140 --output rock_song.mid
+midi-drums generate --genre jazz --style swing --tempo 120 --output jazz_song.mid
+midi-drums generate --genre funk --style classic --tempo 110 --output funk_song.mid
 
 # Generate patterns with drummer styles
-python -m midi_drums pattern --genre rock --section verse --drummer bonham --output bonham_verse.mid
+midi-drums pattern --genre rock --section verse --drummer bonham --output bonham_verse.mid
+
+# Reaper DAW integration
+midi-drums reaper export --genre metal --style doom --tempo 120 --output doom.rpp --midi
 
 # List available options
-python -m midi_drums list genres
-python -m midi_drums list drummers
+midi-drums list genres
+midi-drums list drummers
+```
+
+**Or use the module directly:**
+```bash
+python -m midi_drums.api.cli generate --genre metal --style heavy --output metal.mid
+python -m midi_drums.api.cli reaper export --genre metal --style doom --output doom.rpp
 ```
 
 ## 🤖 AI-Powered Generation
@@ -252,6 +277,72 @@ ai_groq = DrumGeneratorAI(backend_config=groq_config)
 - `AI_MAX_TOKENS` - Maximum output tokens (default: 4096)
 
 See [claudedocs/AI_BACKEND_MIGRATION.md](claudedocs/AI_BACKEND_MIGRATION.md) for complete documentation.
+
+## 🎛️ Reaper DAW Integration
+
+Export drum tracks directly to Reaper projects with automatic section markers!
+
+### Python API
+
+```python
+from midi_drums.api.python_api import DrumGeneratorAPI
+from midi_drums.exporters import ReaperExporter
+
+# Generate drums
+api = DrumGeneratorAPI()
+song = api.create_song("metal", "doom", tempo=120)
+
+# Export to Reaper with markers
+exporter = ReaperExporter()
+exporter.export_with_markers(
+    song=song,
+    output_rpp="doom_metal.rpp",
+    marker_color="#FF5733"
+)
+
+# Also export MIDI separately
+exporter.export_with_midi(
+    song=song,
+    output_rpp="doom_metal.rpp",
+    output_midi="doom_metal.mid"
+)
+```
+
+### CLI Usage
+
+```bash
+# Generate drums and create Reaper project with markers
+midi-drums reaper export \
+    --genre metal \
+    --style doom \
+    --tempo 120 \
+    --output doom_metal.rpp \
+    --midi
+
+# With all options
+midi-drums reaper export \
+    --genre metal \
+    --style death \
+    --tempo 180 \
+    --output death.rpp \
+    --midi death_drums.mid \
+    --complexity 0.8 \
+    --humanization 0.4 \
+    --drummer hoglan \
+    --marker-color "#FF0000" \
+    --template my_template.rpp
+```
+
+### Features
+
+- ✅ **Automatic section markers** - Intro, verse, chorus, bridge, etc.
+- ✅ **Time-accurate positioning** - Markers at exact bar positions
+- ✅ **Template support** - Use existing Reaper projects as base
+- ✅ **Custom marker colors** - Hex color codes supported
+- ✅ **Immutable operations** - Original files never modified
+- ✅ **MIDI export** - Optionally export MIDI alongside Reaper project
+
+See [docs/REAPER_INTEGRATION.md](docs/REAPER_INTEGRATION.md) for complete documentation.
 
 ## 📖 Documentation
 
@@ -387,22 +478,34 @@ generator.export_midi(song, "custom_song.mid")
 
 ### CLI Examples
 
+**Using `midi-drums` command (after `uv tool install`):**
+
 ```bash
 # Generate songs across all genres
-python -m midi_drums generate --genre metal --style death --tempo 180 --complexity 0.8 --output death.mid
-python -m midi_drums generate --genre rock --style classic --tempo 140 --drummer bonham --output rock_bonham.mid
-python -m midi_drums generate --genre jazz --style swing --tempo 120 --drummer weckl --output jazz_weckl.mid
-python -m midi_drums generate --genre funk --style classic --tempo 110 --drummer chambers --output funk_chambers.mid
+midi-drums generate --genre metal --style death --tempo 180 --complexity 0.8 --output death.mid
+midi-drums generate --genre rock --style classic --tempo 140 --drummer bonham --output rock_bonham.mid
+midi-drums generate --genre jazz --style swing --tempo 120 --drummer weckl --output jazz_weckl.mid
+midi-drums generate --genre funk --style classic --tempo 110 --drummer chambers --output funk_chambers.mid
 
 # Generate patterns with drummer styles
-python -m midi_drums pattern --genre rock --section verse --style blues --drummer porcaro --output porcaro_verse.mid
-python -m midi_drums pattern --genre jazz --section bridge --style fusion --drummer weckl --output weckl_bridge.mid
+midi-drums pattern --genre rock --section verse --style blues --drummer porcaro --output porcaro_verse.mid
+midi-drums pattern --genre jazz --section bridge --style fusion --drummer weckl --output weckl_bridge.mid
+
+# Reaper integration
+midi-drums reaper export --genre metal --style doom --tempo 120 --output doom.rpp --midi
+midi-drums reaper export --genre jazz --style swing --tempo 110 --output jazz.rpp --template my_template.rpp
 
 # System information
-python -m midi_drums info
-python -m midi_drums list genres
-python -m midi_drums list styles --genre jazz
-python -m midi_drums list drummers
+midi-drums info
+midi-drums list genres
+midi-drums list styles --genre jazz
+midi-drums list drummers
+```
+
+**Or use module directly:**
+```bash
+python -m midi_drums.api.cli generate --genre metal --style death --output death.mid
+python -m midi_drums.api.cli reaper export --genre metal --output metal.rpp
 ```
 
 ## 🔌 Plugin System
@@ -505,6 +608,17 @@ uv sync --all-groups  # Syncs dev, ai, and core dependencies
 bin/linting.sh  # Linux/macOS
 bin/linting.bat # Windows
 ```
+
+### Continuous Integration
+
+The project uses **GitHub Actions** for automated testing:
+
+- ✅ Automated linting (ruff, black, isort)
+- ✅ Multi-version testing (Python 3.12, 3.13)
+- ✅ Coverage reporting
+- 🚧 Currently debugging dependency installation issues
+
+See [docs/CI_CD.md](docs/CI_CD.md) for CI/CD documentation.
 
 ### Testing
 
@@ -689,10 +803,14 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [x] Funk genre plugin with 7 styles
 - [x] 7 drummer plugins (Bonham, Porcaro, Weckl, Chambers, Roeder, Dee, Hoglan)
 - [x] Comprehensive testing and validation system
+- [x] Reaper DAW integration with automatic markers
+- [x] CLI tool installation (`uv tool install`)
+- [x] GitHub Actions CI/CD pipeline
 
 ### Phase 2: Advanced Features 🚧
 - [ ] Electronic genre plugin (House, Techno, Drum'n'Bass)
 - [ ] More drummer plugins (Neil Peart, Buddy Rich, Stewart Copeland)
+- [ ] Reaper marker import (generate drums from existing markers)
 - [ ] Real-time audio synthesis
 - [ ] AI-driven pattern variations
 - [ ] Advanced humanization algorithms
