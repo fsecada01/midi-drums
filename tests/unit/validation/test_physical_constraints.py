@@ -93,7 +93,9 @@ class TestPhysicalValidator:
 
         # Beats very close together (within tolerance)
         pattern.add_beat(0.00, DrumInstrument.RIDE, 95)
-        pattern.add_beat(0.005, DrumInstrument.CLOSED_HH, 80)  # Within 0.01 tolerance
+        pattern.add_beat(
+            0.005, DrumInstrument.CLOSED_HH, 80
+        )  # Within 0.01 tolerance
 
         validator = PhysicalValidator(timing_tolerance=0.01)
         conflicts = validator.validate_pattern(pattern)
@@ -106,7 +108,9 @@ class TestPhysicalValidator:
 
         # Beats far apart (outside tolerance)
         pattern.add_beat(0.00, DrumInstrument.RIDE, 95)
-        pattern.add_beat(0.02, DrumInstrument.CLOSED_HH, 80)  # Outside 0.01 tolerance
+        pattern.add_beat(
+            0.02, DrumInstrument.CLOSED_HH, 80
+        )  # Outside 0.01 tolerance
 
         validator = PhysicalValidator(timing_tolerance=0.01)
         conflicts = validator.validate_pattern(pattern)
@@ -293,7 +297,10 @@ class TestInstrumentClassifications:
         validator = PhysicalValidator()
 
         # Ride and hi-hat hand should be disjoint
-        assert len(validator.RIDE_INSTRUMENTS & validator.HIHAT_HAND_INSTRUMENTS) == 0
+        assert (
+            len(validator.RIDE_INSTRUMENTS & validator.HIHAT_HAND_INSTRUMENTS)
+            == 0
+        )
 
         # Hi-hat hand and foot should be disjoint
         assert len(validator.HIHAT_HAND_INSTRUMENTS & validator.HIHAT_FOOT) == 0
