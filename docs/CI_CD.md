@@ -201,9 +201,9 @@ Solution: Run 'uv run pytest -v' locally to debug
 ## Performance
 
 **Cache Strategy**:
-- uv cache enabled for faster dependency installation
-- First run: ~2-3 minutes (cold cache)
-- Subsequent runs: ~30-60 seconds (warm cache)
+- uv caching currently disabled (no uv.lock file in repository)
+- Dependency installation takes ~30-60 seconds per run
+- Future: Enable caching when uv.lock is added or use pip-based caching
 
 ## Future Enhancements
 

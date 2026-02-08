@@ -26,8 +26,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v4
         with:
-          enable-cache: true
-          ignore-nothing-to-cache: true
+          enable-cache: false
 
       - name: Install dependencies
         run: |
@@ -63,8 +62,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v4
         with:
-          enable-cache: true
-          ignore-nothing-to-cache: true
+          enable-cache: false
 
       - name: Install dependencies
         run: |
@@ -109,8 +107,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v4
         with:
-          enable-cache: true
-          ignore-nothing-to-cache: true
+          enable-cache: false
 
       - name: Install dependencies
         run: |
