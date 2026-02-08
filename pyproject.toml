@@ -15,6 +15,7 @@ version = "1.0.0"
 description = "Heavy metal drum track generator for EZDrummer 3"
 dependencies = [
     "midiutil>=1.2.1",
+    "numpy>=1.24.0",
 ]
 
 [dependency-groups]
@@ -34,7 +35,6 @@ ai = [
     "langchain-openai>=0.2.0",
     "langchain-core>=0.3.0",
     "pydantic-ai>=0.0.14",
-    "librosa>=0.10.0",
     "numpy>=1.24.0",
     "soundfile>=0.12.0",
     "anthropic>=0.39.0",

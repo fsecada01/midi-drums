@@ -1,7 +1,10 @@
 # MIDI Drums Generator - Justfile
 # Run `just --list` to see all available commands
 
+set shell := ["cmd.exe", "/c"]
+
 # Default recipe - show available commands
+
 default:
     @just --list
 

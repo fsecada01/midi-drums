@@ -151,6 +151,8 @@ class MetalGenrePlugin(GenrePlugin):
             return self._death_metal_chorus(builder, params)
         elif style == "power":
             return self._power_metal_chorus(builder, params)
+        elif style == "doom":
+            return self._doom_metal_chorus(builder, params)
         else:
             return self._heavy_metal_chorus(builder, params)
 
@@ -185,8 +187,20 @@ class MetalGenrePlugin(GenrePlugin):
 
         # Reduce complexity slightly
         reduced_beats = []
+        hihat_instruments = {
+            DrumInstrument.CLOSED_HH,
+            DrumInstrument.CLOSED_HH_EDGE,
+            DrumInstrument.CLOSED_HH_TIP,
+            DrumInstrument.TIGHT_HH_EDGE,
+            DrumInstrument.TIGHT_HH_TIP,
+            DrumInstrument.OPEN_HH,
+            DrumInstrument.OPEN_HH_1,
+            DrumInstrument.OPEN_HH_2,
+            DrumInstrument.OPEN_HH_3,
+            DrumInstrument.OPEN_HH_MAX,
+        }
         for beat in pattern.beats:
-            if beat.instrument == DrumInstrument.CLOSED_HH:
+            if beat.instrument in hihat_instruments:
                 # Reduce hi-hat density
                 if beat.position % 1.0 == 0:  # Keep only quarter notes
                     reduced_beats.append(beat)
@@ -284,9 +298,40 @@ class MetalGenrePlugin(GenrePlugin):
         builder.snare(1.0, 125)
         builder.snare(3.0, 125)
 
-        # Minimal hi-hat
-        builder.hihat(0.0, 70)
-        builder.hihat(2.0, 70)
+        # Ride pattern for atmospheric sustain (quarters)
+        for i in range(4):
+            builder.ride(i, 75)
+
+        # Open hi-hat max accents for aggressive texture (EZDrummer note 60)
+        builder.pattern.add_beat(1.0, DrumInstrument.OPEN_HH_MAX, 100)
+        builder.pattern.add_beat(3.0, DrumInstrument.OPEN_HH_MAX, 100)
+
+        return builder.build()
+
+    def _doom_metal_chorus(
+        self, builder: PatternBuilder, params: GenerationParameters
+    ) -> Pattern:
+        """Doom metal chorus - heavier and more intense than verse."""
+        # More aggressive kick pattern
+        builder.kick(0.0, 125)
+        builder.kick(1.5, 115)
+        builder.kick(2.0, 125)
+        builder.kick(3.5, 115)
+
+        # Powerful snare on 2 and 4
+        builder.snare(1.0, 127)
+        builder.snare(3.0, 127)
+
+        # Crash on 1 for emphasis
+        builder.crash(0.0, 115)
+
+        # Continuous ride for driving intensity (8th notes)
+        for i in range(8):
+            builder.ride(i * 0.5, 80)
+
+        # Open hi-hat max accents on backbeat (EZDrummer note 60)
+        builder.pattern.add_beat(1.0, DrumInstrument.OPEN_HH_MAX, 110)
+        builder.pattern.add_beat(3.0, DrumInstrument.OPEN_HH_MAX, 110)
 
         return builder.build()
 
