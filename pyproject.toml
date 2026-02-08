@@ -72,7 +72,7 @@ line-length = 80
 
 [tool.ruff.lint]
 select = ["E", "F", "B"]
-ignore = ["B008"]
+ignore = ["B008", "E501"]  # E501 temporarily ignored - to be fixed
 ignore-init-module-imports = true
 unfixable = []
 

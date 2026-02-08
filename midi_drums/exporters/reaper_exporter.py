@@ -1,7 +1,6 @@
 """High-level API for Reaper DAW integration."""
 
 from pathlib import Path
-from typing import Optional
 
 from midi_drums.engines.midi_engine import MIDIEngine
 from midi_drums.engines.reaper_engine import ReaperEngine

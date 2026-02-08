@@ -9,7 +9,9 @@ from midi_drums.api.python_api import DrumGeneratorAPI
 # Fix Windows console encoding
 if sys.platform == "win32":
     import codecs
+
     sys.stdout = codecs.getwriter("utf-8")(sys.stdout.buffer, errors="replace")
+
 
 def test_basic_generation():
     """Test basic MIDI generation across different genres and styles."""
@@ -28,7 +30,7 @@ def test_basic_generation():
         style="death",
         tempo=180,
         complexity=0.8,
-        humanization=0.3
+        humanization=0.3,
     )
     metal_file = output_dir / "test_death_metal.mid"
     api.save_as_midi(metal_song, str(metal_file))
@@ -43,7 +45,7 @@ def test_basic_generation():
         style="classic",
         tempo=140,
         complexity=0.6,
-        drummer="bonham"
+        drummer="bonham",
     )
     rock_file = output_dir / "test_classic_rock_bonham.mid"
     api.save_as_midi(rock_song, str(rock_file))
@@ -54,11 +56,7 @@ def test_basic_generation():
     # Test 3: Jazz genre with swing style
     print("\n[3] Generating Jazz Swing song with Weckl style (160 BPM)...")
     jazz_song = api.create_song(
-        genre="jazz",
-        style="swing",
-        tempo=160,
-        complexity=0.7,
-        drummer="weckl"
+        genre="jazz", style="swing", tempo=160, complexity=0.7, drummer="weckl"
     )
     jazz_file = output_dir / "test_jazz_swing_weckl.mid"
     api.save_as_midi(jazz_song, str(jazz_file))
@@ -73,7 +71,7 @@ def test_basic_generation():
         style="classic",
         tempo=100,
         complexity=0.6,
-        drummer="chambers"
+        drummer="chambers",
     )
     funk_file = output_dir / "test_classic_funk_chambers.mid"
     api.save_as_midi(funk_song, str(funk_file))
@@ -84,10 +82,7 @@ def test_basic_generation():
     # Test 5: Single pattern generation
     print("\n[5] Generating single breakdown pattern (Metal/Heavy)...")
     pattern = api.generate_pattern(
-        genre="metal",
-        section="breakdown",
-        style="heavy",
-        bars=4
+        genre="metal", section="breakdown", style="heavy", bars=4
     )
     if pattern:
         pattern_file = output_dir / "test_breakdown_pattern.mid"
@@ -110,6 +105,7 @@ def test_basic_generation():
     print(f"  {', '.join(api.list_genres())}")
     print("\nAvailable drummers:")
     print(f"  {', '.join(api.list_drummers())}")
+
 
 if __name__ == "__main__":
     test_basic_generation()

@@ -113,13 +113,17 @@ class TestAIBackendFactory:
 
     def test_unsupported_provider_pydantic(self):
         """Test error on unsupported Pydantic AI provider."""
-        config = AIBackendConfig(provider=AIProvider.COHERE, model="command-r-plus")
+        config = AIBackendConfig(
+            provider=AIProvider.COHERE, model="command-r-plus"
+        )
         with pytest.raises(ValueError, match="Unsupported provider"):
             AIBackendFactory.create_pydantic_model(config)
 
     def test_unsupported_provider_langchain(self):
         """Test error on unsupported Langchain provider."""
-        config = AIBackendConfig(provider=AIProvider.COHERE, model="command-r-plus")
+        config = AIBackendConfig(
+            provider=AIProvider.COHERE, model="command-r-plus"
+        )
         with pytest.raises(ValueError, match="Unsupported provider"):
             AIBackendFactory.create_langchain_llm(config)
 

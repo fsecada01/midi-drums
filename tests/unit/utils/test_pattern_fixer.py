@@ -137,7 +137,9 @@ class TestPatternFixer:
         """Test that beats within tolerance are grouped together."""
         pattern = Pattern("timing_test")
         pattern.add_beat(0.00, DrumInstrument.RIDE, 95)
-        pattern.add_beat(0.005, DrumInstrument.CLOSED_HH, 80)  # Within tolerance
+        pattern.add_beat(
+            0.005, DrumInstrument.CLOSED_HH, 80
+        )  # Within tolerance
 
         fixer = PatternFixer(timing_tolerance=0.01)
         fixed_pattern = fixer.remove_ride_hihat_conflicts(pattern)
@@ -151,7 +153,9 @@ class TestPatternFixer:
         """Test that beats outside tolerance are not grouped."""
         pattern = Pattern("timing_separate")
         pattern.add_beat(0.00, DrumInstrument.RIDE, 95)
-        pattern.add_beat(0.02, DrumInstrument.CLOSED_HH, 80)  # Outside tolerance
+        pattern.add_beat(
+            0.02, DrumInstrument.CLOSED_HH, 80
+        )  # Outside tolerance
 
         fixer = PatternFixer(timing_tolerance=0.01)
         fixed_pattern = fixer.remove_ride_hihat_conflicts(pattern)
@@ -268,7 +272,8 @@ class TestPatternFixer:
 
         # Fixed should have different instruments (PEDAL_HH instead of CLOSED_HH)
         assert not any(
-            b.instrument == DrumInstrument.CLOSED_HH for b in fixed_pattern.beats
+            b.instrument == DrumInstrument.CLOSED_HH
+            for b in fixed_pattern.beats
         )
         assert any(
             b.instrument == DrumInstrument.PEDAL_HH for b in fixed_pattern.beats
@@ -309,7 +314,8 @@ class TestConvenienceFunction:
 
         # Fixed should have PEDAL_HH instead
         assert not any(
-            b.instrument == DrumInstrument.CLOSED_HH for b in fixed_pattern.beats
+            b.instrument == DrumInstrument.CLOSED_HH
+            for b in fixed_pattern.beats
         )
         assert any(
             b.instrument == DrumInstrument.PEDAL_HH for b in fixed_pattern.beats

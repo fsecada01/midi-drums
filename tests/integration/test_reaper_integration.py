@@ -173,9 +173,7 @@ class TestReaperExportWorkflow:
             )
 
             output_path = tmp_path / filename
-            exporter.export_with_markers(
-                song=song, output_rpp=str(output_path)
-            )
+            exporter.export_with_markers(song=song, output_rpp=str(output_path))
 
         # Verify all files created
         for filename, _ in songs:

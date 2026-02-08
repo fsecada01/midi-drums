@@ -2,6 +2,7 @@
 """
 Generate a heavy metal drum track MIDI file mapped for EZDrummer 3.
 """
+
 import random
 
 try:

@@ -141,7 +141,9 @@ class TestBasicHumanization:
 
         # At least some beats should have different timing
         timing_changed = False
-        for original, humanized_beat in zip(simple_pattern.beats, humanized.beats, strict=False):
+        for original, humanized_beat in zip(
+            simple_pattern.beats, humanized.beats, strict=False
+        ):
             if abs(original.position - humanized_beat.position) > 0.001:
                 timing_changed = True
                 break
@@ -155,7 +157,9 @@ class TestBasicHumanization:
 
         # At least some beats should have different velocities
         velocity_changed = False
-        for original, humanized_beat in zip(simple_pattern.beats, humanized.beats, strict=False):
+        for original, humanized_beat in zip(
+            simple_pattern.beats, humanized.beats, strict=False
+        ):
             if original.velocity != humanized_beat.velocity:
                 velocity_changed = True
                 break
@@ -178,7 +182,9 @@ class TestBasicHumanization:
         humanized = humanizer.humanize_pattern(simple_pattern)
 
         for beat in humanized.beats:
-            assert 1 <= beat.velocity <= 127, f"Velocity {beat.velocity} out of range"
+            assert (
+                1 <= beat.velocity <= 127
+            ), f"Velocity {beat.velocity} out of range"
 
 
 class TestContextAwareHumanization:
@@ -199,9 +205,13 @@ class TestContextAwareHumanization:
         humanizer = AdvancedHumanizer(humanization_amount=0.5)
 
         verse = humanizer.humanize_pattern(simple_pattern, section_type="verse")
-        chorus = humanizer.humanize_pattern(simple_pattern, section_type="chorus")
+        chorus = humanizer.humanize_pattern(
+            simple_pattern, section_type="chorus"
+        )
 
-        verse_avg_velocity = sum(b.velocity for b in verse.beats) / len(verse.beats)
+        verse_avg_velocity = sum(b.velocity for b in verse.beats) / len(
+            verse.beats
+        )
         chorus_avg_velocity = sum(b.velocity for b in chorus.beats) / len(
             chorus.beats
         )
@@ -216,9 +226,13 @@ class TestContextAwareHumanization:
         humanizer = AdvancedHumanizer(humanization_amount=0.5)
 
         verse = humanizer.humanize_pattern(simple_pattern, section_type="verse")
-        breakdown = humanizer.humanize_pattern(simple_pattern, section_type="breakdown")
+        breakdown = humanizer.humanize_pattern(
+            simple_pattern, section_type="breakdown"
+        )
 
-        verse_avg_velocity = sum(b.velocity for b in verse.beats) / len(verse.beats)
+        verse_avg_velocity = sum(b.velocity for b in verse.beats) / len(
+            verse.beats
+        )
         breakdown_avg_velocity = sum(b.velocity for b in breakdown.beats) / len(
             breakdown.beats
         )
@@ -239,7 +253,9 @@ class TestAccentAndGhostNotes:
 
         ghost_velocities = [b.velocity for b in humanized.beats if b.ghost_note]
         normal_velocities = [
-            b.velocity for b in humanized.beats if not b.ghost_note and not b.accent
+            b.velocity
+            for b in humanized.beats
+            if not b.ghost_note and not b.accent
         ]
 
         # Ghost notes should be softer (within reasonable range)
@@ -253,7 +269,9 @@ class TestAccentAndGhostNotes:
 
         accent_velocities = [b.velocity for b in humanized.beats if b.accent]
         normal_velocities = [
-            b.velocity for b in humanized.beats if not b.accent and not b.ghost_note
+            b.velocity
+            for b in humanized.beats
+            if not b.accent and not b.ghost_note
         ]
 
         # Accents should be louder
@@ -266,18 +284,24 @@ class TestAccentAndGhostNotes:
 class TestMicroTiming:
     """Test micro-timing relationships."""
 
-    def test_simultaneous_beats_get_different_timing(self, simultaneous_pattern):
+    def test_simultaneous_beats_get_different_timing(
+        self, simultaneous_pattern
+    ):
         """Test that simultaneous beats get slightly different timing."""
         humanizer = AdvancedHumanizer(humanization_amount=0.5)
         humanized = humanizer.humanize_pattern(simultaneous_pattern)
 
         # Get beats that were originally at position 0.0
-        beats_at_zero = [b for b in humanized.beats if abs(b.position - 0.0) < 0.01]
+        beats_at_zero = [
+            b for b in humanized.beats if abs(b.position - 0.0) < 0.01
+        ]
 
         if len(beats_at_zero) > 1:
             # Should have different positions now (micro-timing)
             positions = [b.position for b in beats_at_zero]
-            assert len(set(positions)) > 1, "Simultaneous beats should have micro-timing"
+            assert (
+                len(set(positions)) > 1
+            ), "Simultaneous beats should have micro-timing"
 
     def test_crash_behind_other_instruments(self, simultaneous_pattern):
         """Test that crashes are slightly behind other instruments."""
@@ -286,10 +310,16 @@ class TestMicroTiming:
 
         # Find crash and kick that were originally simultaneous
         crash = next(
-            (b for b in humanized.beats if b.instrument == DrumInstrument.CRASH), None
+            (
+                b
+                for b in humanized.beats
+                if b.instrument == DrumInstrument.CRASH
+            ),
+            None,
         )
         kick = next(
-            (b for b in humanized.beats if b.instrument == DrumInstrument.KICK), None
+            (b for b in humanized.beats if b.instrument == DrumInstrument.KICK),
+            None,
         )
 
         if crash and kick and abs(crash.position - kick.position) < 0.1:
@@ -321,8 +351,12 @@ class TestFatigue:
         last_bar_beats = [b for b in humanized.beats if b.position >= 28.0]
 
         if first_bar_beats and last_bar_beats:
-            first_avg = sum(b.velocity for b in first_bar_beats) / len(first_bar_beats)
-            last_avg = sum(b.velocity for b in last_bar_beats) / len(last_bar_beats)
+            first_avg = sum(b.velocity for b in first_bar_beats) / len(
+                first_bar_beats
+            )
+            last_avg = sum(b.velocity for b in last_bar_beats) / len(
+                last_bar_beats
+            )
 
             # Last bar should be slightly softer (fatigue) - with tolerance for randomness
             assert (
@@ -353,18 +387,24 @@ class TestStyleVariations:
         # Measure timing deviation from original
         tight_deviations = [
             abs(h.position - o.position)
-            for h, o in zip(tight_result.beats, simple_pattern.beats, strict=False)
+            for h, o in zip(
+                tight_result.beats, simple_pattern.beats, strict=False
+            )
         ]
         loose_deviations = [
             abs(h.position - o.position)
-            for h, o in zip(loose_result.beats, simple_pattern.beats, strict=False)
+            for h, o in zip(
+                loose_result.beats, simple_pattern.beats, strict=False
+            )
         ]
 
         # Loose should have larger deviations on average (with some tolerance)
         tight_avg = sum(tight_deviations) / len(tight_deviations)
         loose_avg = sum(loose_deviations) / len(loose_deviations)
 
-        assert loose_avg > tight_avg - 0.001, "Loose should have more timing variation"
+        assert (
+            loose_avg > tight_avg - 0.001
+        ), "Loose should have more timing variation"
 
 
 class TestEdgeCases:

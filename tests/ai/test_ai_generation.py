@@ -11,6 +11,7 @@ from midi_drums.ai.logging_config import configure_logging
 # Fix Windows console encoding
 if sys.platform == "win32":
     import codecs
+
     sys.stdout = codecs.getwriter("utf-8")(sys.stdout.buffer, errors="replace")
 
 # Configure logging to console only for testing
@@ -38,7 +39,9 @@ async def test_ai_generation():
     print(f"✅ Generated: {pattern1.name}")
     print(f"   AI-detected genre: {response1.characteristics.genre}")
     print(f"   AI-detected style: {response1.characteristics.style}")
-    print(f"   AI-detected intensity: {response1.characteristics.intensity:.2f}")
+    print(
+        f"   AI-detected intensity: {response1.characteristics.intensity:.2f}"
+    )
     print(f"   Double bass: {response1.characteristics.use_double_bass}")
     print(f"   Ghost notes: {response1.characteristics.use_ghost_notes}")
 
@@ -84,8 +87,7 @@ async def test_ai_generation():
     # Test 4: Quick convenience method
     print("\n[4] Quick API: Fast death metal generation...")
     quick_pattern = await ai.quick_pattern(
-        "intense death metal with blast beats",
-        tempo=200
+        "intense death metal with blast beats", tempo=200
     )
     print(f"✅ Generated: {quick_pattern.name}")
 

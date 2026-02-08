@@ -1,6 +1,5 @@
 """Shared pytest fixtures and configuration for MIDI Drums tests."""
 
-
 import pytest
 
 from midi_drums.ai import AIBackendConfig, DrumGeneratorAI
@@ -54,13 +53,17 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "integration: Integration tests")
     config.addinivalue_line("markers", "ai: AI tests (requires API key)")
     config.addinivalue_line("markers", "slow: Slow tests")
-    config.addinivalue_line("markers", "requires_api: Tests requiring API access")
+    config.addinivalue_line(
+        "markers", "requires_api: Tests requiring API access"
+    )
 
 
 # Skip AI tests if no API key
 def pytest_collection_modifyitems(config, items):
     """Modify test collection to skip AI tests without API key."""
-    skip_ai = pytest.mark.skip(reason="AI tests require API key (set ANTHROPIC_API_KEY or configure AI_PROVIDER)")
+    skip_ai = pytest.mark.skip(
+        reason="AI tests require API key (set ANTHROPIC_API_KEY or configure AI_PROVIDER)"
+    )
 
     for item in items:
         # Only check explicit markers, not directory names
