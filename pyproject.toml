@@ -16,6 +16,7 @@ description = "Heavy metal drum track generator for EZDrummer 3"
 dependencies = [
     "midiutil>=1.2.1",
     "numpy>=1.24.0",
+    "rpp>=0.5.0",
 ]
 
 [dependency-groups]
