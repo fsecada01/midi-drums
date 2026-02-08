@@ -187,26 +187,15 @@ Thumbs.db
 *.log
 
 # Generated files
-generated_songs/
 output/
-test_pattern.mid
-test_song.mid
-metal_heavy_verse.mid
-metal_death_chorus.mid
-death_metal.mid
-prog_metal.mid
-breakdown.mid
-metal_song_new.mid
-ezdrummer3_heavy_metal_new_architecture.mid
 
 # Compiled requirements
 core_requirements.txt
 dev_requirements.txt
+ai_requirements.txt
 
 # Local settings
 .claude/
+!.claude/system-prompt.md
 memo.txt
 memo.md
-
-songs
-working_complex_song
