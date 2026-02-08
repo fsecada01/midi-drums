@@ -19,6 +19,9 @@ dependencies = [
     "rpp>=0.5.0",
 ]
 
+[project.scripts]
+midi-drums = "midi_drums.api.cli:main"
+
 [dependency-groups]
 dev = [
     "black>=25.1.0",
