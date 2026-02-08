@@ -466,6 +466,58 @@ exporter.export_with_markers(
 )
 ```
 
+### CLI Usage
+
+The Reaper integration is also available through the command-line interface.
+
+**Generate drums and create Reaper project**:
+```bash
+# Basic usage - creates both .rpp and .mid files
+python -m midi_drums.api.cli reaper export \
+    --genre metal \
+    --style doom \
+    --tempo 120 \
+    --output doom_project.rpp \
+    --midi
+
+# With all options
+python -m midi_drums.api.cli reaper export \
+    --genre metal \
+    --style death \
+    --tempo 180 \
+    --output death_metal.rpp \
+    --midi death_drums.mid \
+    --complexity 0.8 \
+    --humanization 0.4 \
+    --drummer hoglan \
+    --marker-color "#FF0000" \
+    --template my_template.rpp \
+    --name "Death Metal Song"
+```
+
+**Add markers to existing project** (future):
+```bash
+# Note: Currently stubbed - requires MIDI loading implementation
+python -m midi_drums.api.cli reaper add-markers \
+    --song existing_drums.mid \
+    --output project_with_markers.rpp \
+    --template my_project.rpp \
+    --marker-color "#00FF00"
+```
+
+**Available options**:
+- `--genre`: Genre (metal, rock, jazz, funk)
+- `--style`: Style within genre
+- `--tempo`: Tempo in BPM (default: 120)
+- `--output, -o`: Output Reaper project file (.rpp)
+- `--midi`: Export MIDI file (auto-generates name or use custom path)
+- `--complexity`: Complexity level 0.0-1.0 (default: 0.5)
+- `--humanization`: Humanization level 0.0-1.0 (default: 0.3)
+- `--drummer`: Drummer style plugin to apply
+- `--marker-color`: Hex color for markers (default: #FF5733)
+- `--template`: Input Reaper template to use as base
+- `--name`: Custom song name
+
 ## Success Criteria
 
 - ✅ Can add markers to .rpp files programmatically
