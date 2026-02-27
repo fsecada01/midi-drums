@@ -34,9 +34,10 @@ class TestAIBackendConfig:
 
     def test_from_env_default(self, monkeypatch):
         """Test configuration from environment with defaults."""
-        # Clear any existing API keys
+        # Clear any existing API keys and model overrides
         monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
         monkeypatch.delenv("AI_PROVIDER", raising=False)
+        monkeypatch.delenv("AI_MODEL", raising=False)
 
         config = AIBackendConfig.from_env()
         assert config.provider == AIProvider.ANTHROPIC
@@ -46,6 +47,7 @@ class TestAIBackendConfig:
         """Test configuration with custom provider."""
         monkeypatch.setenv("AI_PROVIDER", "openai")
         monkeypatch.setenv("OPENAI_API_KEY", "test-openai-key")
+        monkeypatch.delenv("AI_MODEL", raising=False)
 
         config = AIBackendConfig.from_env()
         assert config.provider == AIProvider.OPENAI
@@ -90,8 +92,12 @@ class TestAIBackendFactory:
 
     @pytest.mark.ai
     @pytest.mark.requires_api
-    def test_create_anthropic_pydantic_model(self):
+    def test_create_anthropic_pydantic_model(self, monkeypatch):
         """Test creating Anthropic Pydantic AI model."""
+        import os
+
+        if not os.getenv("ANTHROPIC_API_KEY"):
+            pytest.skip("ANTHROPIC_API_KEY not set")
         config = AIBackendConfig(
             provider=AIProvider.ANTHROPIC, model="claude-sonnet-4-20250514"
         )

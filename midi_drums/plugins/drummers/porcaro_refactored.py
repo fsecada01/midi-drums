@@ -37,7 +37,7 @@ class PorcaroPlugin(DrummerPlugin):
 
     @property
     def compatible_genres(self) -> list[str]:
-        return ["rock", "pop", "jazz", "funk"]
+        return ["rock", "pop", "blues", "funk", "jazz"]
 
     def apply_style(self, pattern: Pattern) -> Pattern:
         """Apply Jeff Porcaro's signature style to a pattern."""
@@ -52,3 +52,7 @@ class PorcaroPlugin(DrummerPlugin):
     def get_signature_fills(self) -> list[Fill]:
         """Return Jeff Porcaro's signature fill patterns."""
         return []
+
+
+# backward-compat alias for existing test imports
+PorcaroPluginRefactored = PorcaroPlugin

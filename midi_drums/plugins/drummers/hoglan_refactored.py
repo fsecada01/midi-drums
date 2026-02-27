@@ -37,7 +37,7 @@ class HoglanPlugin(DrummerPlugin):
 
     @property
     def compatible_genres(self) -> list[str]:
-        return ["metal", "death_metal", "thrash"]
+        return ["metal", "death", "thrash", "progressive"]
 
     def apply_style(self, pattern: Pattern) -> Pattern:
         """Apply Gene Hoglan's signature style to a pattern."""
@@ -52,3 +52,7 @@ class HoglanPlugin(DrummerPlugin):
     def get_signature_fills(self) -> list[Fill]:
         """Return Gene Hoglan's signature fill patterns."""
         return []
+
+
+# backward-compat alias for existing test imports
+HoglanPluginRefactored = HoglanPlugin

@@ -44,7 +44,7 @@ class ChambersPlugin(DrummerPlugin):
 
     @property
     def compatible_genres(self) -> list[str]:
-        return ["funk", "rock", "jazz", "metal"]
+        return ["funk", "jazz", "fusion", "rock", "r&b"]
 
     def apply_style(self, pattern: Pattern) -> Pattern:
         """Apply Dennis Chambers' signature style to a pattern."""
@@ -61,3 +61,7 @@ class ChambersPlugin(DrummerPlugin):
     def get_signature_fills(self) -> list[Fill]:
         """Return Dennis Chambers' signature fill patterns."""
         return []
+
+
+# backward-compat alias for existing test imports
+ChambersPluginRefactored = ChambersPlugin

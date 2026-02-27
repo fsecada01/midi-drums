@@ -66,10 +66,20 @@ class MIDIEngine:
         # Set tempo
         midi.addTempo(track, 0, song.tempo)
 
+        # Shared dedup set across all sections — see _add_section_to_midi for
+        # why this must span the entire song rather than be per-section.
+        added_note_ticks: set[tuple[int, int]] = set()
+
         current_bar = 0
         for section in song.sections:
             self._add_section_to_midi(
-                midi, track, channel, section, current_bar, song
+                midi,
+                track,
+                channel,
+                section,
+                current_bar,
+                song,
+                added_note_ticks,
             )
             current_bar += section.bars
 
@@ -83,8 +93,21 @@ class MIDIEngine:
         section,
         current_bar: int,
         song: Song,
+        added_note_ticks: set[tuple[int, int]] | None = None,
     ) -> None:
         """Add a song section to the MIDI file."""
+        # midiutil uses int(time * ticks_per_quarter) to convert beat times to
+        # ticks.  When multi-bar patterns or drummer timing modifications cause
+        # two beats to map to the same tick for the same pitch, midiutil's
+        # removeDuplicates collapses the NoteOn pair to one event while keeping
+        # both NoteOff events (if they differ by even 1 tick), which then causes
+        # deInterleaveNotes to crash with "pop from empty list".  We prevent
+        # this by globally deduplicating on (midi_note, on_tick) before adding.
+        # The caller (song_to_midi) passes a shared set spanning ALL sections.
+        _TPQ = 960  # ticks per quarter – matches MIDIFile(1) default
+
+        if added_note_ticks is None:
+            added_note_ticks = set()
 
         for bar_num in range(section.bars):
             absolute_bar = current_bar + bar_num
@@ -100,17 +123,35 @@ class MIDIEngine:
                     bar_num, song.global_parameters.fill_frequency
                 )
 
-            # Add pattern beats to MIDI
+            # Per-bar dedup: if drummer modifications created two beats at the
+            # same (instrument, position) within a bar, keep the loudest.
+            deduped: dict[tuple, object] = {}
             for beat in pattern.beats:
+                key = (beat.instrument, round(beat.position, 6))
+                if key not in deduped or beat.velocity > deduped[key].velocity:
+                    deduped[key] = beat
+
+            for beat in sorted(deduped.values(), key=lambda b: b.position):
                 midi_note = self.drum_kit.get_midi_note(beat.instrument)
                 absolute_time = bar_start_time + beat.position
+                safe_duration = min(beat.duration, 0.2)
+
+                # Global dedup: skip if this (pitch, on_tick) was already
+                # added.  Multi-bar patterns can place beats at positions
+                # beyond beats_per_bar, causing later bars to collide at the
+                # same tick and producing unbalanced NoteOn/NoteOff pairs.
+                on_tick = int(absolute_time * _TPQ)
+                note_key = (midi_note, on_tick)
+                if note_key in added_note_ticks:
+                    continue
+                added_note_ticks.add(note_key)
 
                 midi.addNote(
                     track=track,
                     channel=channel,
                     pitch=midi_note,
                     time=absolute_time,
-                    duration=beat.duration,
+                    duration=safe_duration,
                     volume=beat.velocity,
                 )
 
@@ -125,13 +166,20 @@ class MIDIEngine:
                     if beat.position < 1.0:  # Only add beats within 1 bar
                         midi_note = self.drum_kit.get_midi_note(beat.instrument)
                         absolute_time = fill_start_time + beat.position
+                        safe_duration = min(beat.duration, 0.2)
+
+                        on_tick = int(absolute_time * _TPQ)
+                        note_key = (midi_note, on_tick)
+                        if note_key in added_note_ticks:
+                            continue
+                        added_note_ticks.add(note_key)
 
                         midi.addNote(
                             track=track,
                             channel=channel,
                             pitch=midi_note,
                             time=absolute_time,
-                            duration=beat.duration,
+                            duration=safe_duration,
                             volume=beat.velocity,
                         )
 

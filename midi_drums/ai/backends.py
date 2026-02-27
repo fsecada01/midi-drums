@@ -134,11 +134,15 @@ class AIBackendFactory:
 
         if config.provider == AIProvider.ANTHROPIC:
             from pydantic_ai.models.anthropic import AnthropicModel
+            from pydantic_ai.providers.anthropic import AnthropicProvider
 
             logger.debug(f"Creating Anthropic model: {config.model}")
+            provider_kwargs = {}
+            if config.api_key:
+                provider_kwargs["api_key"] = config.api_key
             return AnthropicModel(
                 config.model,
-                api_key=config.api_key,
+                provider=AnthropicProvider(**provider_kwargs),
             )
 
         elif config.provider == AIProvider.OPENAI:
@@ -151,11 +155,15 @@ class AIBackendFactory:
 
         elif config.provider == AIProvider.GROQ:
             from pydantic_ai.models.groq import GroqModel
+            from pydantic_ai.providers.groq import GroqProvider
 
             logger.debug(f"Creating Groq model: {config.model}")
+            provider_kwargs = {}
+            if config.api_key:
+                provider_kwargs["api_key"] = config.api_key
             return GroqModel(
                 config.model,
-                api_key=config.api_key,
+                provider=GroqProvider(**provider_kwargs),
             )
 
         else:
@@ -177,11 +185,18 @@ class AIBackendFactory:
         if config is None:
             config = AIBackendConfig.from_env()
 
+        _supported = {AIProvider.ANTHROPIC, AIProvider.OPENAI, AIProvider.GROQ}
+        if config.provider not in _supported:
+            raise ValueError(
+                f"Unsupported provider for Langchain: {config.provider}. "
+                f"Supported: {', '.join(p.value for p in _supported)}"
+            )
+
         # Use Langchain's universal init_chat_model
         # Set API key in environment if provided
         import os
 
-        from langchain_core.language_models import init_chat_model
+        from langchain.chat_models import init_chat_model
 
         if config.api_key:
             env_key = f"{config.provider.value.upper()}_API_KEY"
@@ -190,12 +205,19 @@ class AIBackendFactory:
         # Format: "provider:model"
         model_string = f"{config.provider.value}:{config.model}"
 
-        logger.debug(f"Creating Langchain model: {model_string}")
-        return init_chat_model(
-            model_string,
-            temperature=config.temperature,
-            max_tokens=config.max_tokens,
+        # Some reasoning models (e.g., OpenAI o1/o3 family) do not support
+        # the temperature parameter and will raise a 400 error if passed.
+        _no_temp_prefixes = ("o1", "o3")
+        supports_temperature = not any(
+            config.model.startswith(p) for p in _no_temp_prefixes
         )
+
+        kwargs: dict = {"max_tokens": config.max_tokens}
+        if supports_temperature:
+            kwargs["temperature"] = config.temperature
+
+        logger.debug(f"Creating Langchain model: {model_string}")
+        return init_chat_model(model_string, **kwargs)
 
 
 def get_backend_config() -> AIBackendConfig:

@@ -294,13 +294,17 @@ class DrumGeneratorAI:
     # Convenience methods for common use cases
 
     async def quick_pattern(
-        self, description: str, output_path: str | None = None
+        self,
+        description: str,
+        output_path: str | None = None,
+        tempo: int = 120,
     ) -> Pattern:
         """Quick pattern generation with optional MIDI export.
 
         Args:
             description: Natural language pattern description
             output_path: Optional path for immediate MIDI export
+            tempo: BPM for MIDI export (default 120)
 
         Returns:
             Generated Pattern object
@@ -309,13 +313,14 @@ class DrumGeneratorAI:
             >>> ai = DrumGeneratorAI()
             >>> pattern = await ai.quick_pattern(
             ...     "aggressive blast beat",
-            ...     "blast.mid"
+            ...     "blast.mid",
+            ...     tempo=180,
             ... )
         """
         pattern, _ = await self.generate_pattern_from_text(description)
 
         if output_path:
-            self.export_pattern(pattern, output_path)
+            self.export_pattern(pattern, output_path, tempo=tempo)
 
         return pattern
 

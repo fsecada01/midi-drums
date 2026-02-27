@@ -37,7 +37,7 @@ class DeePlugin(DrummerPlugin):
 
     @property
     def compatible_genres(self) -> list[str]:
-        return ["metal", "rock", "hard_rock"]
+        return ["metal", "speed_metal", "punk", "hard_rock", "horror_metal"]
 
     def apply_style(self, pattern: Pattern) -> Pattern:
         """Apply Mikkey Dee's signature style to a pattern."""
@@ -52,3 +52,7 @@ class DeePlugin(DrummerPlugin):
     def get_signature_fills(self) -> list[Fill]:
         """Return Mikkey Dee's signature fill patterns."""
         return []
+
+
+# backward-compat alias for existing test imports
+DeePluginRefactored = DeePlugin

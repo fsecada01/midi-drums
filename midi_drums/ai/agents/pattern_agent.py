@@ -1,6 +1,6 @@
 """Langchain agent for intelligent pattern composition.
 
-This agent uses Langchain 1.0's create_react_agent function with tools for
+This agent uses Langchain 1.x create_agent (LangGraph-backed) with tools for
 drum pattern generation, composition, and evolution.
 """
 
@@ -9,8 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from langchain.agents import AgentExecutor, create_react_agent
-from langchain_core.prompts import ChatPromptTemplate
+from langchain.agents import create_agent
 from loguru import logger
 
 from midi_drums.ai.backends import AIBackendConfig, AIBackendFactory
@@ -29,18 +28,7 @@ SYSTEM_PROMPT = (
     "3. Explain your creative decisions\n"
     "4. Reference generated pattern/song IDs for the user\n\n"
     "Available tools allow you to generate patterns, apply drummer styles, "
-    "create complete songs, and list available options.\n\n"
-    "You have access to the following tools:\n\n"
-    "{tools}\n\n"
-    "Use the following format:\n\n"
-    "Question: the input question you must answer\n"
-    "Thought: you should always think about what to do\n"
-    "Action: the action to take, should be one of [{tool_names}]\n"
-    "Action Input: the input to the action\n"
-    "Observation: the result of the action\n"
-    "... (this Thought/Action/Action Input/Observation can repeat N times)\n"
-    "Thought: I now know the final answer\n"
-    "Final Answer: the final answer to the original input question"
+    "create complete songs, and list available options."
 )
 
 
@@ -269,40 +257,22 @@ class PatternCompositionAgent:
             list_drummers,
         ]
 
-    def _create_agent(self) -> AgentExecutor:
-        """Create Langchain 1.0 agent using create_react_agent.
+    def _create_agent(self) -> Any:
+        """Create Langchain 1.x agent using create_agent (LangGraph-backed).
 
         Returns:
-            Configured AgentExecutor
+            Compiled LangGraph state machine (CompiledStateGraph)
         """
-        logger.debug("Creating agent with create_react_agent()")
+        logger.debug("Creating agent with create_agent()")
 
-        # Build the ReAct prompt template
-        prompt = ChatPromptTemplate.from_messages(
-            [
-                ("system", SYSTEM_PROMPT),
-                ("human", "{input}"),
-                ("placeholder", "{agent_scratchpad}"),
-            ]
-        )
-
-        # Create the ReAct agent
-        react_agent = create_react_agent(
-            llm=self.llm,
+        agent = create_agent(
+            model=self.llm,
             tools=self.tools,
-            prompt=prompt,
+            system_prompt=SYSTEM_PROMPT,
         )
 
-        # Wrap in AgentExecutor for invocation
-        executor = AgentExecutor(
-            agent=react_agent,
-            tools=self.tools,
-            verbose=True,
-            handle_parsing_errors=True,
-        )
-
-        logger.debug("AgentExecutor created successfully")
-        return executor
+        logger.debug("LangGraph agent created successfully")
+        return agent
 
     def compose(self, user_request: str) -> dict[str, Any]:
         """Process a user composition request using the agent.
@@ -319,13 +289,16 @@ class PatternCompositionAgent:
             f"{len(self.song_cache)} songs"
         )
 
-        # Invoke AgentExecutor with input key (Langchain 1.0 format)
-        result = self.agent.invoke({"input": user_request})
+        # Invoke LangGraph agent with messages format (Langchain 1.x)
+        result = self.agent.invoke(
+            {"messages": [{"role": "user", "content": user_request}]}
+        )
 
         logger.success("Agent composition complete")
 
-        # AgentExecutor returns {"output": <final_answer>, ...}
-        final_response = result.get("output", "")
+        # LangGraph agent returns {"messages": [...]} - last message is the response
+        messages = result.get("messages", [])
+        final_response = messages[-1].content if messages else ""
 
         return {
             "output": final_response,

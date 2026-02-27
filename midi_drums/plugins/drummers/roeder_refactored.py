@@ -37,7 +37,7 @@ class RoederPlugin(DrummerPlugin):
 
     @property
     def compatible_genres(self) -> list[str]:
-        return ["metal", "doom", "sludge"]
+        return ["metal", "sludge", "post_metal", "doom", "atmospheric"]
 
     def apply_style(self, pattern: Pattern) -> Pattern:
         """Apply Jason Roeder's signature style to a pattern."""
@@ -52,3 +52,7 @@ class RoederPlugin(DrummerPlugin):
     def get_signature_fills(self) -> list[Fill]:
         """Return Jason Roeder's signature fill patterns."""
         return []
+
+
+# backward-compat alias for existing test imports
+RoederPluginRefactored = RoederPlugin

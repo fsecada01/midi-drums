@@ -47,10 +47,10 @@ class FunkGenrePlugin(GenrePlugin):
     def intensity_profile(self) -> dict[str, float]:
         """Funk genre intensity characteristics."""
         return {
-            "aggression": 0.4,
-            "speed": 0.6,
-            "density": 0.7,
-            "power": 0.6,
+            "aggression": 0.5,
+            "speed": 0.5,
+            "density": 0.75,
+            "power": 0.65,
             "complexity": 0.7,
             "darkness": 0.4,
         }
@@ -503,3 +503,7 @@ class FunkGenrePlugin(GenrePlugin):
             .add(CrashAccents(positions=[3.75], intensity=1.0))
             .build(bars=1, complexity=outro_complexity)
         )
+
+
+# backward-compat alias for existing test imports
+FunkGenrePluginRefactored = FunkGenrePlugin

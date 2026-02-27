@@ -5,6 +5,8 @@ import asyncio
 import sys
 from pathlib import Path
 
+import pytest
+
 from midi_drums.ai import DrumGeneratorAI
 from midi_drums.ai.logging_config import configure_logging
 
@@ -109,6 +111,8 @@ async def test_ai_generation():
     print("  ✅ Type-safe pattern generation")
 
 
+@pytest.mark.ai
+@pytest.mark.requires_api
 def test_langchain_agent():
     """Test Langchain agent composition (synchronous)."""
     print("\n" + "=" * 70)

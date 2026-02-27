@@ -49,9 +49,9 @@ class JazzGenrePlugin(GenrePlugin):
         return {
             "aggression": 0.3,
             "speed": 0.7,
-            "density": 0.5,
+            "density": 0.6,
             "power": 0.4,
-            "complexity": 0.8,
+            "complexity": 0.85,
             "darkness": 0.3,
         }
 
@@ -176,7 +176,7 @@ class JazzGenrePlugin(GenrePlugin):
                 .add(JazzRidePattern(swing_ratio=0.33, accent_pattern="tony"))
                 .add(
                     BasicGroove(
-                        kick_positions=[0.0, 2.0],
+                        kick_positions=[0.0, 0.75, 2.0, 2.33],
                         snare_positions=[1.0, 3.0],
                         hihat_subdivision=TIMING.HALF,
                     )
@@ -412,3 +412,7 @@ class JazzGenrePlugin(GenrePlugin):
             .add(JazzRidePattern(swing_ratio=0.33, accent_pattern="standard"))
             .build(bars=1, complexity=outro_complexity)
         )
+
+
+# backward-compat alias for existing test imports
+JazzGenrePluginRefactored = JazzGenrePlugin
