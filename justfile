@@ -14,19 +14,24 @@ default:
 
 # Start Claude Code with system prompt (supports any args: just claude --continue, just claude -p "task")
 claude *ARGS:
-    claude --system-prompt .claude/system-prompt.md {{ARGS}}
+    claude --append-system-prompt-file .claude/system-prompt.md {{ARGS}}
 
 # Start Claude in continue mode
 claude-continue:
-    claude --system-prompt .claude/system-prompt.md --continue
+    claude --append-system-prompt-file .claude/system-prompt.md --continue
 
 # Start Claude in resume mode (resume last conversation)
 claude-resume:
-    claude --system-prompt .claude/system-prompt.md --resume
+    claude --append-system-prompt-file .claude/system-prompt.md --resume
 
 # Start Claude with a specific prompt
 claude-prompt PROMPT:
-    claude --system-prompt .claude/system-prompt.md -p "{{PROMPT}}"
+    claude --append-system-prompt-file .claude/system-prompt.md -p "{{PROMPT}}"
+
+# Run Claude Code with full orchestration workflow (multi-agent, model routing, RTK)
+claude-orchestrate *ARGS:
+    claude --dangerously-skip-permissions --append-system-prompt-file .claude/system-prompt.md {{ ARGS }}
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Development Setup
@@ -216,6 +221,22 @@ demo-drummers:
     python -m midi_drums generate --genre rock --style blues --drummer porcaro --tempo 95 --output demo_porcaro.mid
     python -m midi_drums generate --genre jazz --style fusion --drummer weckl --tempo 135 --output demo_weckl.mid
     python -m midi_drums generate --genre funk --style classic --drummer chambers --tempo 105 --output demo_chambers.mid
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Reaper Integration
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Generate Reaper project with genre-smart structure (includes MIDI drum track)
+gen-reaper genre="metal" style="heavy" tempo="155" output="project.rpp":
+    python -m midi_drums reaper export --genre {{genre}} --style {{style}} --tempo {{tempo}} --output {{output}} --midi
+
+# Generate Reaper project with genre-smart markers only (no MIDI generated)
+gen-reaper-preset genre="metal" style="heavy" tempo="155" output="markers.rpp":
+    python -m midi_drums reaper export --genre {{genre}} --style {{style}} --tempo {{tempo}} --output {{output}} --preset-only
+
+# List available genre structure presets (optionally filter by genre)
+list-presets genre="":
+    python -m midi_drums reaper presets
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Maintenance

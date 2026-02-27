@@ -1,5 +1,7 @@
 """Command-line interface for drum generation."""
 
+from __future__ import annotations
+
 import argparse
 import sys
 from pathlib import Path
@@ -17,21 +19,31 @@ def create_parser() -> argparse.ArgumentParser:
         epilog="""
 Examples:
   # Generate a metal song
-  python -m midi_drums.api.cli generate --genre metal --style death \
+  python -m midi_drums.api.cli generate --genre metal --style death \\
       --tempo 180 --output song.mid
 
   # Generate a single pattern
-  python -m midi_drums.api.cli pattern --genre jazz --section verse \
+  python -m midi_drums.api.cli pattern --genre jazz --section verse \\
       --output pattern.mid
 
   # List available options
   python -m midi_drums.api.cli list genres
   python -m midi_drums.api.cli list styles --genre metal
 
-  # Reaper integration
-  python -m midi_drums.api.cli reaper export --genre metal --style doom \
-      --tempo 120 --output doom.rpp
-  python -m midi_drums.api.cli reaper add-markers --song doom.mid \
+  # Reaper integration — full export with MIDI
+  python -m midi_drums.api.cli reaper export --genre metal --style doom \\
+      --tempo 120 --output doom.rpp --midi
+
+  # Reaper integration — markers only, no MIDI (preset-only mode)
+  python -m midi_drums.api.cli reaper export --genre jazz --style swing \\
+      --tempo 160 --output jazz.rpp --preset-only
+
+  # List available genre structure presets
+  python -m midi_drums.api.cli reaper presets
+  python -m midi_drums.api.cli reaper presets --genre metal
+
+  # Add markers from existing metadata
+  python -m midi_drums.api.cli reaper add-markers --song doom.mid \\
       --output project.rpp
         """,
     )
@@ -155,7 +167,7 @@ Examples:
         "--style", default="default", help="Style within genre"
     )
     reaper_export.add_argument(
-        "--tempo", type=int, default=120, help="Tempo in BPM"
+        "--tempo", type=int, default=None, help="Tempo in BPM"
     )
     reaper_export.add_argument(
         "--output", "-o", required=True, help="Output Reaper project (.rpp)"
@@ -183,13 +195,32 @@ Examples:
         const="",
         help=(
             "Also export MIDI file (auto-generates filename based on .rpp "
-            "name, or specify custom filename)"
+            "name, or specify custom filename). Ignored when --preset-only."
         ),
     )
     reaper_export.add_argument(
         "--marker-color",
         default="#FF5733",
-        help="Hex color for markers (default: #FF5733)",
+        help=(
+            "Hex color for markers (default: #FF5733). "
+            "Ignored when --preset-only (preset colors used instead)."
+        ),
+    )
+    reaper_export.add_argument(
+        "--preset-only",
+        action="store_true",
+        default=False,
+        help=(
+            "Create the Reaper project with genre-smart structure markers "
+            "without generating any MIDI audio. Much faster and does not "
+            "require the drum plugin system."
+        ),
+    )
+    reaper_export.add_argument(
+        "--list-presets",
+        action="store_true",
+        default=False,
+        help="List available genre structure presets and exit.",
     )
 
     # Reaper add-markers command
@@ -238,6 +269,17 @@ Examples:
     reaper_markers.add_argument(
         "--time-signature",
         help="Time signature (default: 4/4, or from metadata)",
+    )
+
+    # Reaper presets command
+    reaper_presets = reaper_subparsers.add_parser(
+        "presets",
+        help="List available genre structure presets",
+    )
+    reaper_presets.add_argument(
+        "--genre",
+        default=None,
+        help="Filter presets to a specific genre (e.g. metal, jazz)",
     )
 
     return parser
@@ -374,56 +416,111 @@ def handle_info_command(args, generator: DrumGenerator) -> None:
 
 
 def handle_reaper_export_command(args, generator: DrumGenerator) -> None:
-    """Handle Reaper export command."""
+    """Handle Reaper export command.
+
+    Supports two modes:
+
+    * ``--preset-only``: create the ``.rpp`` with genre-smart markers from the
+      preset registry, without generating any MIDI audio.
+    * Normal mode: generate a full song with audio patterns, then export to
+      Reaper with optional MIDI output.
+    """
+    # Fast path: show presets and exit
+    if getattr(args, "list_presets", False):
+        _print_genre_presets(genre_filter=None)
+        return
+
     try:
-        # Create drum kit
-        drum_kit = DrumKit.from_preset("ezdrummer3")
-
-        # Generate song
-        song = generator.create_song(
-            genre=args.genre,
-            style=args.style,
-            tempo=args.tempo,
-            complexity=args.complexity,
-            humanization=args.humanization,
-            drummer=args.drummer,
-            drum_kit=drum_kit,
-        )
-
-        if args.name:
-            song.name = args.name
-
-        # Export to Reaper
-        exporter = ReaperExporter()
         output_path = Path(args.output)
 
-        exporter.export_with_markers(
-            song=song,
-            output_rpp=str(output_path),
-            input_rpp=args.template,
-            marker_color=args.marker_color,
-        )
+        if args.preset_only:
+            # ----------------------------------------------------------------
+            # Preset-only mode: no MIDI generation
+            # ----------------------------------------------------------------
+            from midi_drums.models.reaper_models import get_genre_preset
 
-        print(f"Generated song: {song.name}")
-        print(f"Reaper project saved to: {output_path}")
-        print(f"Genre: {args.genre} ({args.style})")
-        print(f"Tempo: {args.tempo} BPM")
-
-        # Show song info
-        info = generator.get_song_info(song)
-        print(f"Duration: {info['duration_seconds']:.1f}s")
-        print(f"Sections: {len(song.sections)}")
-        print(f"Markers added: {len(song.sections)}")
-
-        # Export MIDI if requested
-        if args.midi is not None:
-            midi_path = (
-                Path(args.midi)
-                if args.midi
-                else output_path.with_suffix(".mid")
+            exporter = ReaperExporter()
+            preset = exporter.export_with_genre_preset(
+                genre=args.genre,
+                style=args.style,
+                output_rpp=str(output_path),
+                tempo=args.tempo,
+                input_rpp=args.template,
+                name=args.name,
             )
-            generator.export_midi(song, midi_path)
-            print(f"MIDI file saved to: {midi_path}")
+
+            resolved_tempo = (
+                args.tempo if args.tempo is not None else preset.default_tempo
+            )
+            print(f"Reaper project saved to: {output_path}")
+            print("Mode: preset-only (no MIDI generated)")
+            print(f"Genre: {args.genre} ({args.style})")
+            print(f"Preset matched: {preset.genre}/{preset.style}")
+            print(f"Tempo: {resolved_tempo} BPM")
+            print(f"Sections: {len(preset.sections)}")
+            print(f"Markers added: {len(preset.sections)}")
+
+        else:
+            # ----------------------------------------------------------------
+            # Full generation mode
+            # ----------------------------------------------------------------
+            # Create drum kit
+            drum_kit = DrumKit.from_preset("ezdrummer3")
+
+            # Resolve tempo — use preset default when not supplied
+            from midi_drums.models.reaper_models import get_genre_preset
+
+            preset = get_genre_preset(args.genre, args.style)
+            resolved_tempo = (
+                args.tempo if args.tempo is not None else preset.default_tempo
+            )
+
+            # Generate song
+            song = generator.create_song(
+                genre=args.genre,
+                style=args.style,
+                tempo=resolved_tempo,
+                complexity=args.complexity,
+                humanization=args.humanization,
+                drummer=args.drummer,
+                drum_kit=drum_kit,
+            )
+
+            if args.name:
+                song.name = args.name
+
+            # Attach genre metadata so the exporter picks section colors
+            song.metadata["genre"] = args.genre
+            song.metadata["style"] = args.style
+
+            exporter = ReaperExporter()
+            exporter.export_with_markers(
+                song=song,
+                output_rpp=str(output_path),
+                input_rpp=args.template,
+                marker_color=args.marker_color,
+            )
+
+            print(f"Generated song: {song.name}")
+            print(f"Reaper project saved to: {output_path}")
+            print(f"Genre: {args.genre} ({args.style})")
+            print(f"Tempo: {resolved_tempo} BPM")
+
+            # Show song info
+            info = generator.get_song_info(song)
+            print(f"Duration: {info['duration_seconds']:.1f}s")
+            print(f"Sections: {len(song.sections)}")
+            print(f"Markers added: {len(song.sections)}")
+
+            # Export MIDI if requested
+            if args.midi is not None:
+                midi_path = (
+                    Path(args.midi)
+                    if args.midi
+                    else output_path.with_suffix(".mid")
+                )
+                generator.export_midi(song, midi_path)
+                print(f"MIDI file saved to: {midi_path}")
 
     except Exception as e:
         print(f"Error exporting to Reaper: {e}", file=sys.stderr)
@@ -581,6 +678,59 @@ def handle_reaper_add_markers_command(args, generator: DrumGenerator) -> None:
         sys.exit(1)
 
 
+def _print_genre_presets(genre_filter: str | None = None) -> None:
+    """Print genre structure presets to stdout.
+
+    Args:
+        genre_filter: When provided, only presets for this genre are shown.
+    """
+    from midi_drums.models.reaper_models import (
+        GENRE_STRUCTURE_PRESETS,
+        list_genre_presets,
+    )
+
+    all_presets = list_genre_presets()
+
+    if genre_filter:
+        g = genre_filter.lower()
+        if g not in all_presets:
+            print(
+                f"No presets found for genre '{genre_filter}'.",
+                file=sys.stderr,
+            )
+            print(
+                f"Available genres: {', '.join(sorted(all_presets))}",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        genres_to_show = {g: all_presets[g]}
+    else:
+        genres_to_show = all_presets
+
+    print("Available genre structure presets")
+    print("=" * 48)
+    for genre, styles in sorted(genres_to_show.items()):
+        print(f"\n{genre.upper()}")
+        for style in styles:
+            preset = GENRE_STRUCTURE_PRESETS.get((genre, style))
+            if preset is None:
+                continue
+            lo, hi = preset.tempo_range
+            num, den = preset.time_signature
+            section_names = ", ".join(s.name for s in preset.sections)
+            print(f"  {style:<16}  {lo}-{hi} BPM  {num}/{den}")
+            print(f"    Sections: {section_names}")
+
+
+def handle_reaper_presets_command(args) -> None:
+    """Handle 'reaper presets' command.
+
+    Args:
+        args: Parsed CLI arguments (expects ``args.genre``).
+    """
+    _print_genre_presets(genre_filter=getattr(args, "genre", None))
+
+
 def main():
     """Main CLI entry point."""
     parser = create_parser()
@@ -611,10 +761,12 @@ def main():
             handle_reaper_export_command(args, generator)
         elif args.reaper_command == "add-markers":
             handle_reaper_add_markers_command(args, generator)
+        elif args.reaper_command == "presets":
+            handle_reaper_presets_command(args)
         else:
             print(
-                "Error: Please specify a reaper subcommand (export or "
-                "add-markers)",
+                "Error: Please specify a reaper subcommand "
+                "(export, add-markers, or presets)",
                 file=sys.stderr,
             )
             sys.exit(1)
