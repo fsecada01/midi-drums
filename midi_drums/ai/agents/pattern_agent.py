@@ -1,12 +1,16 @@
 """Langchain agent for intelligent pattern composition.
 
-This agent uses Langchain 1.0's create_agent function with tools for drum
-pattern generation, composition, and evolution.
+This agent uses Langchain 1.0's create_react_agent function with tools for
+drum pattern generation, composition, and evolution.
 """
 
+from __future__ import annotations
+
+from pathlib import Path
 from typing import Any
 
-from langchain.agents import create_agent
+from langchain.agents import AgentExecutor, create_react_agent
+from langchain_core.prompts import ChatPromptTemplate
 from loguru import logger
 
 from midi_drums.ai.backends import AIBackendConfig, AIBackendFactory
@@ -14,12 +18,37 @@ from midi_drums.core.engine import DrumGenerator
 from midi_drums.models.pattern import Pattern
 from midi_drums.models.song import Song
 
+SYSTEM_PROMPT = (
+    "You are an expert drum pattern composer and music producer. "
+    "You help users create professional drum patterns and songs across "
+    "multiple genres (metal, rock, jazz, funk) with various styles and "
+    "drummer personalities.\n\n"
+    "When composing:\n"
+    "1. Ask clarifying questions if the request is vague\n"
+    "2. Suggest appropriate styles and drummers based on the user's goals\n"
+    "3. Explain your creative decisions\n"
+    "4. Reference generated pattern/song IDs for the user\n\n"
+    "Available tools allow you to generate patterns, apply drummer styles, "
+    "create complete songs, and list available options.\n\n"
+    "You have access to the following tools:\n\n"
+    "{tools}\n\n"
+    "Use the following format:\n\n"
+    "Question: the input question you must answer\n"
+    "Thought: you should always think about what to do\n"
+    "Action: the action to take, should be one of [{tool_names}]\n"
+    "Action Input: the input to the action\n"
+    "Observation: the result of the action\n"
+    "... (this Thought/Action/Action Input/Observation can repeat N times)\n"
+    "Thought: I now know the final answer\n"
+    "Final Answer: the final answer to the original input question"
+)
+
 
 class PatternCompositionAgent:
     """Langchain 1.0 agent for intelligent drum pattern composition.
 
-    This class uses Langchain's create_agent function with a set of tools
-    for generating patterns, applying drummer styles, and creating songs.
+    This class uses Langchain's create_react_agent function with a set of
+    tools for generating patterns, applying drummer styles, and creating songs.
 
     Features:
     - Multi-step reasoning about musical composition
@@ -66,7 +95,7 @@ class PatternCompositionAgent:
         self.tools = self._create_tools()
         logger.info(f"Agent tools created: {len(self.tools)} tools available")
 
-        # Create agent using Langchain 1.0 create_agent
+        # Create agent using Langchain 1.0 create_react_agent
         self.agent = self._create_agent()
         logger.success("Langchain Pattern Composition Agent V2 ready")
 
@@ -193,7 +222,12 @@ class PatternCompositionAgent:
             )
 
             section_desc = ", ".join(
-                f"{s.type}({s.bars})" for s in song.sections[:5]
+                (
+                    f"{s.type}({s.bars})"
+                    if hasattr(s, "type")
+                    else f"{s.name}({s.bars})"
+                )
+                for s in song.sections[:5]
             )
             if len(song.sections) > 5:
                 section_desc += f", +{len(song.sections) - 5} more"
@@ -235,35 +269,40 @@ class PatternCompositionAgent:
             list_drummers,
         ]
 
-    def _create_agent(self):
-        """Create Langchain 1.0 agent using create_agent.
+    def _create_agent(self) -> AgentExecutor:
+        """Create Langchain 1.0 agent using create_react_agent.
 
         Returns:
-            Configured agent
+            Configured AgentExecutor
         """
-        logger.debug("Creating agent with create_agent()")
+        logger.debug("Creating agent with create_react_agent()")
 
-        # Use Langchain 1.0 create_agent
-        agent = create_agent(
-            model=self.llm,
-            tools=self.tools,
-            system_prompt=(
-                "You are an expert drum pattern composer and music producer. "
-                "You help users create professional drum patterns and songs across "
-                "multiple genres (metal, rock, jazz, funk) with various styles and "
-                "drummer personalities.\n\n"
-                "When composing:\n"
-                "1. Ask clarifying questions if the request is vague\n"
-                "2. Suggest appropriate styles and drummers based on the user's goals\n"
-                "3. Explain your creative decisions\n"
-                "4. Reference generated pattern/song IDs for the user\n\n"
-                "Available tools allow you to generate patterns, apply drummer styles, "
-                "create complete songs, and list available options."
-            ),
+        # Build the ReAct prompt template
+        prompt = ChatPromptTemplate.from_messages(
+            [
+                ("system", SYSTEM_PROMPT),
+                ("human", "{input}"),
+                ("placeholder", "{agent_scratchpad}"),
+            ]
         )
 
-        logger.debug("Agent created successfully")
-        return agent
+        # Create the ReAct agent
+        react_agent = create_react_agent(
+            llm=self.llm,
+            tools=self.tools,
+            prompt=prompt,
+        )
+
+        # Wrap in AgentExecutor for invocation
+        executor = AgentExecutor(
+            agent=react_agent,
+            tools=self.tools,
+            verbose=True,
+            handle_parsing_errors=True,
+        )
+
+        logger.debug("AgentExecutor created successfully")
+        return executor
 
     def compose(self, user_request: str) -> dict[str, Any]:
         """Process a user composition request using the agent.
@@ -280,23 +319,13 @@ class PatternCompositionAgent:
             f"{len(self.song_cache)} songs"
         )
 
-        # Invoke agent with messages
-        result = self.agent.invoke(
-            {"messages": [{"role": "user", "content": user_request}]}
-        )
+        # Invoke AgentExecutor with input key (Langchain 1.0 format)
+        result = self.agent.invoke({"input": user_request})
 
         logger.success("Agent composition complete")
 
-        # Extract final response
-        final_response = ""
-        if "messages" in result:
-            # Get last message
-            last_message = result["messages"][-1]
-            final_response = (
-                last_message.content
-                if hasattr(last_message, "content")
-                else str(last_message)
-            )
+        # AgentExecutor returns {"output": <final_answer>, ...}
+        final_response = result.get("output", "")
 
         return {
             "output": final_response,
@@ -325,3 +354,71 @@ class PatternCompositionAgent:
             Song if found, None otherwise
         """
         return self.song_cache.get(song_id)
+
+    def export_pattern(
+        self,
+        pattern_or_id: Pattern | str,
+        output_path: str,
+        tempo: int = 120,
+    ) -> bool:
+        """Export a pattern (by ID or object) to MIDI file.
+
+        Args:
+            pattern_or_id: Pattern object or pattern ID string from agent cache
+            output_path: Destination file path for MIDI output
+            tempo: Tempo in BPM used for MIDI export
+
+        Returns:
+            True if export succeeded, False otherwise
+        """
+        from midi_drums.engines.midi_engine import MIDIEngine
+
+        if isinstance(pattern_or_id, str):
+            pattern = self.get_pattern(pattern_or_id)
+            if pattern is None:
+                logger.error(f"Pattern not found in cache: {pattern_or_id}")
+                return False
+        else:
+            pattern = pattern_or_id
+
+        try:
+            engine = MIDIEngine()
+            engine.save_pattern_midi(pattern, Path(output_path), tempo)
+            logger.success(f"Pattern exported to: {output_path}")
+            return True
+        except Exception as exc:
+            logger.error(f"Failed to export pattern: {exc}")
+            return False
+
+    def export_song(
+        self,
+        song_or_id: Song | str,
+        output_path: str,
+    ) -> bool:
+        """Export a song (by ID or object) to MIDI file.
+
+        Args:
+            song_or_id: Song object or song ID string from agent cache
+            output_path: Destination file path for MIDI output
+
+        Returns:
+            True if export succeeded, False otherwise
+        """
+        from midi_drums.engines.midi_engine import MIDIEngine
+
+        if isinstance(song_or_id, str):
+            song = self.get_song(song_or_id)
+            if song is None:
+                logger.error(f"Song not found in cache: {song_or_id}")
+                return False
+        else:
+            song = song_or_id
+
+        try:
+            engine = MIDIEngine()
+            engine.save_song_midi(song, Path(output_path))
+            logger.success(f"Song exported to: {output_path}")
+            return True
+        except Exception as exc:
+            logger.error(f"Failed to export song: {exc}")
+            return False
