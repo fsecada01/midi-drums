@@ -56,6 +56,9 @@ class PatternFixer:
         fixed_pattern = pattern.copy()
         self.fixes_applied = []
 
+        # Remove duplicate beats (same position + instrument) first
+        fixed_pattern = self.remove_duplicate_beats(fixed_pattern)
+
         # Fix ride + hi-hat conflicts
         fixed_pattern = self.remove_ride_hihat_conflicts(fixed_pattern)
 
@@ -65,6 +68,39 @@ class PatternFixer:
             )
             for fix in self.fixes_applied:
                 logger.info(f"  - {fix}")
+
+        return fixed_pattern
+
+    def remove_duplicate_beats(self, pattern: Pattern) -> Pattern:
+        """Remove duplicate beats at the same position with the same instrument.
+
+        When multiple drummer modifications are layered, the same instrument
+        can end up with multiple beats at identical positions. These duplicates
+        are musically redundant and cause spurious physical-constraint violations
+        (e.g. "requires 3 hands" when two of them are the same cymbal).
+
+        Strategy: keep only the loudest beat when duplicates exist at the
+        same (position, instrument) key.
+
+        Args:
+            pattern: Pattern to deduplicate
+
+        Returns:
+            Fixed pattern (new copy)
+        """
+        fixed_pattern = pattern.copy()
+        seen: dict[tuple, object] = {}
+
+        for beat in fixed_pattern.beats:
+            key = (round(beat.position, 4), beat.instrument)
+            if key not in seen or beat.velocity > seen[key].velocity:  # type: ignore[attr-defined]
+                seen[key] = beat
+
+        original_count = len(fixed_pattern.beats)
+        fixed_pattern.beats = sorted(seen.values(), key=lambda b: b.position)
+        removed = original_count - len(fixed_pattern.beats)
+        if removed:
+            self.fixes_applied.append(f"Removed {removed} duplicate beat(s)")
 
         return fixed_pattern
 

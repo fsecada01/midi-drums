@@ -7,7 +7,7 @@ from midi_drums.plugins.base import DrummerPlugin
 from midi_drums.plugins.drummers.chambers import ChambersPlugin
 from midi_drums.plugins.drummers.porcaro import PorcaroPlugin
 from midi_drums.plugins.drummers.roeder import RoederPlugin
-from midi_drums.utils.pattern_fixer import remove_ride_hihat_conflicts
+from midi_drums.utils.pattern_fixer import PatternFixer
 from midi_drums.validation.physical_constraints import PhysicalValidator
 
 logger = logging.getLogger(__name__)
@@ -96,8 +96,8 @@ class CompositeDoomBluesPlugin(DrummerPlugin):
                 "applying automatic fixes"
             )
 
-            # Apply automatic conflict resolution
-            styled_pattern = remove_ride_hihat_conflicts(styled_pattern)
+            # Apply full conflict resolution (dedup + ride/hihat fixes)
+            styled_pattern = PatternFixer().fix_pattern(styled_pattern)
 
             # Validate again to ensure all conflicts are resolved
             remaining_conflicts = self.validator.validate_pattern(
