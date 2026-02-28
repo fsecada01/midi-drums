@@ -113,9 +113,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv venv --python ${{ matrix.python-version || '3.12' }}
-          source .venv/bin/activate
-          uv pip install -e ".[dev,ai]"
+          uv sync --all-groups --python 3.12
 
       - name: Run all tests with coverage
         run: |
