@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recipes — MIDI Drums Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/base16/onedark.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>hljs.highlightAll();</script>
+<style>
+:root{--dm-bg:#0c1117;--dm-panel:#161c26;--dm-code-bg:#090e18;--dm-border:#1e2a3c;--dm-border-lit:#29394f;--dm-violet:#a78bfa;--dm-amber:#fbbf24;--dm-sky:#38bdf8;--dm-green:#4ade80;--dm-text:#cbd5e1;--dm-muted:#64748b;--dm-dim:#334155;--dm-white:#f1f5f9;--dm-mono:'IBM Plex Mono','Courier New',monospace;--dm-sans:'Inter',system-ui,-apple-system,sans-serif;--dm-bar-h:42px;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}html{scroll-behavior:smooth;}body{background:var(--dm-bg);color:var(--dm-text);font-family:var(--dm-sans);padding-top:var(--dm-bar-h);line-height:1.7;}::-webkit-scrollbar{width:5px;}::-webkit-scrollbar-thumb{background:var(--dm-border-lit);border-radius:3px;}
+#dm-bar{position:fixed;top:0;left:0;right:0;height:var(--dm-bar-h);z-index:1000;display:flex;align-items:center;padding:0 1.5rem;background:linear-gradient(to right,#1a2232,var(--dm-panel) 60%);border-bottom:1px solid var(--dm-border);font-family:var(--dm-mono);font-size:11px;color:var(--dm-muted);white-space:nowrap;}
+.dm-logo{color:var(--dm-violet);font-weight:600;font-size:13px;text-decoration:none;margin-right:.85rem;transition:color .15s;}.dm-logo::before{content:"> ";color:var(--dm-amber);}.dm-logo:hover{color:var(--dm-white);}
+.dm-badge{font-size:9px;letter-spacing:.12em;padding:2px 6px;border-radius:2px;margin-right:.85rem;color:var(--dm-green);border:1px solid rgba(74,222,128,.4);background:rgba(74,222,128,.06);}
+.dm-sep{color:var(--dm-border-lit);margin:0 .7rem;}
+.dm-links{margin-left:auto;display:flex;align-items:center;gap:1.1rem;}.dm-links a{color:var(--dm-muted);text-decoration:none;font-size:11px;transition:color .15s;}.dm-links a:hover,.dm-links a.active{color:var(--dm-violet);}.dm-links .api-link{color:var(--dm-sky);}
+.layout{display:grid;grid-template-columns:220px 1fr;max-width:1100px;margin:0 auto;min-height:calc(100vh - var(--dm-bar-h));}
+.toc{position:sticky;top:var(--dm-bar-h);height:calc(100vh - var(--dm-bar-h));overflow-y:auto;padding:2rem 1.25rem;border-right:1px solid var(--dm-border);font-family:var(--dm-mono);font-size:.8rem;}
+.toc h3{font-size:.7rem;color:var(--dm-dim);letter-spacing:.15em;text-transform:uppercase;margin-bottom:.75rem;margin-top:1.25rem;}.toc h3:first-child{margin-top:0;}
+.toc a{display:block;color:var(--dm-muted);text-decoration:none;padding:.2rem 0;transition:color .15s;}.toc a:hover{color:var(--dm-violet);}
+.toc a.sub{padding-left:.85rem;font-size:.75rem;}
+article{padding:2.5rem 3rem;max-width:820px;}
+h1{font-family:var(--dm-mono);font-size:1.65rem;font-weight:600;color:var(--dm-white);margin-bottom:.5rem;}h1::before{content:"# ";color:var(--dm-amber);opacity:.6;}
+.subtitle{color:var(--dm-muted);margin-bottom:2.5rem;font-size:1rem;}
+h2{font-family:var(--dm-mono);font-size:1.1rem;font-weight:600;color:var(--dm-sky);margin:2.5rem 0 .75rem;padding-top:.5rem;}h2::before{content:"## ";color:var(--dm-amber);opacity:.5;font-size:.9em;}
+h3{font-family:var(--dm-mono);font-size:.95rem;font-weight:600;color:var(--dm-text);margin:1.5rem 0 .5rem;}h3::before{content:"### ";color:var(--dm-amber);opacity:.4;font-size:.85em;}
+p{margin:.6rem 0;}a{color:var(--dm-sky);text-decoration:none;}a:hover{color:var(--dm-violet);}
+code{font-family:var(--dm-mono);font-size:.85em;background:var(--dm-panel);border:1px solid var(--dm-border);border-radius:2px;padding:.1em .35em;color:var(--dm-amber);}
+pre{margin:1rem 0;border-radius:6px;overflow-x:auto;border:1px solid var(--dm-border);}pre code{font-size:.84rem;line-height:1.65;}
+ul,ol{margin:.6rem 0 .6rem 1.5rem;}li{margin:.2rem 0;}
+
+/* RECIPE CARD */
+.recipe-card{background:var(--dm-panel);border:1px solid var(--dm-border);border-radius:8px;padding:1.75rem 2rem;margin:2rem 0;position:relative;}
+.recipe-tag{position:absolute;top:1rem;right:1rem;font-family:var(--dm-mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;padding:3px 8px;border-radius:2px;}
+.tag-metal{color:var(--dm-amber);border:1px solid rgba(251,191,36,.4);background:rgba(251,191,36,.06);}
+.tag-jazz{color:var(--dm-violet);border:1px solid rgba(167,139,250,.4);background:rgba(167,139,250,.06);}
+.tag-prog{color:var(--dm-sky);border:1px solid rgba(56,189,248,.4);background:rgba(56,189,248,.06);}
+.recipe-meta{display:flex;gap:2rem;margin:1rem 0 1.25rem;font-size:.85rem;color:var(--dm-muted);}
+.recipe-meta span{display:flex;align-items:center;gap:.4rem;}
+.recipe-meta .label{font-family:var(--dm-mono);font-size:.78rem;color:var(--dm-dim);}
+.recipe-card h2{margin-top:0;padding-top:0;}
+
+/* CALLOUT */
+.callout{background:var(--dm-panel);border-left:3px solid var(--dm-violet);border-radius:0 4px 4px 0;padding:.85rem 1rem;margin:1.25rem 0;}
+.callout.info{border-color:var(--dm-sky);}.callout.tip{border-color:var(--dm-green);}
+.callout-title{font-family:var(--dm-mono);font-size:.75rem;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.4rem;}
+.callout.info .callout-title{color:var(--dm-sky);}.callout.tip .callout-title{color:var(--dm-green);}
+.callout p{font-size:.9rem;color:var(--dm-muted);}
+
+/* SECTION BREAKDOWN */
+.structure-list{display:flex;flex-wrap:wrap;gap:.5rem;margin:1rem 0;}
+.section-pill{font-family:var(--dm-mono);font-size:.75rem;padding:3px 10px;border-radius:12px;background:rgba(30,42,60,.8);border:1px solid var(--dm-border);color:var(--dm-muted);}
+.section-pill span{color:var(--dm-text);}
+
+@media(max-width:768px){.layout{grid-template-columns:1fr;}.toc{display:none;}article{padding:2rem 1.25rem;}.dm-links{display:none;}}
+</style>
+</head>
+<body>
+
+<div id="dm-bar">
+  <a class="dm-logo" href="index.html">midi-drums</a>
+  <span class="dm-badge">stable</span>
+  <span class="dm-sep">|</span>
+  <div class="dm-links">
+    <a href="index.html">Home</a>
+    <a href="quickstart.html">Quickstart</a>
+    <a href="recipes.html" class="active">Recipes</a>
+    <a href="reaper.html">Reaper</a>
+    <a href="midi_drums.html" class="api-link">API →</a>
+  </div>
+</div>
+
+<div class="layout">
+  <nav class="toc">
+    <h3>Recipes</h3>
+    <a href="#death-metal">Death Metal Track</a>
+    <a href="#dm-code" class="sub">Python code</a>
+    <a href="#dm-cli" class="sub">CLI code</a>
+    <a href="#dm-reaper" class="sub">Reaper export</a>
+    <a href="#modern-jazz">Modern Jazz Session</a>
+    <a href="#mj-code" class="sub">Python code</a>
+    <a href="#mj-variations" class="sub">Variations</a>
+    <a href="#prog-rock">Progressive Rock</a>
+    <a href="#pr-code" class="sub">Python code</a>
+    <a href="#pr-custom" class="sub">Custom structure</a>
+    <h3>Extras</h3>
+    <a href="#batch">Batch generation</a>
+    <a href="#ai">AI recipes</a>
+  </nav>
+
+  <article>
+    <h1>Recipes</h1>
+    <p class="subtitle">Complete, runnable examples for common drum track scenarios.</p>
+
+    <!-- ═══ DEATH METAL ═══════════════════════════════════════════════════════ -->
+    <div class="recipe-card" id="death-metal">
+      <span class="recipe-tag tag-metal">metal</span>
+      <h2>Death Metal Track</h2>
+      <div class="recipe-meta">
+        <span><span class="label">BPM</span> 180</span>
+        <span><span class="label">Style</span> death</span>
+        <span><span class="label">Drummer</span> Gene Hoglan</span>
+        <span><span class="label">Complexity</span> 0.9</span>
+      </div>
+      <p>A full death metal song with blast beats, continuous double bass pedal, and Gene Hoglan's mechanical precision. Sections move from atmospheric breakdown intro into relentless verse/chorus cycles.</p>
+
+      <div class="structure-list">
+        <div class="section-pill">intro <span>4 bars</span></div>
+        <div class="section-pill">verse <span>8 bars</span></div>
+        <div class="section-pill">chorus <span>8 bars</span></div>
+        <div class="section-pill">verse <span>8 bars</span></div>
+        <div class="section-pill">breakdown <span>4 bars</span></div>
+        <div class="section-pill">chorus <span>8 bars</span></div>
+        <div class="section-pill">outro <span>4 bars</span></div>
+      </div>
+
+      <h3 id="dm-code">Python</h3>
+      <pre><code class="language-python">from midi_drums.api.python_api import DrumGeneratorAPI
+from midi_drums import DrumGenerator
+
+# Quick version — one function call
+api = DrumGeneratorAPI()
+song = api.create_song(
+    genre="metal",
+    style="death",
+    tempo=180,
+    complexity=0.9,
+    humanization=0.2,   # slight humanization — death metal is tight
+    drummer="hoglan",   # Gene Hoglan: mechanical precision
+)
+api.save_as_midi(song, "death_metal_hoglan.mid")
+
+# Full control over structure
+gen = DrumGenerator()
+song = gen.create_song(
+    genre="metal",
+    style="death",
+    tempo=180,
+    structure=[
+        ("intro",     4),
+        ("verse",     8),
+        ("chorus",    8),
+        ("verse",     8),
+        ("breakdown", 4),
+        ("chorus",    8),
+        ("outro",     4),
+    ],
+    complexity=0.9,
+    humanization=0.2,
+)
+gen.export_midi(song, "death_metal_custom.mid")</code></pre>
+
+      <h3 id="dm-cli">CLI</h3>
+      <pre><code class="language-bash">midi-drums generate \
+    --genre metal \
+    --style death \
+    --tempo 180 \
+    --complexity 0.9 \
+    --humanization 0.2 \
+    --drummer hoglan \
+    --output death_metal.mid</code></pre>
+
+      <h3 id="dm-reaper">Export to Reaper</h3>
+      <pre><code class="language-bash">midi-drums reaper export \
+    --genre metal \
+    --style death \
+    --tempo 180 \
+    --complexity 0.9 \
+    --drummer hoglan \
+    --output death_metal.rpp \
+    --midi death_metal_drums.mid \
+    --marker-color "#FF3300"</code></pre>
+
+      <div class="callout tip">
+        <div class="callout-title">What makes it sound right</div>
+        <p><strong>Hoglan</strong> applies <em>MechanicalPrecision</em> — near-zero timing variation — plus <em>HeavyAccents</em> for the characteristic snare crack. Low <code>humanization=0.2</code> keeps the robotic feel authentic to the genre.</p>
+      </div>
+    </div>
+
+    <!-- ═══ MODERN JAZZ ═══════════════════════════════════════════════════════ -->
+    <div class="recipe-card" id="modern-jazz">
+      <span class="recipe-tag tag-jazz">jazz</span>
+      <h2>Modern Jazz Session</h2>
+      <div class="recipe-meta">
+        <span><span class="label">BPM</span> 130</span>
+        <span><span class="label">Style</span> contemporary / fusion</span>
+        <span><span class="label">Drummer</span> Dave Weckl</span>
+        <span><span class="label">Complexity</span> 0.75</span>
+      </div>
+      <p>A modern jazz recording-session feel — ride-driven with linear passages, ghost notes under the snare, and Weckl's signature sophisticated coordination. Works equally well for contemporary and fusion styles.</p>
+
+      <div class="structure-list">
+        <div class="section-pill">intro <span>4 bars</span></div>
+        <div class="section-pill">verse <span>8 bars</span></div>
+        <div class="section-pill">bridge <span>4 bars</span></div>
+        <div class="section-pill">verse <span>8 bars</span></div>
+        <div class="section-pill">outro <span>4 bars</span></div>
+      </div>
+
+      <h3 id="mj-code">Python</h3>
+      <pre><code class="language-python">from midi_drums.api.python_api import DrumGeneratorAPI
+from midi_drums import DrumGenerator
+
+api = DrumGeneratorAPI()
+
+# Contemporary jazz with Weckl's linear coordination
+contemporary = api.create_song(
+    genre="jazz",
+    style="contemporary",
+    tempo=130,
+    complexity=0.75,
+    humanization=0.5,   # jazz breathes — higher humanization
+    drummer="weckl",
+)
+api.save_as_midi(contemporary, "jazz_contemporary_weckl.mid")
+
+# Fusion style — more electric energy
+fusion = api.create_song(
+    genre="jazz",
+    style="fusion",
+    tempo=145,
+    complexity=0.8,
+    humanization=0.4,
+    drummer="weckl",
+)
+api.save_as_midi(fusion, "jazz_fusion_weckl.mid")
+
+# Classic swing for comparison
+swing = api.create_song(
+    genre="jazz",
+    style="swing",
+    tempo=120,
+    drummer="weckl",
+)
+api.save_as_midi(swing, "jazz_swing_weckl.mid")</code></pre>
+
+      <h3 id="mj-variations">Style variations</h3>
+      <pre><code class="language-python">api = DrumGeneratorAPI()
+
+# Generate individual section patterns for arrangement
+intro_pattern  = api.generate_pattern("jazz", "intro",  "contemporary")
+verse_pattern  = api.generate_pattern("jazz", "verse",  "contemporary")
+bridge_pattern = api.generate_pattern("jazz", "bridge", "fusion")
+outro_pattern  = api.generate_pattern("jazz", "outro",  "ballad")
+
+# Apply Weckl style to each section
+patterns = {
+    "intro":  api.apply_drummer_style(intro_pattern,  "weckl"),
+    "verse":  api.apply_drummer_style(verse_pattern,  "weckl"),
+    "bridge": api.apply_drummer_style(bridge_pattern, "weckl"),
+    "outro":  api.apply_drummer_style(outro_pattern,  "weckl"),
+}
+
+# Save individually for layering in your DAW
+for name, pattern in patterns.items():
+    api.save_pattern_as_midi(
+        pattern,
+        f"jazz_{name}.mid",
+        tempo=130
+    )</code></pre>
+
+      <div class="callout info">
+        <div class="callout-title">Weckl's signature</div>
+        <p><strong>LinearCoordination</strong> removes simultaneous hits so every note has its own space — the hallmark of linear drumming. <strong>GhostNoteLayer</strong> adds barely-audible ghost notes under the snare for depth. Use <code>humanization=0.45–0.55</code> for the most natural jazz feel.</p>
+      </div>
+    </div>
+
+    <!-- ═══ PROGRESSIVE ROCK ═══════════════════════════════════════════════════ -->
+    <div class="recipe-card" id="prog-rock">
+      <span class="recipe-tag tag-prog">rock</span>
+      <h2>Progressive Rock Track</h2>
+      <div class="recipe-meta">
+        <span><span class="label">BPM</span> 145</span>
+        <span><span class="label">Style</span> progressive</span>
+        <span><span class="label">Drummer</span> John Bonham</span>
+        <span><span class="label">Complexity</span> 0.85</span>
+      </div>
+      <p>Progressive rock demands complexity without losing the pocket. Bonham's behind-the-beat feel combined with the progressive rock style creates driving patterns with unexpected syncopations and dynamic fills.</p>
+
+      <div class="structure-list">
+        <div class="section-pill">intro <span>4 bars</span></div>
+        <div class="section-pill">verse <span>8 bars</span></div>
+        <div class="section-pill">chorus <span>8 bars</span></div>
+        <div class="section-pill">bridge <span>8 bars</span></div>
+        <div class="section-pill">chorus <span>8 bars</span></div>
+        <div class="section-pill">outro <span>8 bars</span></div>
+      </div>
+
+      <h3 id="pr-code">Python</h3>
+      <pre><code class="language-python">from midi_drums.api.python_api import DrumGeneratorAPI
+from midi_drums import DrumGenerator
+
+api = DrumGeneratorAPI()
+
+# Progressive rock with Bonham's signature weight
+prog = api.create_song(
+    genre="rock",
+    style="progressive",
+    tempo=145,
+    complexity=0.85,
+    humanization=0.35,  # behind-the-beat feel
+    drummer="bonham",
+)
+api.save_as_midi(prog, "prog_rock_bonham.mid")</code></pre>
+
+      <h3 id="pr-custom">Custom arrangement</h3>
+      <pre><code class="language-python">from midi_drums import DrumGenerator
+
+gen = DrumGenerator()
+
+# Longer, more cinematic arrangement
+song = gen.create_song(
+    genre="rock",
+    style="progressive",
+    tempo=145,
+    structure=[
+        ("intro",  4),   # Build
+        ("verse",  8),   # Theme A
+        ("chorus", 8),   # Lift
+        ("verse",  8),   # Theme A again
+        ("bridge", 8),   # Contrast section — key change feel
+        ("chorus", 8),   # Return
+        ("outro",  8),   # Extended fade
+    ],
+    complexity=0.85,
+    humanization=0.35,
+)
+gen.export_midi(song, "prog_rock_long.mid")
+
+# Or try with Porcaro's ghost note mastery for a more polished feel
+api = DrumGeneratorAPI()
+porcaro_prog = api.create_song(
+    genre="rock",
+    style="progressive",
+    tempo=145,
+    complexity=0.75,
+    humanization=0.4,
+    drummer="porcaro",  # studio precision + ghost notes
+)
+api.save_as_midi(porcaro_prog, "prog_rock_porcaro.mid")</code></pre>
+
+      <div class="callout tip">
+        <div class="callout-title">Bonham's behind-the-beat feel</div>
+        <p><strong>BehindBeatTiming</strong> delays hits by 15–25 ms — subtle enough to be musical, noticeable enough to create that signature weight. Combined with <strong>TripletVocabulary</strong> for fills and <strong>HeavyAccents</strong> for power, it produces the Led Zeppelin signature.</p>
+      </div>
+    </div>
+
+    <!-- ═══ BATCH ══════════════════════════════════════════════════════════════ -->
+    <h2 id="batch">Batch generation</h2>
+    <p>Generate multiple tracks in one call — useful for providing a DAW session with all sections pre-made:</p>
+
+    <pre><code class="language-python">from midi_drums.api.python_api import DrumGeneratorAPI
+
+api = DrumGeneratorAPI()
+
+specs = [
+    # Death metal at different tempos
+    {"genre": "metal", "style": "death",  "tempo": 180, "drummer": "hoglan"},
+    {"genre": "metal", "style": "death",  "tempo": 160, "drummer": "hoglan"},
+    # Progressive rock variations
+    {"genre": "rock",  "style": "progressive", "tempo": 145, "drummer": "bonham"},
+    {"genre": "rock",  "style": "progressive", "tempo": 130, "drummer": "porcaro"},
+    # Jazz sessions
+    {"genre": "jazz",  "style": "contemporary", "tempo": 130, "drummer": "weckl"},
+    {"genre": "jazz",  "style": "fusion",       "tempo": 145, "drummer": "chambers"},
+]
+
+output_files = api.batch_generate(specs, output_dir="output/")
+print(f"Generated {len(output_files)} MIDI files")</code></pre>
+
+    <!-- ═══ AI ═════════════════════════════════════════════════════════════════ -->
+    <h2 id="ai">AI-described recipes</h2>
+    <p>With AI dependencies installed and an API key configured:</p>
+
+    <pre><code class="language-python">import asyncio
+from midi_drums.ai import DrumGeneratorAI
+
+async def main():
+    ai = DrumGeneratorAI()
+
+    # Death metal via natural language
+    pattern, info = await ai.generate_pattern_from_text(
+        "brutal death metal with continuous blast beats and galloping double bass",
+        section="verse", tempo=190, bars=4
+    )
+    ai.export_pattern(pattern, "ai_death.mid", tempo=190)
+
+    # Modern jazz
+    pattern, info = await ai.generate_pattern_from_text(
+        "contemporary jazz with linear drumming, ghost notes, and complex ride pattern",
+        section="verse", tempo=132, bars=4
+    )
+    ai.export_pattern(pattern, "ai_jazz.mid", tempo=132)
+
+    # Progressive rock
+    pattern, info = await ai.generate_pattern_from_text(
+        "progressive rock in odd meter with syncopated snare and driving hi-hat",
+        section="verse", tempo=145, bars=4
+    )
+    ai.export_pattern(pattern, "ai_prog.mid", tempo=145)
+
+asyncio.run(main())</code></pre>
+
+    <p>Next: <a href="reaper.html">Learn how to use these tracks in Reaper →</a></p>
+
+  </article>
+</div>
+
+</body>
+</html>

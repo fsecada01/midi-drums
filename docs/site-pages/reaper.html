@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reaper Integration — MIDI Drums Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/base16/onedark.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>hljs.highlightAll();</script>
+<style>
+:root{--dm-bg:#0c1117;--dm-panel:#161c26;--dm-code-bg:#090e18;--dm-border:#1e2a3c;--dm-border-lit:#29394f;--dm-violet:#a78bfa;--dm-amber:#fbbf24;--dm-sky:#38bdf8;--dm-green:#4ade80;--dm-text:#cbd5e1;--dm-muted:#64748b;--dm-dim:#334155;--dm-white:#f1f5f9;--dm-mono:'IBM Plex Mono','Courier New',monospace;--dm-sans:'Inter',system-ui,-apple-system,sans-serif;--dm-bar-h:42px;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}html{scroll-behavior:smooth;}body{background:var(--dm-bg);color:var(--dm-text);font-family:var(--dm-sans);padding-top:var(--dm-bar-h);line-height:1.7;}::-webkit-scrollbar{width:5px;}::-webkit-scrollbar-thumb{background:var(--dm-border-lit);border-radius:3px;}
+#dm-bar{position:fixed;top:0;left:0;right:0;height:var(--dm-bar-h);z-index:1000;display:flex;align-items:center;padding:0 1.5rem;background:linear-gradient(to right,#1a2232,var(--dm-panel) 60%);border-bottom:1px solid var(--dm-border);font-family:var(--dm-mono);font-size:11px;color:var(--dm-muted);white-space:nowrap;}
+.dm-logo{color:var(--dm-violet);font-weight:600;font-size:13px;text-decoration:none;margin-right:.85rem;transition:color .15s;}.dm-logo::before{content:"> ";color:var(--dm-amber);}.dm-logo:hover{color:var(--dm-white);}
+.dm-badge{font-size:9px;letter-spacing:.12em;padding:2px 6px;border-radius:2px;margin-right:.85rem;color:var(--dm-green);border:1px solid rgba(74,222,128,.4);background:rgba(74,222,128,.06);}
+.dm-sep{color:var(--dm-border-lit);margin:0 .7rem;}
+.dm-links{margin-left:auto;display:flex;align-items:center;gap:1.1rem;}.dm-links a{color:var(--dm-muted);text-decoration:none;font-size:11px;transition:color .15s;}.dm-links a:hover,.dm-links a.active{color:var(--dm-violet);}.dm-links .api-link{color:var(--dm-sky);}
+.layout{display:grid;grid-template-columns:220px 1fr;max-width:1100px;margin:0 auto;min-height:calc(100vh - var(--dm-bar-h));}
+.toc{position:sticky;top:var(--dm-bar-h);height:calc(100vh - var(--dm-bar-h));overflow-y:auto;padding:2rem 1.25rem;border-right:1px solid var(--dm-border);font-family:var(--dm-mono);font-size:.8rem;}
+.toc h3{font-size:.7rem;color:var(--dm-dim);letter-spacing:.15em;text-transform:uppercase;margin-bottom:.75rem;margin-top:1.25rem;}.toc h3:first-child{margin-top:0;}
+.toc a{display:block;color:var(--dm-muted);text-decoration:none;padding:.2rem 0;transition:color .15s;}.toc a:hover{color:var(--dm-violet);}.toc a.sub{padding-left:.85rem;font-size:.75rem;}
+article{padding:2.5rem 3rem;max-width:820px;}
+h1{font-family:var(--dm-mono);font-size:1.65rem;font-weight:600;color:var(--dm-white);margin-bottom:.5rem;}h1::before{content:"# ";color:var(--dm-amber);opacity:.6;}
+.subtitle{color:var(--dm-muted);margin-bottom:2.5rem;font-size:1rem;}
+h2{font-family:var(--dm-mono);font-size:1.1rem;font-weight:600;color:var(--dm-sky);margin:2.5rem 0 .75rem;padding-top:.5rem;}h2::before{content:"## ";color:var(--dm-amber);opacity:.5;font-size:.9em;}
+h3{font-family:var(--dm-mono);font-size:.95rem;font-weight:600;color:var(--dm-text);margin:1.5rem 0 .5rem;}h3::before{content:"### ";color:var(--dm-amber);opacity:.4;font-size:.85em;}
+p{margin:.6rem 0;}a{color:var(--dm-sky);text-decoration:none;}a:hover{color:var(--dm-violet);}
+code{font-family:var(--dm-mono);font-size:.85em;background:var(--dm-panel);border:1px solid var(--dm-border);border-radius:2px;padding:.1em .35em;color:var(--dm-amber);}
+pre{margin:1rem 0;border-radius:6px;overflow-x:auto;border:1px solid var(--dm-border);}pre code{font-size:.84rem;line-height:1.65;}
+ul,ol{margin:.6rem 0 .6rem 1.5rem;}li{margin:.2rem 0;}
+
+/* STEP */
+.step{display:flex;gap:1.25rem;margin:1.75rem 0;}
+.step-num{flex-shrink:0;width:2rem;height:2rem;border-radius:50%;background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.4);color:var(--dm-violet);font-family:var(--dm-mono);font-size:.85rem;display:flex;align-items:center;justify-content:center;font-weight:600;margin-top:.15rem;}
+.step-body h3{margin-top:0;}
+
+/* CALLOUT */
+.callout{background:var(--dm-panel);border-left:3px solid var(--dm-violet);border-radius:0 4px 4px 0;padding:.85rem 1rem;margin:1.25rem 0;}
+.callout.info{border-color:var(--dm-sky);}.callout.tip{border-color:var(--dm-green);}.callout.warn{border-color:var(--dm-amber);}
+.callout-title{font-family:var(--dm-mono);font-size:.75rem;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.4rem;}
+.callout.info .callout-title{color:var(--dm-sky);}.callout.tip .callout-title{color:var(--dm-green);}.callout.warn .callout-title{color:var(--dm-amber);}
+.callout p{font-size:.9rem;color:var(--dm-muted);}
+
+/* WORKFLOW DIAGRAM */
+.workflow{display:flex;align-items:center;flex-wrap:wrap;gap:.5rem;margin:1.25rem 0;font-family:var(--dm-mono);font-size:.8rem;}
+.wf-box{background:var(--dm-panel);border:1px solid var(--dm-border);padding:.5rem .85rem;border-radius:4px;color:var(--dm-text);}
+.wf-box.hl{border-color:rgba(167,139,250,.5);color:var(--dm-violet);}
+.wf-arrow{color:var(--dm-dim);}
+
+/* FILE TREE */
+.file-tree{font-family:var(--dm-mono);font-size:.84rem;background:var(--dm-code-bg);border:1px solid var(--dm-border);border-radius:6px;padding:1rem 1.25rem;margin:1rem 0;line-height:1.8;color:var(--dm-muted);}
+.file-tree .dir{color:var(--dm-sky);}
+.file-tree .file{color:var(--dm-text);}
+.file-tree .note{color:var(--dm-dim);}
+
+/* TABLE */
+table{width:100%;border-collapse:collapse;font-size:.88rem;margin:1rem 0;}
+th{font-family:var(--dm-mono);font-size:.75rem;color:var(--dm-dim);letter-spacing:.1em;text-transform:uppercase;border-bottom:1px solid var(--dm-border);padding:.4rem .75rem;text-align:left;}
+td{border-bottom:1px solid rgba(30,42,60,.5);padding:.4rem .75rem;color:var(--dm-text);}td:first-child{font-family:var(--dm-mono);font-size:.82rem;color:var(--dm-amber);}
+
+@media(max-width:768px){.layout{grid-template-columns:1fr;}.toc{display:none;}article{padding:2rem 1.25rem;}.dm-links{display:none;}}
+</style>
+</head>
+<body>
+
+<div id="dm-bar">
+  <a class="dm-logo" href="index.html">midi-drums</a>
+  <span class="dm-badge">stable</span>
+  <span class="dm-sep">|</span>
+  <div class="dm-links">
+    <a href="index.html">Home</a>
+    <a href="quickstart.html">Quickstart</a>
+    <a href="recipes.html">Recipes</a>
+    <a href="reaper.html" class="active">Reaper</a>
+    <a href="midi_drums.html" class="api-link">API →</a>
+  </div>
+</div>
+
+<div class="layout">
+  <nav class="toc">
+    <h3>Overview</h3>
+    <a href="#overview">How it works</a>
+    <a href="#output" class="sub">Output files</a>
+    <h3>Workflow A</h3>
+    <a href="#new-project">New Reaper project</a>
+    <a href="#step-generate" class="sub">1. Generate track</a>
+    <a href="#step-export" class="sub">2. Export to Reaper</a>
+    <a href="#step-open" class="sub">3. Open in Reaper</a>
+    <a href="#step-markers" class="sub">4. Using markers</a>
+    <h3>Workflow B</h3>
+    <a href="#existing">Existing project</a>
+    <a href="#metadata" class="sub">Metadata workflow</a>
+    <a href="#manual" class="sub">Manual structure</a>
+    <h3>Reference</h3>
+    <a href="#cli-ref">CLI reference</a>
+    <a href="#python-ref">Python API</a>
+    <a href="#marker-colors">Marker colors</a>
+  </nav>
+
+  <article>
+    <h1>Reaper Integration</h1>
+    <p class="subtitle">Export drum tracks directly to Reaper projects with automatic section markers.</p>
+
+    <!-- OVERVIEW -->
+    <h2 id="overview">How it works</h2>
+    <p>The Reaper exporter creates <code>.rpp</code> (Reaper Project) files with section markers placed at exact time positions corresponding to each song section. Markers appear in Reaper's timeline and the marker list, letting you jump between sections instantly.</p>
+
+    <div class="workflow">
+      <div class="wf-box">Generate song</div>
+      <span class="wf-arrow">→</span>
+      <div class="wf-box hl">ReaperExporter</div>
+      <span class="wf-arrow">→</span>
+      <div class="wf-box">project.rpp</div>
+      <span class="wf-arrow">+</span>
+      <div class="wf-box">drums.mid</div>
+    </div>
+
+    <h3 id="output">Output files</h3>
+    <div class="file-tree">
+output/<br>
+├── <span class="dir">my_song/</span><br>
+│   ├── <span class="file">my_song.rpp</span>          <span class="note"># Reaper project with markers</span><br>
+│   ├── <span class="file">my_song_drums.mid</span>    <span class="note"># MIDI drum track</span><br>
+│   └── <span class="file">metadata.json</span>         <span class="note"># Section timing data</span>
+    </div>
+
+    <div class="callout info">
+      <div class="callout-title">Immutable operations</div>
+      <p>The exporter never modifies your original files. Every export writes a new <code>.rpp</code> file. Your existing projects are always safe.</p>
+    </div>
+
+    <!-- WORKFLOW A -->
+    <h2 id="new-project">Workflow A — Create a new Reaper project</h2>
+    <p>The most common case: generate drums, get a Reaper project with markers in one command.</p>
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <h3 id="step-generate">Generate the drum track</h3>
+        <pre><code class="language-bash"># CLI — the simplest path
+midi-drums reaper export \
+    --genre metal \
+    --style doom \
+    --tempo 120 \
+    --output doom_session.rpp \
+    --midi</code></pre>
+        <p>This single command does everything: generates the song, creates the <code>.rpp</code>, and writes the <code>.mid</code> alongside it.</p>
+
+        <pre><code class="language-python"># Python — with more control
+from midi_drums.api.python_api import DrumGeneratorAPI
+from midi_drums.exporters import ReaperExporter
+
+api = DrumGeneratorAPI()
+song = api.create_song(
+    "metal", "doom",
+    tempo=120,
+    complexity=0.7,
+    humanization=0.4,
+)
+
+exporter = ReaperExporter()
+exporter.export_with_markers(
+    song=song,
+    output_rpp="doom_session.rpp",
+)</code></pre>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <h3 id="step-export">Export with MIDI track</h3>
+        <p>To also export the MIDI file alongside the project:</p>
+        <pre><code class="language-bash"># CLI
+midi-drums reaper export \
+    --genre metal --style doom --tempo 120 \
+    --output doom.rpp \
+    --midi doom_drums.mid \
+    --complexity 0.7 \
+    --drummer roeder \
+    --marker-color "#FF5500"</code></pre>
+
+        <pre><code class="language-python"># Python
+exporter.export_with_midi(
+    song=song,
+    output_rpp="doom.rpp",
+    output_midi="doom_drums.mid",
+    marker_color="#FF5500",
+)</code></pre>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <h3 id="step-open">Open in Reaper</h3>
+        <p>Open the <code>.rpp</code> file in Reaper: <strong>File → Open Project</strong> or drag it onto the Reaper window.</p>
+        <p>The project opens with your tempo pre-set and markers already placed in the timeline.</p>
+        <div class="callout tip">
+          <div class="callout-title">Importing the MIDI</div>
+          <p>If you exported a <code>.mid</code> file separately, drag it from the file browser into Reaper's arrange view onto a new track, or use <strong>Insert → Media File</strong>. The MIDI will align to bar 1 automatically.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <h3 id="step-markers">Working with markers in Reaper</h3>
+        <p>Markers appear in the timeline ruler as coloured flags. To use them effectively:</p>
+        <ul>
+          <li><strong>Jump to marker</strong>: press the number key matching the marker (1 = first, 2 = second, etc.)</li>
+          <li><strong>View marker list</strong>: <code>View → Region/Marker Manager</code> (Shift+Ctrl+R)</li>
+          <li><strong>Edit marker names/colors</strong>: double-click the marker flag in the ruler</li>
+          <li><strong>Loop a section</strong>: set the loop region to cover verse or chorus markers and press <code>R</code></li>
+          <li><strong>Create a region from markers</strong>: select two adjacent markers, right-click → <em>Create region from time selection</em></li>
+        </ul>
+        <p>Markers are named after song sections (e.g. <em>Intro</em>, <em>Verse 1</em>, <em>Chorus 1</em>) and positioned at exact bar boundaries based on the generated tempo.</p>
+      </div>
+    </div>
+
+    <!-- WORKFLOW B -->
+    <h2 id="existing">Workflow B — Add markers to an existing project</h2>
+    <p>If you already have a Reaper project open and just want to stamp section markers into it:</p>
+
+    <h3 id="metadata">Using a metadata file (recommended)</h3>
+    <p>When you generate a song with the Python API, a <code>metadata.json</code> file is saved alongside the MIDI. This contains exact section timing and can be used to add markers to any Reaper project:</p>
+
+    <pre><code class="language-bash"># Generate drums + save metadata
+midi-drums generate \
+    --genre rock \
+    --style progressive \
+    --tempo 145 \
+    --output output/prog_rock/
+
+# Later, add those markers to any existing project
+midi-drums reaper add-markers \
+    --metadata output/prog_rock/metadata.json \
+    --output my_existing_project.rpp</code></pre>
+
+    <pre><code class="language-python">from midi_drums.exporters import ReaperExporter
+
+exporter = ReaperExporter()
+
+# Add markers from metadata to an existing project
+exporter.add_markers_from_metadata(
+    metadata_path="output/prog_rock/metadata.json",
+    input_rpp="my_existing_project.rpp",
+    output_rpp="my_existing_project_with_markers.rpp",  # new file
+)</code></pre>
+
+    <h3 id="manual">Manual structure specification</h3>
+    <p>If you don't have a metadata file, specify the structure directly:</p>
+
+    <pre><code class="language-bash"># Describe the structure inline
+midi-drums reaper add-markers \
+    --structure "intro:4,verse:8,chorus:8,verse:8,chorus:8,outro:4" \
+    --tempo 140 \
+    --output project_with_markers.rpp
+
+# Or auto-detect from a MIDI file in a known output directory
+midi-drums reaper add-markers \
+    --song output/my_song/complete.mid \
+    --output project_with_markers.rpp \
+    --marker-color "#00CC88"</code></pre>
+
+    <!-- CLI REFERENCE -->
+    <h2 id="cli-ref">CLI reference</h2>
+
+    <table>
+      <tr><th>Flag</th><th>Description</th><th>Default</th></tr>
+      <tr><td>--genre</td><td>Genre (metal, rock, jazz, funk)</td><td>metal</td></tr>
+      <tr><td>--style</td><td>Style within the genre</td><td>heavy</td></tr>
+      <tr><td>--tempo</td><td>BPM for the generated track</td><td>120</td></tr>
+      <tr><td>--output</td><td>Output <code>.rpp</code> file path</td><td>required</td></tr>
+      <tr><td>--midi</td><td>Also export MIDI (same name as .rpp)</td><td>off</td></tr>
+      <tr><td>--midi PATH</td><td>Export MIDI to specific path</td><td>—</td></tr>
+      <tr><td>--drummer</td><td>Drummer style to apply</td><td>none</td></tr>
+      <tr><td>--complexity</td><td>Pattern complexity 0–1</td><td>0.7</td></tr>
+      <tr><td>--humanization</td><td>Timing/velocity variation 0–1</td><td>0.3</td></tr>
+      <tr><td>--marker-color</td><td>Hex color for markers (#RRGGBB)</td><td>#FF5500</td></tr>
+      <tr><td>--template</td><td>Use existing .rpp as base</td><td>minimal template</td></tr>
+    </table>
+
+    <!-- PYTHON API -->
+    <h2 id="python-ref">Python API</h2>
+    <pre><code class="language-python">from midi_drums.exporters import ReaperExporter
+
+exporter = ReaperExporter()
+
+# Method 1: from a Song object
+exporter.export_with_markers(song, output_rpp="out.rpp")
+exporter.export_with_midi(song, output_rpp="out.rpp", output_midi="drums.mid")
+
+# Method 2: from metadata.json
+exporter.add_markers_from_metadata(
+    metadata_path="metadata.json",
+    input_rpp="existing.rpp",    # optional: start from existing project
+    output_rpp="result.rpp",
+)
+
+# Method 3: from explicit structure
+exporter.add_markers_from_structure(
+    structure=[("intro", 4), ("verse", 8), ("chorus", 8)],
+    tempo=140,
+    input_rpp="existing.rpp",
+    output_rpp="result.rpp",
+    marker_color="#00CC88",
+)</code></pre>
+
+    <!-- MARKER COLORS -->
+    <h2 id="marker-colors">Marker color guide</h2>
+    <p>Reaper renders marker colors in the timeline ruler. Some suggestions:</p>
+    <table>
+      <tr><th>Section</th><th>Color</th><th>Hex</th></tr>
+      <tr><td>Intro / Outro</td><td>Muted orange</td><td><code>#FF8844</code></td></tr>
+      <tr><td>Verse</td><td>Sky blue</td><td><code>#44AAFF</code></td></tr>
+      <tr><td>Chorus</td><td>Green</td><td><code>#44DD88</code></td></tr>
+      <tr><td>Bridge</td><td>Amber</td><td><code>#FFCC44</code></td></tr>
+      <tr><td>Breakdown</td><td>Red</td><td><code>#FF4444</code></td></tr>
+      <tr><td>All sections</td><td>Custom per-section</td><td><em>set per section in metadata</em></td></tr>
+    </table>
+
+    <div class="callout warn">
+      <div class="callout-title">Template projects</div>
+      <p>Use <code>--template existing.rpp</code> when you have audio tracks, VST instruments, or routing you want to preserve. The exporter copies your template and adds markers without touching anything else.</p>
+    </div>
+
+  </article>
+</div>
+
+</body>
+</html>

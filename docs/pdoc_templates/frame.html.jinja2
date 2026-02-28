@@ -1,0 +1,320 @@
+{% extends "default/frame.html.jinja2" %}
+
+{#
+  Custom frame template — "Terminal Modern" aesthetic for MIDI Drums Generator.
+
+  Dark theme with violet primary (#a78bfa) for a musical/creative feel,
+  amber accent (#fbbf24), sky blue secondary (#38bdf8).
+  IBM Plex Mono for code/chrome, Inter for prose.
+#}
+
+{# ── <head>: fonts ─────────────────────────────────────────────────────────── #}
+{% block head %}
+{{ super() }}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+{% endblock head %}
+
+{# ── CSS ───────────────────────────────────────────────────────────────────── #}
+{% block style %}
+{{ super() }}
+<style>
+/* ── Design tokens ─────────────────────────────────────────────────────── */
+:root {
+  --dm-bg:          #0c1117;
+  --dm-panel:       #161c26;
+  --dm-panel-lit:   #1e2637;
+  --dm-code-bg:     #090e18;
+  --dm-border:      #1e2a3c;
+  --dm-border-lit:  #29394f;
+
+  --dm-violet:      #a78bfa;
+  --dm-violet-dim:  rgba(167, 139, 250, 0.12);
+  --dm-amber:       #fbbf24;
+  --dm-amber-dim:   rgba(251, 191, 36, 0.10);
+  --dm-sky:         #38bdf8;
+  --dm-sky-dim:     rgba(56, 189, 248, 0.10);
+  --dm-green:       #4ade80;
+  --dm-green-dim:   rgba(74, 222, 128, 0.10);
+
+  --dm-text:        #cbd5e1;
+  --dm-muted:       #64748b;
+  --dm-dim:         #334155;
+  --dm-white:       #f1f5f9;
+
+  --dm-mono:        'IBM Plex Mono', 'Courier New', monospace;
+  --dm-sans:        'Inter', system-ui, -apple-system, sans-serif;
+
+  --dm-bar-h:       42px;
+  --dm-radius:      4px;
+  --dm-radius-sm:   2px;
+
+  --pdoc-background: var(--dm-bg);
+}
+
+html { scroll-behavior: smooth; }
+body {
+  background: var(--dm-bg);
+  color: var(--dm-text);
+  font-family: var(--dm-sans);
+  padding-top: var(--dm-bar-h);
+}
+
+::-webkit-scrollbar              { width: 5px; height: 5px; }
+::-webkit-scrollbar-track        { background: transparent; }
+::-webkit-scrollbar-thumb        { background: var(--dm-border-lit); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover  { background: var(--dm-muted); }
+*                                { scrollbar-width: thin; scrollbar-color: var(--dm-border-lit) transparent; }
+
+/* ═══ TOP BAR ═══════════════════════════════════════════════════════════ */
+#dm-bar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: var(--dm-bar-h);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  padding: 0 1.25rem;
+  gap: 0;
+  background: linear-gradient(to right, #1a2232 0%, var(--dm-panel) 60%);
+  border-bottom: 1px solid var(--dm-border);
+  font-family: var(--dm-mono);
+  font-size: 11px;
+  color: var(--dm-muted);
+  white-space: nowrap;
+  overflow: hidden;
+}
+#dm-bar .dm-logo {
+  color: var(--dm-violet);
+  font-weight: 600;
+  font-size: 13px;
+  text-decoration: none;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+  margin-right: 0.85rem;
+  transition: color 0.15s;
+}
+#dm-bar .dm-logo::before { content: "> "; color: var(--dm-amber); }
+#dm-bar .dm-logo:hover   { color: var(--dm-white); }
+#dm-bar .dm-badge {
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  border-radius: var(--dm-radius-sm);
+  padding: 2px 6px;
+  flex-shrink: 0;
+  margin-right: 0.85rem;
+  color: var(--dm-green);
+  border: 1px solid rgba(74,222,128,0.4);
+  background: rgba(74,222,128,0.06);
+}
+#dm-bar .dm-sep  { color: var(--dm-border-lit); margin: 0 0.7rem; flex-shrink: 0; }
+#dm-bar .dm-links {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+  flex-shrink: 0;
+}
+#dm-bar .dm-links a {
+  color: var(--dm-muted);
+  text-decoration: none;
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  transition: color 0.15s;
+}
+#dm-bar .dm-links a:hover          { color: var(--dm-violet); }
+#dm-bar .dm-links .dm-link-api     { color: var(--dm-sky); }
+#dm-bar .dm-links .dm-link-api:hover { color: var(--dm-violet); }
+
+/* ═══ SIDEBAR ════════════════════════════════════════════════════════════ */
+nav#sidebar {
+  background: var(--dm-panel);
+  border-right: 1px solid var(--dm-border);
+  font-family: var(--dm-mono);
+  top: var(--dm-bar-h);
+  max-height: calc(100vh - var(--dm-bar-h));
+}
+nav#sidebar a                             { color: var(--dm-muted); text-decoration: none; }
+nav#sidebar a:hover, nav#sidebar a:focus  { color: var(--dm-violet); }
+nav#sidebar h2, nav#sidebar h3 {
+  font-family: var(--dm-mono);
+  font-size: 9px;
+  color: var(--dm-dim);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  margin: 1.1rem 0 0.4rem;
+}
+nav#sidebar input[type=search] {
+  font-family: var(--dm-sans);
+  font-size: 12px;
+  background: rgba(255,255,255,0.04);
+  color: var(--dm-text);
+  border: 1px solid var(--dm-border);
+  border-radius: var(--dm-radius);
+  padding: 5px 10px;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+nav#sidebar input[type=search]:focus {
+  border-color: var(--dm-violet);
+  box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.12);
+}
+
+/* ═══ CONTENT ════════════════════════════════════════════════════════════ */
+main#content {
+  background: var(--dm-bg);
+  font-family: var(--dm-sans);
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--dm-text);
+}
+main#content h1 {
+  font-family: var(--dm-mono);
+  color: var(--dm-violet);
+  font-size: 1.55rem;
+  font-weight: 600;
+  border-bottom: 1px solid var(--dm-border);
+  padding-bottom: 0.4rem;
+  margin-bottom: 1rem;
+}
+main#content h1::before { content: "# "; color: var(--dm-amber); opacity: 0.6; }
+main#content h2 {
+  font-family: var(--dm-mono);
+  color: var(--dm-sky);
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-top: 2rem;
+  margin-bottom: 0.6rem;
+}
+main#content h2::before { content: "## "; color: var(--dm-amber); opacity: 0.5; font-size: 0.85em; }
+main#content h3 {
+  font-family: var(--dm-mono);
+  color: var(--dm-text);
+  font-size: 1rem;
+  font-weight: 600;
+  margin-top: 1.4rem;
+}
+main#content h3::before { content: "### "; color: var(--dm-amber); opacity: 0.4; font-size: 0.8em; }
+main#content h4 { font-family: var(--dm-sans); color: var(--dm-muted); font-size: 0.9rem; margin-top: 1rem; }
+
+main#content p  { margin: 0.6rem 0; }
+main#content a  { color: var(--dm-sky); text-decoration: none; }
+main#content a:hover { color: var(--dm-violet); text-decoration: underline; }
+
+main#content code {
+  font-family: var(--dm-mono);
+  font-size: 0.88em;
+  background: var(--dm-panel);
+  border: 1px solid var(--dm-border);
+  border-radius: var(--dm-radius-sm);
+  padding: 0.1em 0.35em;
+  color: var(--dm-amber);
+}
+main#content pre {
+  background: var(--dm-code-bg);
+  border: 1px solid var(--dm-border);
+  border-radius: var(--dm-radius);
+  padding: 1rem 1.2rem;
+  overflow-x: auto;
+  margin: 0.8rem 0;
+}
+main#content pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--dm-text);
+  font-size: 0.87em;
+}
+
+/* Attributes */
+main#content .attr   { font-family: var(--dm-mono); font-size: 0.88em; }
+main#content .name   { color: var(--dm-violet); }
+main#content .def    { color: var(--dm-sky); }
+main#content .return { color: var(--dm-green); }
+
+/* Docstring sections */
+main#content .field-list { border-left: 2px solid var(--dm-border); padding-left: 1rem; }
+main#content .field-list dt { color: var(--dm-amber); font-family: var(--dm-mono); font-size: 0.85em; font-weight: 600; }
+main#content .field-list dd { margin-left: 1rem; color: var(--dm-muted); }
+
+/* Tables */
+main#content table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1rem 0;
+  font-size: 0.9em;
+}
+main#content th {
+  font-family: var(--dm-mono);
+  font-size: 0.8em;
+  color: var(--dm-dim);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--dm-border);
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+}
+main#content td {
+  border-bottom: 1px solid rgba(30,42,60,0.6);
+  padding: 0.45rem 0.75rem;
+  color: var(--dm-text);
+}
+main#content tr:hover td { background: rgba(167,139,250,0.04); }
+
+/* Highlight.js */
+.hljs                       { background: var(--dm-code-bg) !important; color: var(--dm-text); }
+.hljs-keyword               { color: var(--dm-violet); }
+.hljs-built_in              { color: var(--dm-sky); }
+.hljs-string                { color: var(--dm-green); }
+.hljs-number                { color: var(--dm-amber); }
+.hljs-comment               { color: var(--dm-dim); font-style: italic; }
+.hljs-function .hljs-title  { color: var(--dm-sky); }
+.hljs-class  .hljs-title    { color: var(--dm-violet); }
+.hljs-decorator             { color: var(--dm-amber); }
+
+/* Source toggle */
+details.source summary { color: var(--dm-dim); font-family: var(--dm-mono); font-size: 0.8em; cursor: pointer; }
+details.source summary:hover { color: var(--dm-muted); }
+details.source > div { border-left: 2px solid var(--dm-border); padding-left: 1rem; margin-top: 0.5rem; }
+
+/* Labels */
+.label {
+  font-family: var(--dm-mono);
+  font-size: 0.7em;
+  letter-spacing: 0.1em;
+  padding: 2px 6px;
+  border-radius: var(--dm-radius-sm);
+  border: 1px solid var(--dm-border-lit);
+  color: var(--dm-muted);
+  vertical-align: middle;
+}
+.label-class   { color: var(--dm-violet); border-color: rgba(167,139,250,0.4); background: rgba(167,139,250,0.06); }
+.label-func    { color: var(--dm-sky);    border-color: rgba(56,189,248,0.4);  background: rgba(56,189,248,0.06); }
+.label-method  { color: var(--dm-green);  border-color: rgba(74,222,128,0.4);  background: rgba(74,222,128,0.06); }
+
+@media (max-width: 720px) {
+  #dm-bar .dm-links { display: none; }
+  main#content h1 { font-size: 1.25rem; }
+}
+</style>
+{% endblock style %}
+
+{# ── Top bar (replaces default nav structure) ──────────────────────────────── #}
+{% block nav %}
+<div id="dm-bar">
+  <a class="dm-logo" href="../index.html">midi-drums</a>
+  <span class="dm-badge">stable</span>
+  <span class="dm-sep">|</span>
+  <div class="dm-links">
+    <a href="../index.html">Home</a>
+    <a href="../quickstart.html">Quickstart</a>
+    <a href="../recipes.html">Recipes</a>
+    <a href="../reaper.html">Reaper</a>
+    <a class="dm-link-api" href="../midi_drums.html">API →</a>
+  </div>
+</div>
+{{ super() }}
+{% endblock nav %}

@@ -297,6 +297,18 @@ ai-config:
 # Documentation
 # ═══════════════════════════════════════════════════════════════════════════════
 
+# Build the docs site (output: docs/site/)
+docs:
+    uv run python docs/make.py -o docs/site/
+
+# Start the pdoc dev server with live reload (localhost:8080)
+docs-serve:
+    uv run python docs/make.py --serve
+
+# Verify pdoc is installed and print config
+docs-check:
+    uv run python docs/make.py --check
+
 # Show development system prompt
 show-system-prompt:
     @cat .claude/system-prompt.md

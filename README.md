@@ -2,17 +2,18 @@
 
 <div align="center">
 
-[![Python](https://img.shields.io/badge/Python-3.12+-blue.svg)](https://www.python.org/)
+[![Tests](https://github.com/fsecada01/midi-drums/actions/workflows/tests.yml/badge.svg)](https://github.com/fsecada01/midi-drums/actions/workflows/tests.yml)
+[![Python](https://img.shields.io/badge/Python-3.12%2B%20%7C%203.13-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![MIDI](https://img.shields.io/badge/Output-MIDI-purple.svg)](https://en.wikipedia.org/wiki/MIDI)
 [![EZDrummer](https://img.shields.io/badge/Compatible-EZDrummer_3-orange.svg)](https://www.toontrack.com/product/ezdrummer-3/)
 [![Code Reduction](https://img.shields.io/badge/Code_Reduction-62%25-brightgreen.svg)](claudedocs/REFACTORING_PROGRESS.md)
-[![Test Coverage](https://img.shields.io/badge/Tests-39_passing-success.svg)](tests/)
-[![Type Safety](https://img.shields.io/badge/Type_Safety-100%25-blue.svg)](midi_drums/)
+[![Tests](https://img.shields.io/badge/Tests-257%2B_passing-success.svg)](tests/)
+[![Docs](https://img.shields.io/badge/Docs-GitHub_Pages-blueviolet.svg)](https://fsecada01.github.io/midi-drums/)
 
 *A comprehensive, plugin-based MIDI drum track generation system*
 
-[🚀 Quick Start](#-quick-start) • [📖 Documentation](#-documentation) • [🎵 Examples](#-examples) • [🔌 Plugins](#-plugin-system) • [🤝 Contributing](#-contributing)
+[🚀 Quick Start](#-quick-start) • [📖 Docs](https://fsecada01.github.io/midi-drums/) • [🎵 Examples](#-examples) • [🔌 Plugins](#-plugin-system) • [🤝 Contributing](#-contributing)
 
 </div>
 
@@ -125,14 +126,11 @@ midi-drums --help
 git clone https://github.com/yourusername/midi-drums.git
 cd midi-drums
 
-# Set up virtual environment
-python -m venv .venv
-source .venv/bin/activate  # Linux/macOS
-# or
-.venv\Scripts\activate     # Windows
+# Install with uv (recommended)
+uv sync
 
-# Install dependencies
-pip install -r core_requirements.txt
+# Or using pip
+pip install -e "."
 ```
 
 ### Generate Your First Drum Track
@@ -189,7 +187,8 @@ Generate drum patterns from natural language using AI! The system supports multi
 
 ```bash
 # Install AI dependencies
-pip install -r ai_requirements.txt
+uv sync --group ai
+# or: pip install -e ".[ai]"
 
 # Configure your preferred AI provider
 export AI_PROVIDER="anthropic"  # or openai, groq, cohere
@@ -611,21 +610,41 @@ class BonhamPluginRefactored(DrummerPlugin):
 
 **Available Templates**: BasicGroove, DoubleBassPedal, BlastBeat, JazzRidePattern, FunkGhostNotes, CrashAccents, TomFill, TemplateComposer
 
+## 📚 Documentation
+
+Full documentation is available on **[GitHub Pages](https://fsecada01.github.io/midi-drums/)**:
+
+| Page | Description |
+|------|-------------|
+| **[Home](https://fsecada01.github.io/midi-drums/)** | Overview, features, quick examples |
+| **[Quickstart](https://fsecada01.github.io/midi-drums/quickstart.html)** | Installation, first track, AI setup |
+| **[Recipes](https://fsecada01.github.io/midi-drums/recipes.html)** | Death metal, modern jazz, progressive rock examples |
+| **[Reaper Tutorial](https://fsecada01.github.io/midi-drums/reaper.html)** | DAW integration walkthrough |
+| **[API Reference](https://fsecada01.github.io/midi-drums/midi_drums/)** | Auto-generated module documentation |
+
+Build docs locally:
+```bash
+just docs        # Build to docs/site/
+just docs-serve  # Live reload at localhost:8080
+```
+
 ## 🛠️ Development
 
 ### Setup Development Environment
 
 ```bash
-# Install development dependencies
-bin/py_update.sh  # Linux/macOS
-bin/py_update.bat # Windows
+# Install all dependencies including dev tools
+uv sync --all-groups
 
-# Or using uv (recommended)
-uv sync --all-groups  # Syncs dev, ai, and core dependencies
+# Or install specific groups
+uv sync                  # Core only
+uv sync --group dev      # + dev tools (pytest, ruff, black)
+uv sync --group ai       # + AI providers (langchain, anthropic, etc.)
 
 # Run linting
-bin/linting.sh  # Linux/macOS
-bin/linting.bat # Windows
+just lint    # ruff + black + isort
+just format  # auto-format code
+just check   # format + lint + tests
 ```
 
 ### Continuous Integration
@@ -635,7 +654,7 @@ The project uses **GitHub Actions** for automated testing:
 - ✅ Automated linting (ruff, black, isort)
 - ✅ Multi-version testing (Python 3.12, 3.13)
 - ✅ Coverage reporting
-- 🚧 Currently debugging dependency installation issues
+- ✅ 257+ tests passing across all Python versions
 
 See [docs/CI_CD.md](docs/CI_CD.md) for CI/CD documentation.
 
@@ -691,39 +710,44 @@ pytest -m "not requires_api"
 midi_drums/
 ├── __init__.py              # Main exports
 ├── config/
-│   └── constants.py        # VELOCITY, TIMING, DEFAULTS (283 lines)
+│   └── constants.py        # VELOCITY, TIMING, DEFAULTS constants
 ├── patterns/
-│   └── templates.py        # 8 reusable pattern templates (585 lines)
+│   └── templates.py        # 8 reusable pattern templates
 ├── modifications/
-│   └── drummer_mods.py     # 12 drummer modifications (732 lines)
+│   └── drummer_mods.py     # 12 composable drummer modifications
 ├── core/
-│   └── engine.py           # DrumGenerator - main engine
+│   └── engine.py           # DrumGenerator - main composition engine
 ├── models/
 │   ├── pattern.py          # Pattern, Beat, PatternBuilder
 │   ├── song.py             # Song, Section, GenerationParameters
-│   └── kit.py              # DrumKit configurations
+│   └── kit.py              # DrumKit configurations (EZDrummer3, Metal, Jazz)
 ├── plugins/
 │   ├── base.py             # Plugin system foundation
 │   ├── genres/
-│   │   ├── metal_refactored.py    # 290 lines (was 373)
-│   │   ├── rock_refactored.py     # 332 lines (was 513)
-│   │   ├── jazz_refactored.py     # 337 lines (was 599)
-│   │   └── funk_refactored.py     # 330 lines (was 561)
+│   │   ├── metal.py        # MetalGenrePlugin - 7 styles
+│   │   ├── rock.py         # RockGenrePlugin - 7 styles
+│   │   ├── jazz.py         # JazzGenrePlugin - 7 styles
+│   │   └── funk.py         # FunkGenrePlugin - 7 styles
 │   └── drummers/
-│       ├── bonham_refactored.py   # 66 lines (was 339)
-│       ├── porcaro_refactored.py  # 63 lines (was 369)
-│       ├── weckl_refactored.py    # 63 lines (was 383)
-│       ├── chambers_refactored.py # 70 lines (was 381)
-│       ├── roeder_refactored.py   # 63 lines (was 371)
-│       ├── dee_refactored.py      # 63 lines (was 360)
-│       └── hoglan_refactored.py   # 63 lines (was 389)
+│       ├── bonham.py       # John Bonham style
+│       ├── porcaro.py      # Jeff Porcaro style
+│       ├── weckl.py        # Dave Weckl style
+│       ├── chambers.py     # Dennis Chambers style
+│       ├── roeder.py       # Jason Roeder style
+│       ├── dee.py          # Mikkey Dee style
+│       └── hoglan.py       # Gene Hoglan style
 ├── engines/
 │   └── midi_engine.py      # MIDI file generation
+├── exporters/
+│   └── reaper.py           # Reaper .rpp project exporter
 ├── api/
 │   ├── python_api.py       # High-level Python API
 │   └── cli.py              # Command-line interface
-└── claudedocs/
-    └── REFACTORING_PROGRESS.md  # Complete refactoring docs
+├── ai/                     # AI-powered generation (optional)
+│   ├── agent.py            # Langchain agent orchestration
+│   └── prompts/            # Prompt templates for AI generation
+└── utils/
+    └── pattern_fixer.py    # Physical feasibility validation
 ```
 
 ### Running Examples

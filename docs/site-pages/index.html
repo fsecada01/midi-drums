@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MIDI Drums Generator — Home</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --dm-bg:         #0c1117; --dm-panel:      #161c26; --dm-code-bg:    #090e18;
+  --dm-border:     #1e2a3c; --dm-border-lit: #29394f;
+  --dm-violet:     #a78bfa; --dm-amber:      #fbbf24; --dm-sky:        #38bdf8;
+  --dm-green:      #4ade80; --dm-text:       #cbd5e1; --dm-muted:      #64748b;
+  --dm-dim:        #334155; --dm-white:      #f1f5f9;
+  --dm-mono: 'IBM Plex Mono','Courier New',monospace;
+  --dm-sans: 'Inter',system-ui,-apple-system,sans-serif;
+  --dm-bar-h: 42px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { background: var(--dm-bg); color: var(--dm-text); font-family: var(--dm-sans); padding-top: var(--dm-bar-h); }
+::-webkit-scrollbar { width: 5px; } ::-webkit-scrollbar-thumb { background: var(--dm-border-lit); border-radius: 3px; }
+
+/* NAV BAR */
+#dm-bar {
+  position: fixed; top: 0; left: 0; right: 0; height: var(--dm-bar-h); z-index: 1000;
+  display: flex; align-items: center; padding: 0 1.5rem; gap: 0;
+  background: linear-gradient(to right, #1a2232, var(--dm-panel) 60%);
+  border-bottom: 1px solid var(--dm-border);
+  font-family: var(--dm-mono); font-size: 11px; color: var(--dm-muted); white-space: nowrap;
+}
+.dm-logo { color: var(--dm-violet); font-weight: 600; font-size: 13px; text-decoration: none; margin-right: .85rem; transition: color .15s; }
+.dm-logo::before { content: "> "; color: var(--dm-amber); }
+.dm-logo:hover { color: var(--dm-white); }
+.dm-badge { font-size: 9px; letter-spacing: .12em; padding: 2px 6px; border-radius: 2px; margin-right: .85rem; color: var(--dm-green); border: 1px solid rgba(74,222,128,.4); background: rgba(74,222,128,.06); }
+.dm-sep { color: var(--dm-border-lit); margin: 0 .7rem; }
+.dm-links { margin-left: auto; display: flex; align-items: center; gap: 1.1rem; }
+.dm-links a { color: var(--dm-muted); text-decoration: none; font-size: 11px; transition: color .15s; }
+.dm-links a:hover, .dm-links a.active { color: var(--dm-violet); }
+.dm-links .api-link { color: var(--dm-sky); }
+
+/* HERO */
+.hero {
+  text-align: center; padding: 5rem 2rem 4rem;
+  background: radial-gradient(ellipse at 50% 0%, rgba(167,139,250,.08) 0%, transparent 70%);
+}
+.hero-pre { font-family: var(--dm-mono); font-size: .85rem; color: var(--dm-amber); letter-spacing: .2em; margin-bottom: 1rem; }
+.hero h1 { font-family: var(--dm-mono); font-size: clamp(2rem, 5vw, 3rem); font-weight: 600; color: var(--dm-white); margin-bottom: 1.25rem; }
+.hero h1 span { color: var(--dm-violet); }
+.hero p { font-size: 1.1rem; color: var(--dm-muted); max-width: 580px; margin: 0 auto 2.5rem; line-height: 1.7; }
+.hero-actions { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+.btn { display: inline-block; font-family: var(--dm-mono); font-size: .85rem; font-weight: 600; padding: .6rem 1.4rem; border-radius: 4px; text-decoration: none; transition: all .15s; }
+.btn-primary { background: rgba(167,139,250,.12); color: var(--dm-violet); border: 1px solid rgba(167,139,250,.5); }
+.btn-primary:hover { background: rgba(167,139,250,.2); color: var(--dm-white); }
+.btn-secondary { background: transparent; color: var(--dm-sky); border: 1px solid rgba(56,189,248,.4); }
+.btn-secondary:hover { background: rgba(56,189,248,.08); }
+
+/* QUICK EXAMPLE */
+.quick-example { max-width: 780px; margin: 0 auto; padding: 0 1.5rem 3rem; }
+.quick-example pre {
+  background: var(--dm-code-bg); border: 1px solid var(--dm-border); border-radius: 6px;
+  padding: 1.25rem 1.5rem; overflow-x: auto; font-family: var(--dm-mono); font-size: .84rem;
+  line-height: 1.65; color: var(--dm-text);
+}
+.c { color: var(--dm-dim); font-style: italic; }   /* comment */
+.k { color: var(--dm-violet); }                     /* keyword */
+.f { color: var(--dm-sky); }                        /* function */
+.s { color: var(--dm-green); }                      /* string */
+.n { color: var(--dm-amber); }                      /* number */
+
+/* FEATURES GRID */
+.features { max-width: 1040px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+.features h2 { font-family: var(--dm-mono); color: var(--dm-violet); font-size: 1.2rem; margin-bottom: 2rem; text-align: center; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }
+.card {
+  background: var(--dm-panel); border: 1px solid var(--dm-border); border-radius: 6px;
+  padding: 1.4rem 1.5rem; transition: border-color .2s, transform .15s;
+}
+.card:hover { border-color: var(--dm-border-lit); transform: translateY(-2px); }
+.card-icon { font-size: 1.5rem; margin-bottom: .75rem; }
+.card h3 { font-family: var(--dm-mono); font-size: .95rem; font-weight: 600; color: var(--dm-sky); margin-bottom: .5rem; }
+.card p { font-size: .9rem; color: var(--dm-muted); line-height: 1.6; }
+.card ul { margin: .5rem 0 0 1rem; font-size: .88rem; color: var(--dm-muted); line-height: 1.7; }
+
+/* STATS */
+.stats { background: var(--dm-panel); border-top: 1px solid var(--dm-border); border-bottom: 1px solid var(--dm-border); padding: 2.5rem 1.5rem; }
+.stats-inner { max-width: 900px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1.5rem; text-align: center; }
+.stat-val { font-family: var(--dm-mono); font-size: 2rem; font-weight: 600; color: var(--dm-violet); }
+.stat-label { font-size: .8rem; color: var(--dm-muted); margin-top: .25rem; }
+
+/* GENRES TABLE */
+.genres { max-width: 900px; margin: 3rem auto; padding: 0 1.5rem; }
+.genres h2 { font-family: var(--dm-mono); color: var(--dm-violet); font-size: 1.1rem; margin-bottom: 1.25rem; }
+table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+th { font-family: var(--dm-mono); font-size: .75rem; color: var(--dm-dim); letter-spacing: .1em; text-transform: uppercase; border-bottom: 1px solid var(--dm-border); padding: .5rem .75rem; text-align: left; }
+td { border-bottom: 1px solid rgba(30,42,60,.6); padding: .5rem .75rem; color: var(--dm-text); }
+tr:hover td { background: rgba(167,139,250,.04); }
+.tag { display: inline-block; font-family: var(--dm-mono); font-size: .72em; padding: 1px 6px; border-radius: 2px; margin: 1px; }
+.tag-metal  { color: var(--dm-amber);  border: 1px solid rgba(251,191,36,.35);  background: rgba(251,191,36,.06); }
+.tag-rock   { color: var(--dm-sky);    border: 1px solid rgba(56,189,248,.35);  background: rgba(56,189,248,.06); }
+.tag-jazz   { color: var(--dm-violet); border: 1px solid rgba(167,139,250,.35); background: rgba(167,139,250,.06); }
+.tag-funk   { color: var(--dm-green);  border: 1px solid rgba(74,222,128,.35);  background: rgba(74,222,128,.06); }
+
+/* FOOTER */
+footer { text-align: center; padding: 2.5rem 1.5rem; border-top: 1px solid var(--dm-border); font-family: var(--dm-mono); font-size: .8rem; color: var(--dm-dim); }
+footer a { color: var(--dm-muted); text-decoration: none; }
+footer a:hover { color: var(--dm-violet); }
+
+@media (max-width: 600px) {
+  .hero { padding: 3rem 1.5rem 2.5rem; }
+  .dm-links { display: none; }
+}
+</style>
+</head>
+<body>
+
+<div id="dm-bar">
+  <a class="dm-logo" href="index.html">midi-drums</a>
+  <span class="dm-badge">stable</span>
+  <span class="dm-sep">|</span>
+  <div class="dm-links">
+    <a href="index.html" class="active">Home</a>
+    <a href="quickstart.html">Quickstart</a>
+    <a href="recipes.html">Recipes</a>
+    <a href="reaper.html">Reaper</a>
+    <a href="midi_drums.html" class="api-link">API →</a>
+  </div>
+</div>
+
+<section class="hero">
+  <div class="hero-pre">// professional drum track generation</div>
+  <h1>MIDI <span>Drums</span> Generator</h1>
+  <p>A plugin-based Python system for creating realistic drum tracks across Metal, Rock, Jazz, and Funk with 7 legendary drummer styles and Reaper DAW integration.</p>
+  <div class="hero-actions">
+    <a class="btn btn-primary" href="quickstart.html">Get Started →</a>
+    <a class="btn btn-secondary" href="recipes.html">See Recipes</a>
+    <a class="btn btn-secondary" href="midi_drums.html">API Reference</a>
+  </div>
+</section>
+
+<div class="quick-example">
+<pre><span class="c"># Generate a complete death metal song in 3 lines</span>
+<span class="k">from</span> midi_drums.api.python_api <span class="k">import</span> DrumGeneratorAPI
+
+api = <span class="f">DrumGeneratorAPI</span>()
+song = api.<span class="f">create_song</span>(<span class="s">"metal"</span>, <span class="s">"death"</span>, tempo=<span class="n">180</span>, complexity=<span class="n">0.85</span>)
+api.<span class="f">save_as_midi</span>(song, <span class="s">"death_metal.mid"</span>)
+
+<span class="c"># Or apply a legendary drummer's signature style</span>
+pattern = api.<span class="f">generate_pattern</span>(<span class="s">"jazz"</span>, <span class="s">"verse"</span>, <span class="s">"swing"</span>)
+weckl_pattern = api.<span class="f">apply_drummer_style</span>(pattern, <span class="s">"weckl"</span>)
+api.<span class="f">save_pattern_as_midi</span>(weckl_pattern, <span class="s">"jazz_weckl.mid"</span>, tempo=<span class="n">130</span>)
+
+<span class="c"># Or describe what you want in plain English</span>
+pattern, info = <span class="k">await</span> ai.<span class="f">generate_pattern_from_text</span>(
+    <span class="s">"heavy progressive rock with polyrhythmic fills and ghost notes"</span>,
+    tempo=<span class="n">145</span>, bars=<span class="n">4</span>
+)</pre>
+</div>
+
+<section class="stats">
+  <div class="stats-inner">
+    <div><div class="stat-val">4</div><div class="stat-label">Genres</div></div>
+    <div><div class="stat-val">28</div><div class="stat-label">Styles</div></div>
+    <div><div class="stat-val">7</div><div class="stat-label">Drummer Personalities</div></div>
+    <div><div class="stat-val">62%</div><div class="stat-label">Code Reduction</div></div>
+    <div><div class="stat-val">257+</div><div class="stat-label">Tests Passing</div></div>
+  </div>
+</section>
+
+<section class="features">
+  <h2># features</h2>
+  <div class="grid">
+    <div class="card">
+      <div class="card-icon">🎸</div>
+      <h3>Multi-Genre Engine</h3>
+      <p>Four fully-realized genres, each with 7 distinct styles covering the full spectrum from death metal blast beats to bebop swing.</p>
+      <ul>
+        <li>Metal · Rock · Jazz · Funk</li>
+        <li>7 styles per genre</li>
+        <li>Authentic pattern libraries</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-icon">🥁</div>
+      <h3>Legendary Drummers</h3>
+      <p>Seven iconic playing styles implemented as composable modifications — apply any drummer to any genre pattern.</p>
+      <ul>
+        <li>Bonham · Porcaro · Weckl</li>
+        <li>Chambers · Roeder · Dee · Hoglan</li>
+        <li>Signature fills included</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-icon">🏗️</div>
+      <h3>Song Structure</h3>
+      <p>Generate complete songs with configurable section arrangements, dynamic fills, and pattern variations across bars.</p>
+      <ul>
+        <li>Intro · Verse · Chorus · Bridge</li>
+        <li>Configurable bar counts</li>
+        <li>Automatic fill placement</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-icon">🎛️</div>
+      <h3>Reaper Integration</h3>
+      <p>Export drum tracks directly to Reaper projects with automatically placed section markers at exact bar positions.</p>
+      <ul>
+        <li>Creates <code>.rpp</code> project files</li>
+        <li>Section markers auto-placed</li>
+        <li>Works on existing projects</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-icon">🤖</div>
+      <h3>AI Generation</h3>
+      <p>Describe the drum track you want in plain English. Supports Anthropic, OpenAI, Groq, and Cohere backends.</p>
+      <ul>
+        <li>Natural language input</li>
+        <li>Genre/style auto-detection</li>
+        <li>Provider-agnostic API</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-icon">🔌</div>
+      <h3>Plugin Architecture</h3>
+      <p>Clean SOLID architecture with strategy, builder, and factory patterns. Add new genres or drummers in ~60 lines.</p>
+      <ul>
+        <li>Composable templates &amp; mods</li>
+        <li>Type-safe throughout</li>
+        <li>Zero magic numbers</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="genres">
+  <h2># available genres &amp; styles</h2>
+  <table>
+    <thead>
+      <tr><th>Genre</th><th>Styles</th><th>CLI Flag</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="tag tag-metal">metal</span></td>
+        <td>heavy · death · power · progressive · thrash · doom · breakdown</td>
+        <td><code>--genre metal --style death</code></td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-rock">rock</span></td>
+        <td>classic · blues · alternative · progressive · punk · hard · pop</td>
+        <td><code>--genre rock --style classic</code></td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-jazz">jazz</span></td>
+        <td>swing · bebop · fusion · latin · ballad · hard_bop · contemporary</td>
+        <td><code>--genre jazz --style swing</code></td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-funk">funk</span></td>
+        <td>classic · pfunk · shuffle · new_orleans · fusion · minimal · heavy</td>
+        <td><code>--genre funk --style shuffle</code></td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<footer>
+  <p>
+    <a href="https://github.com/fsecada01/midi-drums">GitHub</a> &nbsp;·&nbsp;
+    <a href="midi_drums.html">API Reference</a> &nbsp;·&nbsp;
+    <a href="quickstart.html">Quickstart</a> &nbsp;·&nbsp;
+    MIT License
+  </p>
+  <p style="margin-top:.75rem;">Built with <a href="https://pdoc.dev">pdoc</a> · MIDI for humans</p>
+</footer>
+
+</body>
+</html>
