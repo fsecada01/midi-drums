@@ -35,6 +35,54 @@ class PatternFixer:
         DrumInstrument.OPEN_HH_MAX,
     }
 
+    # All hand instruments (mirrors PhysicalValidator.HAND_INSTRUMENTS)
+    HAND_INSTRUMENTS = {
+        DrumInstrument.RIDE,
+        DrumInstrument.RIDE_BELL,
+        DrumInstrument.CLOSED_HH,
+        DrumInstrument.CLOSED_HH_EDGE,
+        DrumInstrument.CLOSED_HH_TIP,
+        DrumInstrument.TIGHT_HH_EDGE,
+        DrumInstrument.TIGHT_HH_TIP,
+        DrumInstrument.OPEN_HH,
+        DrumInstrument.OPEN_HH_1,
+        DrumInstrument.OPEN_HH_2,
+        DrumInstrument.OPEN_HH_3,
+        DrumInstrument.OPEN_HH_MAX,
+        DrumInstrument.SNARE,
+        DrumInstrument.RIM,
+        DrumInstrument.MID_TOM,
+        DrumInstrument.FLOOR_TOM,
+        DrumInstrument.CRASH,
+        DrumInstrument.SPLASH,
+        DrumInstrument.CHINA,
+    }
+
+    # Priority for retaining hand instruments when > 2 are simultaneous.
+    # Higher number = keep this first.  Cymbals (crash/splash/china) are
+    # lowest priority because they are the most dispensable ornaments.
+    HAND_PRIORITY: dict = {
+        DrumInstrument.SNARE: 10,
+        DrumInstrument.CLOSED_HH: 9,
+        DrumInstrument.CLOSED_HH_EDGE: 9,
+        DrumInstrument.CLOSED_HH_TIP: 9,
+        DrumInstrument.OPEN_HH: 8,
+        DrumInstrument.OPEN_HH_1: 8,
+        DrumInstrument.OPEN_HH_2: 8,
+        DrumInstrument.OPEN_HH_3: 8,
+        DrumInstrument.OPEN_HH_MAX: 8,
+        DrumInstrument.TIGHT_HH_EDGE: 8,
+        DrumInstrument.TIGHT_HH_TIP: 8,
+        DrumInstrument.RIDE: 7,
+        DrumInstrument.RIDE_BELL: 7,
+        DrumInstrument.RIM: 6,
+        DrumInstrument.FLOOR_TOM: 5,
+        DrumInstrument.MID_TOM: 5,
+        DrumInstrument.CRASH: 4,
+        DrumInstrument.SPLASH: 3,
+        DrumInstrument.CHINA: 3,
+    }
+
     def __init__(self, timing_tolerance: float = 0.01):
         """Initialize pattern fixer.
 
@@ -64,6 +112,9 @@ class PatternFixer:
 
         # Fix ride + hi-hat conflicts
         fixed_pattern = self.remove_ride_hihat_conflicts(fixed_pattern)
+
+        # Fix "too many hands" — >2 hand instruments at the same time
+        fixed_pattern = self.remove_too_many_hand_instruments(fixed_pattern)
 
         if self.fixes_applied:
             logger.info(
@@ -241,6 +292,65 @@ class PatternFixer:
 
         # Sort beats by position
         fixed_pattern.beats.sort(key=lambda b: b.position)
+
+        return fixed_pattern
+
+    def remove_too_many_hand_instruments(self, pattern: Pattern) -> Pattern:
+        """Remove excess hand instruments when more than 2 are simultaneous.
+
+        A drummer has only 2 hands.  When layered modifications produce 3+
+        hand instruments at the same position the lowest-priority ones are
+        dropped so the pattern remains physically playable.
+
+        Priority (highest kept first): snare > hi-hat variants > ride >
+        rim/toms > crash > splash/china.  Velocity is the tiebreaker within
+        the same priority level.
+
+        Args:
+            pattern: Pattern to fix
+
+        Returns:
+            Fixed pattern (new copy)
+        """
+        fixed_pattern = pattern.copy()
+
+        time_groups = self._group_by_time(
+            fixed_pattern.beats, self.timing_tolerance
+        )
+
+        beats_to_remove = []
+
+        for _time, beats in time_groups.items():
+            hand_beats = [
+                b for b in beats if b.instrument in self.HAND_INSTRUMENTS
+            ]
+            if len(hand_beats) <= 2:
+                continue
+
+            # Sort: highest priority first, then loudest as tiebreaker
+            hand_beats.sort(
+                key=lambda b: (
+                    self.HAND_PRIORITY.get(b.instrument, 0),
+                    b.velocity,
+                ),
+                reverse=True,
+            )
+            # Remove everything beyond the first 2
+            to_remove = hand_beats[2:]
+            beats_to_remove.extend(to_remove)
+
+        if beats_to_remove:
+            removed_names = ", ".join(
+                b.instrument.name for b in beats_to_remove
+            )
+            fixed_pattern.beats = [
+                b for b in fixed_pattern.beats if b not in beats_to_remove
+            ]
+            fixed_pattern.beats.sort(key=lambda b: b.position)
+            self.fixes_applied.append(
+                f"Removed {len(beats_to_remove)} excess hand instrument(s) "
+                f"to satisfy 2-hand limit: {removed_names}"
+            )
 
         return fixed_pattern
 
