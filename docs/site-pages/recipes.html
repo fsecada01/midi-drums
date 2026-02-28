@@ -161,6 +161,8 @@ footer a:hover{color:var(--violet);}
     <h3>Extras</h3>
     <a href="#batch">Batch generation</a>
     <a href="#ai">AI recipes</a>
+    <a href="#ai-cli" class="sub">CLI prompt</a>
+    <a href="#ai-song" class="sub">Full song</a>
   </nav>
 
   <article>
@@ -445,8 +447,61 @@ print(f"Generated {len(output_files)} MIDI files")</code></pre>
 
     <!-- ═══ AI ═════════════════════════════════════════════════════════════════ -->
     <h2 id="ai">AI-described recipes</h2>
-    <p>With AI dependencies installed and an API key configured:</p>
+    <p>With AI dependencies installed (<code>uv sync --group ai</code>) and an API key configured, you can describe drums in plain English. Two code paths are available: the Python async API for scripting, and the <code>prompt</code> CLI command for quick one-liners.</p>
 
+    <h3 id="ai-cli">CLI — single pattern</h3>
+    <p>The fastest way to get a MIDI file from a description:</p>
+
+    <pre><code class="language-bash"># Single death metal pattern
+midi-drums prompt "brutal death metal with continuous blast beats and galloping double bass" \
+    --tempo 190 --bars 4 -o ai_death.mid
+
+# Contemporary jazz — auto-named output
+midi-drums prompt "contemporary jazz with linear drumming, ghost notes, and complex ride pattern" \
+    --tempo 132 --complexity 0.75 --drummer weckl
+
+# Progressive rock with odd meter feel
+midi-drums prompt "progressive rock in 7/8 with syncopated snare and polyrhythmic hi-hat" \
+    --tempo 145 --bars 8 --section verse -o prog78.mid</code></pre>
+
+    <h3 id="ai-song">CLI — full song via agent</h3>
+    <p>Add <code>--song</code> to have the AI agent compose a complete multi-section arrangement. Use <code>--save-metadata</code> for an organized output directory with per-section MIDI parts.</p>
+
+    <pre><code class="language-bash"># Full song, organised output
+midi-drums prompt \
+    "death metal song with Gene Hoglan blast beats, Dave Lombardo double-kick sections, \
+     and an extended solo arc that starts slow and builds to full thrash speed" \
+    --song --save-metadata --tempo 185 -o my_death_song
+
+# What gets written to disk:
+# output/my_death_song/
+# ├── my_death_song.mid        ← full linear song (all sections)
+# ├── metadata.json            ← prompt, provider, structure, agent notes
+# └── parts/
+#     ├── 00_intro.mid
+#     ├── 01_verse.mid
+#     ├── 02_chorus.mid
+#     ├── 03_breakdown.mid
+#     ├── 04_solo_slow.mid
+#     ├── 05_solo_build.mid
+#     └── ...
+
+# Progressive rock epic
+midi-drums prompt "progressive rock epic with odd time signatures, Bonham-style power, \
+                   extended bridge section and ambient outro" \
+    --song --save-metadata --tempo 138 -o prog_epic
+
+# Modern jazz with complex structure
+midi-drums prompt "modern jazz quartet session: intro brushwork, swing groove verse, \
+                   bebop bridge, fusion chorus and calm outro" \
+    --song --save-metadata --tempo 125 -o jazz_session</code></pre>
+
+    <div class="callout tip">
+      <div class="callout-title">Using parts in your DAW</div>
+      <p>Each <code>parts/</code> file is a standalone MIDI clip for one section — drop them onto separate tracks in your DAW to mix and match, or import the full <code>*.mid</code> for a linear arrangement. <code>metadata.json</code> lists section names and bars so you know exactly what each file contains.</p>
+    </div>
+
+    <h3>Python API</h3>
     <pre><code class="language-python">import asyncio
 from midi_drums.ai import DrumGeneratorAI
 

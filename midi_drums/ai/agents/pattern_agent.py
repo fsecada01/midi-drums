@@ -18,14 +18,29 @@ from midi_drums.models.song import Song
 
 SYSTEM_PROMPT = (
     "You are an expert drum pattern composer and music producer. "
-    "You help users create professional drum patterns and songs across "
-    "multiple genres (metal, rock, jazz, funk) with various styles and "
-    "drummer personalities.\n\n"
-    "When composing:\n"
-    "1. Ask clarifying questions if the request is vague\n"
-    "2. Suggest appropriate styles and drummers based on the user's goals\n"
-    "3. Explain your creative decisions\n"
-    "4. Reference generated pattern/song IDs for the user\n\n"
+    "You generate professional drum patterns and songs across multiple genres "
+    "(metal, rock, jazz, funk) with various styles and drummer personalities.\n\n"
+    "IMPORTANT — this is a single-shot, non-interactive command. "
+    "The user will not respond after you act. You must infer all creative "
+    "decisions from the prompt alone and immediately call the appropriate tools. "
+    "Do NOT ask clarifying questions. Do NOT request more information. "
+    "If the prompt is ambiguous, make a reasonable creative choice and proceed.\n\n"
+    "If the user wants explicit control over genre, style, tempo, or structure "
+    "they should use the CLI flags directly (e.g. --genre, --style, --tempo).\n\n"
+    "IMPORTANT — valid style values per genre (use EXACTLY these strings):\n"
+    "  metal : heavy, death, power, progressive, thrash, doom, breakdown\n"
+    "  rock  : classic, blues, alternative, progressive, punk, hard, pop\n"
+    "  jazz  : swing, bebop, fusion, latin, ballad, hard_bop, contemporary\n"
+    "  funk  : classic, pfunk, shuffle, new_orleans, fusion, minimal, heavy\n\n"
+    "Never pass a style like 'death metal' or 'heavy metal' — use 'death' or 'heavy'.\n\n"
+    "When composing a song, follow this exact workflow:\n"
+    "1. Infer genre, style, tempo, and structure from the user's description\n"
+    "2. Call create_song with the full section list\n"
+    "3. Call generate_pattern for each distinct section type that needs a unique pattern\n"
+    "4. Call apply_drummer_style to apply the appropriate drummer to each pattern\n"
+    "5. Call assign_pattern_to_section for EVERY section in the song — this is mandatory.\n"
+    "   Without this step the exported MIDI will be wrong.\n"
+    "6. After all assignments, briefly summarise what was created and reference the IDs\n\n"
     "Available tools allow you to generate patterns, apply drummer styles, "
     "create complete songs, and list available options."
 )
@@ -94,6 +109,64 @@ class PatternCompositionAgent:
         """
         from langchain.tools import tool
 
+        _VALID_STYLES: dict[str, list[str]] = {
+            "metal": [
+                "heavy",
+                "death",
+                "power",
+                "progressive",
+                "thrash",
+                "doom",
+                "breakdown",
+            ],
+            "rock": [
+                "classic",
+                "blues",
+                "alternative",
+                "progressive",
+                "punk",
+                "hard",
+                "pop",
+            ],
+            "jazz": [
+                "swing",
+                "bebop",
+                "fusion",
+                "latin",
+                "ballad",
+                "hard_bop",
+                "contemporary",
+            ],
+            "funk": [
+                "classic",
+                "pfunk",
+                "shuffle",
+                "new_orleans",
+                "fusion",
+                "minimal",
+                "heavy",
+            ],
+        }
+
+        def _normalize_style(genre: str, style: str) -> str:
+            valid = _VALID_STYLES.get(genre.lower(), [])
+            if not valid:
+                return style
+            normalized = style.lower().replace("-", "_").replace(" ", "_")
+            if normalized in valid:
+                return normalized
+            # Substring match: "death_metal" → "death", "classic_rock" → "classic"
+            for v in valid:
+                if v in normalized or normalized in v:
+                    logger.debug(
+                        f"Style '{style}' normalized to '{v}' for genre '{genre}'"
+                    )
+                    return v
+            logger.warning(
+                f"Unknown style '{style}' for genre '{genre}', using '{valid[0]}'"
+            )
+            return valid[0]
+
         @tool
         def generate_pattern(
             genre: str, style: str, section: str, bars: int = 4
@@ -101,14 +174,19 @@ class PatternCompositionAgent:
             """Generate a drum pattern with specified characteristics.
 
             Args:
-                genre: Musical genre (metal, rock, jazz, funk)
-                style: Specific style within genre
+                genre: Musical genre — one of: metal, rock, jazz, funk
+                style: Exact style token for the genre. Valid values:
+                    metal → heavy | death | power | progressive | thrash | doom | breakdown
+                    rock  → classic | blues | alternative | progressive | punk | hard | pop
+                    jazz  → swing | bebop | fusion | latin | ballad | hard_bop | contemporary
+                    funk  → classic | pfunk | shuffle | new_orleans | fusion | minimal | heavy
                 section: Song section type (verse, chorus, bridge, breakdown, etc.)
                 bars: Number of bars in pattern (1-16)
 
             Returns:
                 Description of generated pattern with ID for reference
             """
+            style = _normalize_style(genre, style)
             logger.info(
                 f"Tool: generate_pattern({genre}/{style}/{section}, {bars} bars)"
             )
@@ -181,23 +259,54 @@ class PatternCompositionAgent:
             """Create a complete multi-section song.
 
             Args:
-                genre: Primary genre
-                style: Primary style
+                genre: Primary genre — one of: metal, rock, jazz, funk
+                style: Exact style token for the genre. Valid values:
+                    metal → heavy | death | power | progressive | thrash | doom | breakdown
+                    rock  → classic | blues | alternative | progressive | punk | hard | pop
+                    jazz  → swing | bebop | fusion | latin | ballad | hard_bop | contemporary
+                    funk  → classic | pfunk | shuffle | new_orleans | fusion | minimal | heavy
                 tempo: Tempo in BPM (40-300)
                 structure: Song structure description or "default"
 
             Returns:
                 Description of created song with ID
             """
+            style = _normalize_style(genre, style)
             logger.info(
                 f"Tool: create_song({genre}/{style}, {tempo} BPM, {structure})"
             )
+
+            # Parse structure string into (section_name, bars) tuples
+            _SECTION_BARS: dict[str, int] = {
+                "intro": 4,
+                "verse": 8,
+                "chorus": 8,
+                "bridge": 4,
+                "breakdown": 4,
+                "outro": 4,
+                "pre_chorus": 4,
+                "interlude": 4,
+                "hook": 4,
+            }
+            parsed_structure = None
+            if structure and structure.lower() != "default":
+                parsed_structure = []
+                for part in structure.split(","):
+                    name = part.strip().lower()
+                    if not name:
+                        continue
+                    # solo_slow, solo_build, solo_midtempo → 8 bars each
+                    if name.startswith("solo"):
+                        bars = 8
+                    else:
+                        bars = _SECTION_BARS.get(name, 4)
+                    parsed_structure.append((name, bars))
 
             song = self.drum_generator.create_song(
                 genre=genre,
                 style=style,
                 tempo=tempo,
-                # Use default structure for now (could parse structure string)
+                **({"structure": parsed_structure} if parsed_structure else {}),
             )
 
             # Cache the song
@@ -223,6 +332,49 @@ class PatternCompositionAgent:
                 f"Created {genre}/{style} song at {tempo} BPM "
                 f"(ID: {song_id}, {len(song.sections)} sections: {section_desc}). "
                 f"Use this ID to export to MIDI."
+            )
+
+        @tool
+        def assign_pattern_to_section(
+            song_id: str, section_index: int, pattern_id: str
+        ) -> str:
+            """Assign a generated pattern to a specific section of a song.
+
+            IMPORTANT: Always call this for every section after generating patterns
+            so the exported MIDI reflects the correct drummer styles and patterns.
+
+            Args:
+                song_id: Song ID from create_song (e.g. "song_0")
+                section_index: 0-based index of the section to replace
+                pattern_id: Pattern ID from generate_pattern or apply_drummer_style
+
+            Returns:
+                Confirmation of the assignment
+            """
+            if song_id not in self.song_cache:
+                return f"Song {song_id} not found. Create a song first."
+            if pattern_id not in self.pattern_cache:
+                return (
+                    f"Pattern {pattern_id} not found. Generate a pattern first."
+                )
+
+            song = self.song_cache[song_id]
+            if section_index < 0 or section_index >= len(song.sections):
+                return (
+                    f"Section index {section_index} out of range "
+                    f"(song has {len(song.sections)} sections, 0-based)."
+                )
+
+            section = song.sections[section_index]
+            section.pattern = self.pattern_cache[pattern_id]
+            section_name = section.name
+
+            logger.success(
+                f"Assigned {pattern_id} → {song_id}[{section_index}] ({section_name})"
+            )
+            return (
+                f"Assigned pattern '{pattern_id}' to section {section_index} "
+                f"('{section_name}') of song '{song_id}'."
             )
 
         @tool
@@ -252,6 +404,7 @@ class PatternCompositionAgent:
             generate_pattern,
             apply_drummer_style,
             create_song,
+            assign_pattern_to_section,
             list_genres,
             list_drummers,
         ]

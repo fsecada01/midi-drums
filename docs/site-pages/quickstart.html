@@ -329,6 +329,49 @@ song = gen.create_song(
 )
 gen.export_midi(song, "rock_song.mid")</code></pre>
 
+    <!-- AI PROMPT -->
+    <h2 id="ai-prompt">AI prompt — natural language</h2>
+    <p>With AI dependencies installed, generate drums from plain English using the <code>prompt</code> subcommand:</p>
+
+    <pre><code class="language-bash"># Single pattern — AI picks genre, style, and complexity from your words
+midi-drums prompt "funky groove with ghost notes and syncopation"
+midi-drums prompt "aggressive metal breakdown with double bass" --tempo 180 -o breakdown.mid
+
+# Full multi-section song composed by an AI agent
+midi-drums prompt "Testament-inspired death metal, Hoglan blast beats, Lombardo breakdowns" \
+    --song --tempo 185
+
+# --save-metadata organises everything into output/&lt;name&gt;/
+midi-drums prompt "brutal death metal with progressive solo section" \
+    --song --save-metadata --tempo 185 --output my_song.mid</code></pre>
+
+    <p id="ai-song">The <code>--save-metadata</code> flag creates an organised directory:</p>
+    <pre><code class="language-text">output/my_song/
+  my_song.mid          ← full assembled song
+  metadata.json        ← prompt, structure, agent composition notes
+  parts/
+    00_intro.mid       ← each section exported individually
+    01_verse.mid
+    02_chorus.mid
+    03_breakdown.mid
+    04_solo_slow.mid
+    ...</code></pre>
+
+    <table>
+      <tr><th>Flag</th><th>Description</th></tr>
+      <tr><td>--song</td><td>Compose a full multi-section song via AI agent</td></tr>
+      <tr><td>--save-metadata</td><td>Write metadata.json + parts/ into output/&lt;name&gt;/</td></tr>
+      <tr><td>--output / -o</td><td>MIDI filename (auto-named from prompt if omitted)</td></tr>
+      <tr><td>--tempo</td><td>Tempo in BPM (default: 120)</td></tr>
+      <tr><td>--drummer</td><td>Apply a drummer style (bonham, hoglan, weckl, …)</td></tr>
+      <tr><td>--rpp</td><td>Also create a Reaper project with section markers</td></tr>
+    </table>
+
+    <div class="callout tip">
+      <div class="callout-title">Tip</div>
+      <p>Use the parts files to individually import each drum section into your DAW — handy for rearranging song structure or A/B-testing different sections.</p>
+    </div>
+
     <!-- REAPER -->
     <h2 id="reaper">Reaper project export</h2>
     <p>Optionally export the drum track alongside a Reaper project with auto-placed section markers:</p>

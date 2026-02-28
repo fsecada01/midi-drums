@@ -1,5 +1,6 @@
 """MIDI file generation engine."""
 
+import copy
 from pathlib import Path
 
 try:
@@ -109,9 +110,11 @@ class MIDIEngine:
         if added_note_ticks is None:
             added_note_ticks = set()
 
+        beats_per_bar = song.time_signature.beats_per_bar
+
         for bar_num in range(section.bars):
             absolute_bar = current_bar + bar_num
-            bar_start_time = absolute_bar * song.time_signature.beats_per_bar
+            bar_start_time = absolute_bar * beats_per_bar
 
             # Get the effective pattern for this bar (considering variations)
             pattern = section.get_effective_pattern(bar_num)
@@ -123,10 +126,42 @@ class MIDIEngine:
                     bar_num, song.global_parameters.fill_frequency
                 )
 
+            # Detect the natural bar-span of THIS bar's pattern so multi-bar
+            # patterns (e.g. assigned via assign_pattern_to_section) are tiled
+            # correctly. Computed per-bar so that single-bar variations inside
+            # a multi-bar section still render all their beats (cycle_bar would
+            # otherwise filter them to zero if computed from bar 0's pattern).
+            if pattern.beats:
+                _max_pos = max(b.position for b in pattern.beats)
+                _pattern_bars = max(1, round((_max_pos + 1) / beats_per_bar))
+            else:
+                _pattern_bars = 1
+
+            # For multi-bar patterns, only emit the beats belonging to the
+            # current bar within the pattern cycle so that each bar gets its
+            # own distinct slice rather than the full pattern being re-placed
+            # from position 0 (which causes global-dedup collisions).
+            if _pattern_bars > 1:
+                cycle_bar = bar_num % _pattern_bars
+                bar_beats = [
+                    b
+                    for b in pattern.beats
+                    if int(b.position / beats_per_bar) == cycle_bar
+                ]
+                # Re-express positions relative to this bar
+                adjusted_beats = []
+                for b in bar_beats:
+                    nb = copy.copy(b)
+                    nb.position = b.position - cycle_bar * beats_per_bar
+                    adjusted_beats.append(nb)
+                beats_to_render = adjusted_beats
+            else:
+                beats_to_render = pattern.beats
+
             # Per-bar dedup: if drummer modifications created two beats at the
             # same (instrument, position) within a bar, keep the loudest.
             deduped: dict[tuple, object] = {}
-            for beat in pattern.beats:
+            for beat in beats_to_render:
                 key = (beat.instrument, round(beat.position, 6))
                 if key not in deduped or beat.velocity > deduped[key].velocity:
                     deduped[key] = beat

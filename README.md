@@ -171,6 +171,11 @@ midi-drums reaper export --genre metal --style doom --tempo 120 --output doom.rp
 # List available options
 midi-drums list genres
 midi-drums list drummers
+
+# AI natural language generation (requires AI setup)
+midi-drums prompt "funky groove with ghost notes"
+midi-drums prompt "aggressive death metal breakdown" --tempo 180 -o breakdown.mid
+midi-drums prompt "Testament-style death metal epic" --song --save-metadata --tempo 185
 ```
 
 **Or use the module directly:**
@@ -233,6 +238,48 @@ result = ai.compose_with_agent(
 
 print(result['output'])  # Agent's creative response
 ```
+
+### CLI — `prompt` command
+
+The `prompt` subcommand is the fastest way to get a MIDI file from plain English:
+
+```bash
+# Single pattern — analyses the text, picks genre/style, exports MIDI
+midi-drums prompt "funky groove with ghost notes and syncopation"
+midi-drums prompt "aggressive metal breakdown with double bass at 180 bpm" \
+    --tempo 180 -o breakdown.mid
+
+# Full multi-section song via AI agent
+midi-drums prompt "Testament-inspired death metal — Hoglan blast beats, \
+Lombardo breakdowns, extended solo arc" \
+    --song --tempo 185
+
+# Organised output: --save-metadata creates a directory with parts
+midi-drums prompt "brutal death metal with progressive solo section" \
+    --song --save-metadata --tempo 185 --output my_song.mid
+
+# Produces:
+# output/my_song/
+#   my_song.mid          ← full assembled song
+#   metadata.json        ← prompt, structure, agent composition notes
+#   parts/
+#     00_intro.mid       ← each section exported individually
+#     01_verse.mid
+#     02_chorus.mid
+#     03_breakdown.mid
+#     ...
+```
+
+**Flags:**
+
+| Flag | Description |
+|------|-------------|
+| `--song` | Compose a full multi-section song via AI agent (default: single pattern) |
+| `--save-metadata` | Write `metadata.json` + per-section `parts/` into `output/<name>/` |
+| `--output` / `-o` | MIDI filename (auto-named from prompt words if omitted) |
+| `--tempo` | Tempo in BPM (default: 120) |
+| `--drummer` | Apply a specific drummer style (bonham, hoglan, weckl, …) |
+| `--rpp` | Also create a Reaper project with section markers |
 
 ### Multi-Provider Support
 

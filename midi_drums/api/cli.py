@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
@@ -45,6 +46,10 @@ Examples:
   # Add markers from existing metadata
   python -m midi_drums.api.cli reaper add-markers --song doom.mid \\
       --output project.rpp
+
+  # Generate a pattern from a natural language prompt
+  python -m midi_drums prompt "funky groove with ghost notes and syncopation"
+  python -m midi_drums prompt "aggressive death metal breakdown" --tempo 180 -o breakdown.mid
         """,
     )
 
@@ -280,6 +285,55 @@ Examples:
         "--genre",
         default=None,
         help="Filter presets to a specific genre (e.g. metal, jazz)",
+    )
+
+    # AI prompt command
+    prompt_parser = subparsers.add_parser(
+        "prompt",
+        help="Generate a drum pattern from a natural language description",
+    )
+    prompt_parser.add_argument(
+        "text",
+        help='Natural language description in quotes, e.g. "funky groove with ghost notes"',
+    )
+    prompt_parser.add_argument(
+        "--output", "-o", help="Output MIDI file (auto-named if omitted)"
+    )
+    prompt_parser.add_argument(
+        "--tempo", type=int, default=120, help="Tempo in BPM (default: 120)"
+    )
+    prompt_parser.add_argument(
+        "--section", default="verse", help="Song section (verse, chorus, …)"
+    )
+    prompt_parser.add_argument(
+        "--bars", type=int, default=4, help="Number of bars (default: 4)"
+    )
+    prompt_parser.add_argument(
+        "--complexity",
+        type=float,
+        default=0.5,
+        help="Complexity 0.0–1.0 (default: 0.5)",
+    )
+    prompt_parser.add_argument(
+        "--drummer", help="Drummer style (bonham, weckl, …)"
+    )
+    prompt_parser.add_argument(
+        "--song",
+        action="store_true",
+        help=(
+            "Compose a full multi-section song via the AI agent "
+            "(default: single pattern)"
+        ),
+    )
+    prompt_parser.add_argument(
+        "--rpp",
+        metavar="FILE.rpp",
+        help="Also create a Reaper project with tempo, meter, and section markers",
+    )
+    prompt_parser.add_argument(
+        "--save-metadata",
+        action="store_true",
+        help="Save a JSON metadata file alongside the MIDI (e.g. output.json)",
     )
 
     return parser
@@ -731,6 +785,273 @@ def handle_reaper_presets_command(args) -> None:
     _print_genre_presets(genre_filter=getattr(args, "genre", None))
 
 
+def _print_ai_setup_help(provider: str | None = None) -> None:
+    """Print AI setup instructions and exit."""
+    active = provider or os.getenv("AI_PROVIDER", "anthropic")
+    key_var = f"{active.upper()}_API_KEY"
+    print(
+        f"\nLooks like you haven't set up your AI provider yet, my dudes.\n"
+        f"\nCurrently configured provider: {active!r}\n"
+        f"Missing API key: {key_var}\n"
+        f"\nHere's what you need:\n"
+        f"\n  Provider (optional, default: anthropic)"
+        f"\n    AI_PROVIDER=anthropic | openai | groq | cohere"
+        f"\n"
+        f"\n  API key for your provider:"
+        f"\n    ANTHROPIC_API_KEY=sk-ant-...    → Anthropic (Claude)"
+        f"\n    OPENAI_API_KEY=sk-proj-...      → OpenAI (GPT-4o)"
+        f"\n    GROQ_API_KEY=gsk_...            → Groq (Llama)"
+        f"\n    COHERE_API_KEY=...              → Cohere"
+        f"\n"
+        f"\n  Optional tuning:"
+        f"\n    AI_MODEL=claude-sonnet-4-20250514"
+        f"\n    AI_TEMPERATURE=0.7"
+        f"\n    AI_MAX_TOKENS=4096"
+        f"\n"
+        f"\nDrop these in a .env file at the project root and they'll be"
+        f"\npicked up automatically.\n",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+
+def handle_prompt_command(args) -> None:
+    """Handle the 'prompt' command — AI-powered natural language generation."""
+    # ── guard: AI extras installed? ──────────────────────────────────────────
+    try:
+        from midi_drums.ai.ai_api import DrumGeneratorAI  # noqa: PLC0415
+        from midi_drums.ai.backends import AIBackendConfig  # noqa: PLC0415
+    except ImportError:
+        print(
+            "\nAI dependencies are not installed, my dudes.\n"
+            "Install them with:\n"
+            "  uv sync --group ai\n"
+            "  # or: pip install 'midi-drums[ai]'\n",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    # ── guard: env vars configured? ───────────────────────────────────────────
+    config = AIBackendConfig.from_env()
+    if not config.api_key:
+        _print_ai_setup_help(config.provider.value)
+
+    # ── resolve output paths ─────────────────────────────────────────────────
+    description = args.text
+    save_metadata = getattr(args, "save_metadata", False)
+    rpp_path = getattr(args, "rpp", None)
+
+    # Derive a filesystem-safe slug from --output stem or the first 4 prompt words
+    if args.output:
+        slug = Path(args.output).stem
+    else:
+        slug = "_".join(description.lower().split()[:4])
+        slug = "".join(c if c.isalnum() or c == "_" else "" for c in slug)
+        slug = slug or "ai_pattern"
+
+    if save_metadata:
+        # Organised layout:  output/<slug>/
+        #                    output/<slug>/<slug>.mid
+        #                    output/<slug>/metadata.json
+        #                    output/<slug>/parts/<N>_<section>.mid   (--song only)
+        out_dir = Path("output") / slug
+        out_dir.mkdir(parents=True, exist_ok=True)
+        output_path = str(out_dir / f"{slug}.mid")
+        meta_path: Path | None = out_dir / "metadata.json"
+        parts_dir: Path | None = out_dir / "parts"
+    else:
+        output_path = args.output or f"{slug}.mid"
+        meta_path = None
+        parts_dir = None
+
+    print(f"Generating from prompt: {description!r}")
+    print(f"Provider : {config.provider.value}/{config.model}")
+    if save_metadata:
+        print(f"Output dir: output/{slug}/")
+
+    ai = DrumGeneratorAI(backend_config=config)
+
+    try:
+        if getattr(args, "song", False):
+            # ── --song path: Langchain agent composes a multi-section song ──
+            print("Composing song via agent…")
+            result = ai.compose_with_agent(description)
+            print(result.get("output", ""))
+
+            song_cache = result.get("song_cache", {})
+            pattern_cache = result.get("pattern_cache", {})
+
+            if song_cache:
+                last_id = song_cache[-1]
+                success = ai.export_song(last_id, output_path)
+                song_obj = ai.get_song_from_agent(last_id)
+            elif pattern_cache:
+                last_id = pattern_cache[-1]
+                success = ai.export_pattern(
+                    last_id, output_path, tempo=args.tempo
+                )
+                song_obj = None
+            else:
+                print(
+                    "Agent didn't create any patterns or songs.",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+
+            if not success:
+                print("MIDI export returned failure.", file=sys.stderr)
+                sys.exit(1)
+
+            # ── export per-section parts ─────────────────────────────────────
+            if parts_dir is not None and song_obj:
+                from midi_drums.engines.midi_engine import MIDIEngine
+
+                parts_dir.mkdir(exist_ok=True)
+                engine = MIDIEngine()
+                for i, section in enumerate(song_obj.sections):
+                    part_file = parts_dir / f"{i:02d}_{section.name}.mid"
+                    engine.save_pattern_midi(
+                        section.pattern, part_file, tempo=song_obj.tempo
+                    )
+                print(
+                    f"  Parts      : {parts_dir}/"
+                    f" ({len(song_obj.sections)} files)"
+                )
+
+            # ── optional Reaper project ──────────────────────────────────────
+            if rpp_path and song_obj:
+                from midi_drums.exporters.reaper_exporter import ReaperExporter
+
+                Path(rpp_path).parent.mkdir(parents=True, exist_ok=True)
+                ReaperExporter().export_complete(
+                    song_obj, rpp_path, output_path
+                )
+                print(f"  Reaper     : {rpp_path}")
+
+            # ── optional metadata JSON ───────────────────────────────────────
+            if save_metadata:
+                import json
+                from datetime import datetime
+
+                meta = {
+                    "generator": "midi-drums",
+                    "created_at": datetime.now().isoformat(),
+                    "prompt": description,
+                    "provider": f"{config.provider.value}/{config.model}",
+                    "song": {
+                        "name": song_obj.name if song_obj else None,
+                        "tempo": song_obj.tempo if song_obj else args.tempo,
+                        "time_signature": (
+                            f"{song_obj.time_signature.numerator}/"
+                            f"{song_obj.time_signature.denominator}"
+                            if song_obj
+                            else "4/4"
+                        ),
+                        "total_bars": (
+                            song_obj.total_bars() if song_obj else None
+                        ),
+                    },
+                    "structure": (
+                        [
+                            {"name": s.name, "bars": s.bars}
+                            for s in song_obj.sections
+                        ]
+                        if song_obj
+                        else []
+                    ),
+                    "agent": {
+                        "patterns_generated": result.get("pattern_cache", []),
+                        "songs_generated": result.get("song_cache", []),
+                        "composition_notes": result.get("output", ""),
+                    },
+                }
+                meta_path.write_text(json.dumps(meta, indent=2))
+                print(f"  Metadata   : {meta_path}")
+
+            print(f"\nDone!\n  Output : {output_path}")
+
+        else:
+            # ── default path: Pydantic AI → single pattern ───────────────────
+            pattern, info = ai.generate_pattern_from_text_sync(
+                description=description,
+                section=args.section,
+                tempo=args.tempo,
+                bars=args.bars,
+                complexity=args.complexity,
+                drummer_style=args.drummer,
+            )
+
+            success = ai.export_pattern(pattern, output_path, tempo=args.tempo)
+            if not success:
+                print("MIDI export returned failure.", file=sys.stderr)
+                sys.exit(1)
+
+            chars = info.characteristics
+
+            # ── optional Reaper project ──────────────────────────────────────
+            if rpp_path:
+                from midi_drums.exporters.reaper_exporter import ReaperExporter
+                from midi_drums.models.song import Section, Song, TimeSignature
+
+                Path(rpp_path).parent.mkdir(parents=True, exist_ok=True)
+                song_obj = Song(
+                    name=slug,
+                    tempo=args.tempo,
+                    time_signature=TimeSignature(4, 4),
+                    sections=[
+                        Section(
+                            name=args.section, pattern=pattern, bars=args.bars
+                        )
+                    ],
+                    metadata={"genre": chars.genre, "style": chars.style},
+                )
+                ReaperExporter().export_complete(
+                    song_obj, rpp_path, output_path
+                )
+                print(f"  Reaper     : {rpp_path}")
+
+            # ── optional metadata JSON ───────────────────────────────────────
+            if save_metadata:
+                import json
+                from datetime import datetime
+
+                meta = {
+                    "generator": "midi-drums",
+                    "created_at": datetime.now().isoformat(),
+                    "prompt": description,
+                    "provider": f"{config.provider.value}/{config.model}",
+                    "song": {
+                        "tempo": args.tempo,
+                        "time_signature": "4/4",
+                        "total_bars": args.bars,
+                    },
+                    "structure": [{"name": args.section, "bars": args.bars}],
+                    "generation": {
+                        "genre": chars.genre,
+                        "style": chars.style,
+                        "complexity": args.complexity,
+                        "drummer": args.drummer,
+                        "confidence": round(info.confidence, 3),
+                    },
+                }
+                if info.suggestions:
+                    meta["generation"]["suggestions"] = info.suggestions
+                meta_path.write_text(json.dumps(meta, indent=2))
+                print(f"  Metadata   : {meta_path}")
+
+            print("\nDone!")
+            print(f"  Output     : {output_path}")
+            print(f"  Genre      : {chars.genre} / {chars.style}")
+            print(f"  Tempo      : {args.tempo} BPM  |  Bars: {args.bars}")
+            print(f"  Confidence : {info.confidence:.0%}")
+            if info.suggestions:
+                print(f"  Tip        : {info.suggestions[0]}")
+
+    except Exception as e:
+        print(f"AI generation failed: {e}", file=sys.stderr)
+        sys.exit(1)
+
+
 def main():
     """Main CLI entry point."""
     parser = create_parser()
@@ -738,6 +1059,10 @@ def main():
 
     if not args.command:
         parser.print_help()
+        return
+
+    if args.command == "prompt":
+        handle_prompt_command(args)
         return
 
     # Initialize generator
