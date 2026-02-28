@@ -436,17 +436,25 @@ class TestSectionColors:
     def test_known_section_types_return_non_default(self):
         """Well-known section types return specific colors."""
         known_types = [
-            "verse", "chorus", "intro", "outro", "bridge",
-            "solo", "breakdown", "blast_section", "head", "groove",
+            "verse",
+            "chorus",
+            "intro",
+            "outro",
+            "bridge",
+            "solo",
+            "breakdown",
+            "blast_section",
+            "head",
+            "groove",
         ]
         default = "#FF5733"
         for section_type in known_types:
             color = get_section_color(section_type)
             assert isinstance(color, str)
             assert color.startswith("#")
-            assert color != default, (
-                f"Section '{section_type}' should have a dedicated color"
-            )
+            assert (
+                color != default
+            ), f"Section '{section_type}' should have a dedicated color"
 
     def test_unknown_section_returns_default(self):
         """Unknown section types fall back to the default color."""
@@ -522,15 +530,20 @@ class TestListGenrePresets:
         """Styles within each genre are alphabetically sorted."""
         result = list_genre_presets()
         for genre, styles in result.items():
-            assert styles == sorted(styles), (
-                f"Styles for '{genre}' are not sorted"
-            )
+            assert styles == sorted(
+                styles
+            ), f"Styles for '{genre}' are not sorted"
 
     def test_metal_has_expected_styles(self):
         """Metal genre includes all defined styles."""
         result = list_genre_presets()
         expected = {
-            "heavy", "death", "doom", "thrash", "power", "progressive",
+            "heavy",
+            "death",
+            "doom",
+            "thrash",
+            "power",
+            "progressive",
             "breakdown",
         }
         assert expected.issubset(set(result["metal"]))
