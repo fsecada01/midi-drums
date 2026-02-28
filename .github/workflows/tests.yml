@@ -119,7 +119,8 @@ jobs:
 
       - name: Run all tests with coverage
         run: |
-          uv run pytest \
+          source .venv/bin/activate
+          pytest \
             --cov=midi_drums \
             --cov-report=html \
             --cov-report=term-missing \
@@ -134,7 +135,8 @@ jobs:
 
       - name: Coverage summary
         run: |
-          uv run coverage report --show-missing
+          source .venv/bin/activate
+          coverage report --show-missing
 
   success:
     name: All Tests Passed

@@ -59,6 +59,9 @@ class PatternFixer:
         # Remove duplicate beats (same position + instrument) first
         fixed_pattern = self.remove_duplicate_beats(fixed_pattern)
 
+        # Remove simultaneous conflicting hi-hat states (e.g. CLOSED_HH + OPEN_HH)
+        fixed_pattern = self.remove_simultaneous_hihat_conflicts(fixed_pattern)
+
         # Fix ride + hi-hat conflicts
         fixed_pattern = self.remove_ride_hihat_conflicts(fixed_pattern)
 
@@ -101,6 +104,55 @@ class PatternFixer:
         removed = original_count - len(fixed_pattern.beats)
         if removed:
             self.fixes_applied.append(f"Removed {removed} duplicate beat(s)")
+
+        return fixed_pattern
+
+    def remove_simultaneous_hihat_conflicts(self, pattern: Pattern) -> Pattern:
+        """Remove cases where multiple hi-hat hand instruments are simultaneous.
+
+        A drummer's right hand can only be in one hi-hat position at a time.
+        When layered modifications produce e.g. CLOSED_HH + OPEN_HH at the same
+        position, that requires two hands for the hi-hat alone, which is
+        physically impossible.
+
+        Strategy: keep only the loudest hi-hat hand instrument at each position.
+
+        Args:
+            pattern: Pattern to fix
+
+        Returns:
+            Fixed pattern (new copy)
+        """
+        fixed_pattern = pattern.copy()
+
+        time_groups = self._group_by_time(
+            fixed_pattern.beats, self.timing_tolerance
+        )
+
+        beats_to_remove = []
+
+        for _time, beats in time_groups.items():
+            hihat_beats = [
+                b for b in beats if b.instrument in self.HIHAT_HAND_INSTRUMENTS
+            ]
+            if len(hihat_beats) > 1:
+                # Keep only the loudest; remove the rest
+                hihat_beats.sort(key=lambda b: b.velocity, reverse=True)
+                to_remove = hihat_beats[1:]
+                beats_to_remove.extend(to_remove)
+
+        if beats_to_remove:
+            removed_names = ", ".join(
+                b.instrument.name for b in beats_to_remove
+            )
+            fixed_pattern.beats = [
+                b for b in fixed_pattern.beats if b not in beats_to_remove
+            ]
+            fixed_pattern.beats.sort(key=lambda b: b.position)
+            self.fixes_applied.append(
+                f"Removed {len(beats_to_remove)} simultaneous hi-hat "
+                f"conflict(s): {removed_names}"
+            )
 
         return fixed_pattern
 
