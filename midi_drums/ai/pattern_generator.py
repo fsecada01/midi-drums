@@ -320,18 +320,13 @@ description context.
         suggestions = []
 
         # Suggest intensity variations
+        genre = characteristics.genre
         if characteristics.intensity < 0.5:
             suggestions.append(
-                f"Try higher intensity for more aggressive {
-                    characteristics.genre
-                }"
+                f"Try higher intensity for more aggressive {genre}"
             )
         elif characteristics.intensity > 0.7:
-            suggestions.append(
-                f"Try lower intensity for more subtle {
-                    characteristics.genre
-                }"
-            )
+            suggestions.append(f"Try lower intensity for more subtle {genre}")
 
         # Suggest style variations within genre
         style_suggestions = {

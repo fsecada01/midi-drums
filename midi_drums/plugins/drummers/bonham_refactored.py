@@ -56,3 +56,7 @@ class BonhamPlugin(DrummerPlugin):
     def get_signature_fills(self) -> list[Fill]:
         """Return John Bonham's signature fill patterns."""
         return []
+
+
+# backward-compat alias for existing test imports
+BonhamPluginRefactored = BonhamPlugin

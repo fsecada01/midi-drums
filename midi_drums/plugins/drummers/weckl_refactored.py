@@ -52,3 +52,7 @@ class WecklPlugin(DrummerPlugin):
     def get_signature_fills(self) -> list[Fill]:
         """Return Dave Weckl's signature fill patterns."""
         return []
+
+
+# backward-compat alias for existing test imports
+WecklPluginRefactored = WecklPlugin

@@ -12,15 +12,19 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-from dotenv import load_dotenv
 from loguru import logger
 from pydantic import BaseModel, Field
 
-# Load .env file if it exists
-dotenv_path = Path(__file__).parent.parent.parent / ".env"
-if dotenv_path.exists():
-    load_dotenv(dotenv_path)
-    logger.debug(f"Loaded environment variables from {dotenv_path}")
+# Load .env file if it exists and python-dotenv is available
+try:
+    from dotenv import load_dotenv as _load_dotenv
+
+    _dotenv_path = Path(__file__).parent.parent.parent / ".env"
+    if _dotenv_path.exists():
+        _load_dotenv(_dotenv_path)
+        logger.debug(f"Loaded environment variables from {_dotenv_path}")
+except ImportError:
+    pass
 
 
 class AIProvider(str, Enum):

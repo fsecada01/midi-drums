@@ -387,3 +387,7 @@ class RockGenrePlugin(GenrePlugin):
             .add(CrashAccents(positions=[3.75], intensity=1.0))
             .build(bars=1, complexity=outro_complexity)
         )
+
+
+# backward-compat alias for existing test imports
+RockGenrePluginRefactored = RockGenrePlugin
