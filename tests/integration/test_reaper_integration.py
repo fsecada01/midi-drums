@@ -473,9 +473,9 @@ class TestDrumGeneratorAPIReaper:
         presets = api.list_genre_presets()
 
         for genre, styles in presets.items():
-            assert styles == sorted(styles), (
-                f"Styles for '{genre}' are not sorted"
-            )
+            assert styles == sorted(
+                styles
+            ), f"Styles for '{genre}' are not sorted"
 
     def test_create_reaper_from_preset_markers_correct_count(self, tmp_path):
         """Number of markers equals preset section count."""

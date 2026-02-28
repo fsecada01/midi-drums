@@ -9,7 +9,6 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from langchain.agents import create_agent
 from loguru import logger
 
 from midi_drums.ai.backends import AIBackendConfig, AIBackendFactory
@@ -263,6 +262,8 @@ class PatternCompositionAgent:
         Returns:
             Compiled LangGraph state machine (CompiledStateGraph)
         """
+        from langchain.agents import create_agent
+
         logger.debug("Creating agent with create_agent()")
 
         agent = create_agent(
