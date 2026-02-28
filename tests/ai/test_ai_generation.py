@@ -20,6 +20,8 @@ if sys.platform == "win32":
 configure_logging(level="WARNING", log_to_file=False)
 
 
+@pytest.mark.ai
+@pytest.mark.requires_api
 async def test_ai_generation():
     """Test AI-powered pattern generation."""
     print("=" * 70)
