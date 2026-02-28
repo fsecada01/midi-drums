@@ -3,278 +3,839 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MIDI Drums Generator — Home</title>
+<title>MIDI Drums Generator — Professional Drum Track Generation</title>
+<meta name="description" content="A plugin-based Python system for creating professional MIDI drum tracks across Metal, Rock, Jazz, and Funk with 7 legendary drummer styles.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,600;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
+/* ── Tokens ─────────────────────────────────────────────────────────────── */
 :root {
-  --dm-bg:         #0c1117; --dm-panel:      #161c26; --dm-code-bg:    #090e18;
-  --dm-border:     #1e2a3c; --dm-border-lit: #29394f;
-  --dm-violet:     #a78bfa; --dm-amber:      #fbbf24; --dm-sky:        #38bdf8;
-  --dm-green:      #4ade80; --dm-text:       #cbd5e1; --dm-muted:      #64748b;
-  --dm-dim:        #334155; --dm-white:      #f1f5f9;
-  --dm-mono: 'IBM Plex Mono','Courier New',monospace;
-  --dm-sans: 'Inter',system-ui,-apple-system,sans-serif;
-  --dm-bar-h: 42px;
+  --bg:          #0a0f17;
+  --bg-raised:   #0e1520;
+  --panel:       #141d2b;
+  --panel-lit:   #1a2438;
+  --code-bg:     #080d14;
+  --border:      #1c2840;
+  --border-lit:  #263650;
+  --border-glow: #2e4270;
+
+  --violet:      #a78bfa;
+  --violet-d:    #7c5fdb;
+  --violet-dim:  rgba(167,139,250,0.08);
+  --violet-glow: rgba(167,139,250,0.15);
+  --amber:       #fbbf24;
+  --amber-dim:   rgba(251,191,36,0.08);
+  --sky:         #38bdf8;
+  --sky-dim:     rgba(56,189,248,0.08);
+  --green:       #4ade80;
+  --green-dim:   rgba(74,222,128,0.08);
+  --rose:        #fb7185;
+
+  --text:        #c8d3e0;
+  --muted:       #5a6f8a;
+  --dim:         #2d3f57;
+  --white:       #eef2f8;
+
+  --mono: 'IBM Plex Mono', 'Courier New', monospace;
+  --sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --bar-h: 44px;
+  --radius: 6px;
 }
+
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
-body { background: var(--dm-bg); color: var(--dm-text); font-family: var(--dm-sans); padding-top: var(--dm-bar-h); }
-::-webkit-scrollbar { width: 5px; } ::-webkit-scrollbar-thumb { background: var(--dm-border-lit); border-radius: 3px; }
-
-/* NAV BAR */
-#dm-bar {
-  position: fixed; top: 0; left: 0; right: 0; height: var(--dm-bar-h); z-index: 1000;
-  display: flex; align-items: center; padding: 0 1.5rem; gap: 0;
-  background: linear-gradient(to right, #1a2232, var(--dm-panel) 60%);
-  border-bottom: 1px solid var(--dm-border);
-  font-family: var(--dm-mono); font-size: 11px; color: var(--dm-muted); white-space: nowrap;
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  padding-top: var(--bar-h);
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
 }
-.dm-logo { color: var(--dm-violet); font-weight: 600; font-size: 13px; text-decoration: none; margin-right: .85rem; transition: color .15s; }
-.dm-logo::before { content: "> "; color: var(--dm-amber); }
-.dm-logo:hover { color: var(--dm-white); }
-.dm-badge { font-size: 9px; letter-spacing: .12em; padding: 2px 6px; border-radius: 2px; margin-right: .85rem; color: var(--dm-green); border: 1px solid rgba(74,222,128,.4); background: rgba(74,222,128,.06); }
-.dm-sep { color: var(--dm-border-lit); margin: 0 .7rem; }
-.dm-links { margin-left: auto; display: flex; align-items: center; gap: 1.1rem; }
-.dm-links a { color: var(--dm-muted); text-decoration: none; font-size: 11px; transition: color .15s; }
-.dm-links a:hover, .dm-links a.active { color: var(--dm-violet); }
-.dm-links .api-link { color: var(--dm-sky); }
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-thumb { background: var(--border-lit); border-radius: 3px; }
 
-/* HERO */
+/* ── NAV ─────────────────────────────────────────────────────────────────── */
+#nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+  height: var(--bar-h);
+  display: flex; align-items: center; padding: 0 1.75rem;
+  background: rgba(10,15,23,0.92);
+  backdrop-filter: blur(12px) saturate(1.4);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+  border-bottom: 1px solid var(--border);
+  font-family: var(--mono); font-size: 11px; color: var(--muted);
+}
+#nav::after {
+  content: '';
+  position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(167,139,250,0.3), transparent);
+}
+.nav-logo {
+  display: flex; align-items: center; gap: 0.6rem;
+  color: var(--violet); font-weight: 600; font-size: 13px;
+  text-decoration: none; margin-right: 1rem;
+  transition: color 0.15s;
+}
+.nav-logo-prompt { color: var(--amber); }
+.nav-logo:hover { color: var(--white); }
+.nav-badge {
+  font-size: 9px; letter-spacing: 0.12em; padding: 2px 7px;
+  border-radius: 2px; color: var(--green);
+  border: 1px solid rgba(74,222,128,0.35);
+  background: rgba(74,222,128,0.05);
+}
+.nav-sep { color: var(--dim); margin: 0 0.85rem; }
+.nav-links {
+  margin-left: auto; display: flex; align-items: center; gap: 1.25rem;
+}
+.nav-links a {
+  color: var(--muted); text-decoration: none;
+  font-size: 11px; letter-spacing: 0.02em;
+  padding-bottom: 2px;
+  border-bottom: 1px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+}
+.nav-links a:hover, .nav-links a.active { color: var(--violet); border-bottom-color: rgba(167,139,250,0.5); }
+.nav-links .nav-api { color: var(--sky); }
+.nav-links .nav-api:hover { color: var(--violet); }
+
+/* ── HERO ─────────────────────────────────────────────────────────────────── */
 .hero {
-  text-align: center; padding: 5rem 2rem 4rem;
-  background: radial-gradient(ellipse at 50% 0%, rgba(167,139,250,.08) 0%, transparent 70%);
+  position: relative;
+  padding: 6rem 2rem 5rem;
+  text-align: center;
+  overflow: hidden;
 }
-.hero-pre { font-family: var(--dm-mono); font-size: .85rem; color: var(--dm-amber); letter-spacing: .2em; margin-bottom: 1rem; }
-.hero h1 { font-family: var(--dm-mono); font-size: clamp(2rem, 5vw, 3rem); font-weight: 600; color: var(--dm-white); margin-bottom: 1.25rem; }
-.hero h1 span { color: var(--dm-violet); }
-.hero p { font-size: 1.1rem; color: var(--dm-muted); max-width: 580px; margin: 0 auto 2.5rem; line-height: 1.7; }
-.hero-actions { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
-.btn { display: inline-block; font-family: var(--dm-mono); font-size: .85rem; font-weight: 600; padding: .6rem 1.4rem; border-radius: 4px; text-decoration: none; transition: all .15s; }
-.btn-primary { background: rgba(167,139,250,.12); color: var(--dm-violet); border: 1px solid rgba(167,139,250,.5); }
-.btn-primary:hover { background: rgba(167,139,250,.2); color: var(--dm-white); }
-.btn-secondary { background: transparent; color: var(--dm-sky); border: 1px solid rgba(56,189,248,.4); }
-.btn-secondary:hover { background: rgba(56,189,248,.08); }
 
-/* QUICK EXAMPLE */
-.quick-example { max-width: 780px; margin: 0 auto; padding: 0 1.5rem 3rem; }
-.quick-example pre {
-  background: var(--dm-code-bg); border: 1px solid var(--dm-border); border-radius: 6px;
-  padding: 1.25rem 1.5rem; overflow-x: auto; font-family: var(--dm-mono); font-size: .84rem;
-  line-height: 1.65; color: var(--dm-text);
+/* DAW grid background */
+.hero::before {
+  content: '';
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(167,139,250,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(167,139,250,0.025) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse at 50% 30%, black 0%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse at 50% 30%, black 0%, transparent 75%);
+  pointer-events: none;
 }
-.c { color: var(--dm-dim); font-style: italic; }   /* comment */
-.k { color: var(--dm-violet); }                     /* keyword */
-.f { color: var(--dm-sky); }                        /* function */
-.s { color: var(--dm-green); }                      /* string */
-.n { color: var(--dm-amber); }                      /* number */
 
-/* FEATURES GRID */
-.features { max-width: 1040px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
-.features h2 { font-family: var(--dm-mono); color: var(--dm-violet); font-size: 1.2rem; margin-bottom: 2rem; text-align: center; }
-.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }
+/* Radial violet glow */
+.hero::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(167,139,250,0.1) 0%, transparent 65%);
+  pointer-events: none;
+}
+
+.hero-inner { position: relative; z-index: 1; }
+
+.hero-label {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  font-family: var(--mono); font-size: 0.78rem;
+  color: var(--amber); letter-spacing: 0.2em;
+  margin-bottom: 1.5rem;
+}
+.hero-label::before, .hero-label::after {
+  content: ''; display: inline-block;
+  width: 24px; height: 1px; background: currentColor; opacity: 0.4;
+}
+
+.hero h1 {
+  font-family: var(--mono); font-size: clamp(2.2rem, 5.5vw, 3.4rem);
+  font-weight: 600; line-height: 1.15;
+  color: var(--white);
+  margin-bottom: 1.5rem;
+  letter-spacing: -0.01em;
+}
+.hero h1 .hl-violet { color: var(--violet); }
+.hero h1 .hl-amber  { color: var(--amber); }
+
+/* Waveform bars */
+.waveform {
+  display: flex; gap: 3px; align-items: flex-end;
+  height: 28px; justify-content: center; margin-bottom: 1.5rem;
+}
+.waveform span {
+  width: 3px; border-radius: 2px;
+  background: var(--violet); opacity: 0.35;
+  animation: wave-pulse 1.4s ease-in-out infinite;
+}
+.waveform span:nth-child(1)  { height: 8px;  animation-delay: 0.0s; }
+.waveform span:nth-child(2)  { height: 16px; animation-delay: 0.1s; }
+.waveform span:nth-child(3)  { height: 24px; animation-delay: 0.2s; }
+.waveform span:nth-child(4)  { height: 20px; animation-delay: 0.3s; }
+.waveform span:nth-child(5)  { height: 28px; animation-delay: 0.15s; }
+.waveform span:nth-child(6)  { height: 22px; animation-delay: 0.05s; }
+.waveform span:nth-child(7)  { height: 28px; animation-delay: 0.25s; }
+.waveform span:nth-child(8)  { height: 18px; animation-delay: 0.1s; }
+.waveform span:nth-child(9)  { height: 24px; animation-delay: 0.35s; }
+.waveform span:nth-child(10) { height: 14px; animation-delay: 0.2s; }
+.waveform span:nth-child(11) { height: 20px; animation-delay: 0.0s; }
+.waveform span:nth-child(12) { height: 10px; animation-delay: 0.3s; }
+.waveform span:nth-child(13) { height: 16px; animation-delay: 0.1s; }
+.waveform span:nth-child(14) { height: 8px;  animation-delay: 0.4s; }
+@keyframes wave-pulse {
+  0%, 100% { opacity: 0.3; transform: scaleY(0.8); }
+  50%       { opacity: 0.6; transform: scaleY(1.1); }
+}
+
+.hero p {
+  font-size: 1.1rem; color: var(--muted);
+  max-width: 600px; margin: 0 auto 2.5rem;
+  line-height: 1.75;
+}
+
+.hero-btns { display: flex; gap: 0.85rem; justify-content: center; flex-wrap: wrap; }
+.btn {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  font-family: var(--mono); font-size: 0.84rem; font-weight: 600;
+  padding: 0.6rem 1.5rem; border-radius: var(--radius);
+  text-decoration: none; transition: all 0.2s; letter-spacing: 0.02em;
+  position: relative; overflow: hidden;
+}
+.btn-primary {
+  background: var(--violet-dim);
+  color: var(--violet);
+  border: 1px solid rgba(167,139,250,0.45);
+  box-shadow: 0 0 20px rgba(167,139,250,0.08);
+}
+.btn-primary:hover {
+  background: rgba(167,139,250,0.15);
+  color: var(--white);
+  border-color: rgba(167,139,250,0.7);
+  box-shadow: 0 0 28px rgba(167,139,250,0.18);
+  transform: translateY(-1px);
+}
+.btn-secondary {
+  background: transparent; color: var(--sky);
+  border: 1px solid rgba(56,189,248,0.3);
+}
+.btn-secondary:hover {
+  background: var(--sky-dim); color: var(--white);
+  border-color: rgba(56,189,248,0.55);
+  transform: translateY(-1px);
+}
+.btn-ghost {
+  background: transparent; color: var(--muted);
+  border: 1px solid var(--border);
+}
+.btn-ghost:hover { color: var(--text); border-color: var(--border-lit); }
+
+/* ── TERMINAL CODE BLOCK ─────────────────────────────────────────────────── */
+.terminal {
+  max-width: 800px; margin: 0 auto;
+  padding: 0 1.75rem 3.5rem;
+  position: relative; z-index: 1;
+}
+.term-chrome {
+  display: flex; align-items: center; gap: 7px;
+  padding: 9px 14px;
+  background: var(--panel-lit);
+  border: 1px solid var(--border);
+  border-bottom: 1px solid var(--dim);
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+.term-dot {
+  width: 11px; height: 11px; border-radius: 50%;
+}
+.term-dot-r { background: #ff5f57; box-shadow: 0 0 4px rgba(255,95,87,0.4); }
+.term-dot-y { background: #febc2e; box-shadow: 0 0 4px rgba(254,188,46,0.4); }
+.term-dot-g { background: #28c840; box-shadow: 0 0 4px rgba(40,200,64,0.4); }
+.term-title {
+  margin-left: auto; font-family: var(--mono); font-size: 10px;
+  color: var(--dim); letter-spacing: 0.05em;
+}
+.term-pre {
+  background: var(--code-bg);
+  border: 1px solid var(--border); border-top: none;
+  border-radius: 0 0 var(--radius) var(--radius);
+  padding: 1.4rem 1.75rem;
+  overflow-x: auto;
+  font-family: var(--mono); font-size: 0.84rem;
+  line-height: 1.7; color: var(--text);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+.c  { color: var(--dim); font-style: italic; }
+.k  { color: var(--violet); }
+.f  { color: var(--sky); }
+.s  { color: var(--green); }
+.n  { color: var(--amber); }
+.p  { color: var(--muted); }
+
+/* ── STATS STRIP ─────────────────────────────────────────────────────────── */
+.stats-strip {
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(to right, var(--bg-raised), var(--panel), var(--bg-raised));
+  padding: 0;
+}
+.stats-inner {
+  max-width: 960px; margin: 0 auto;
+  display: grid; grid-template-columns: repeat(5, 1fr);
+}
+.stat-item {
+  text-align: center; padding: 2rem 1rem;
+  border-right: 1px solid var(--border);
+  position: relative;
+}
+.stat-item:last-child { border-right: none; }
+.stat-item::after {
+  content: '';
+  position: absolute; bottom: 0; left: 25%; right: 25%; height: 1px;
+  background: var(--violet); opacity: 0;
+  transition: opacity 0.3s;
+}
+.stat-item:hover::after { opacity: 0.5; }
+.stat-val {
+  font-family: var(--mono); font-size: 2rem; font-weight: 600;
+  color: var(--white); line-height: 1;
+  background: linear-gradient(135deg, var(--white) 0%, var(--violet) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.stat-label {
+  font-size: 0.78rem; color: var(--muted);
+  margin-top: 0.35rem; letter-spacing: 0.03em;
+}
+
+/* ── FEATURE CARDS ───────────────────────────────────────────────────────── */
+.section-wrap { max-width: 1060px; margin: 0 auto; padding: 4rem 1.75rem; }
+.section-label {
+  font-family: var(--mono); font-size: 0.72rem;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--amber); margin-bottom: 0.6rem;
+}
+.section-title {
+  font-family: var(--mono); font-size: 1.25rem; font-weight: 600;
+  color: var(--white); margin-bottom: 0.5rem;
+}
+.section-sub { font-size: 0.95rem; color: var(--muted); margin-bottom: 2.5rem; }
+
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
 .card {
-  background: var(--dm-panel); border: 1px solid var(--dm-border); border-radius: 6px;
-  padding: 1.4rem 1.5rem; transition: border-color .2s, transform .15s;
+  background: var(--panel);
+  padding: 1.75rem 1.6rem;
+  position: relative;
+  transition: background 0.2s;
+  overflow: hidden;
 }
-.card:hover { border-color: var(--dm-border-lit); transform: translateY(-2px); }
-.card-icon { font-size: 1.5rem; margin-bottom: .75rem; }
-.card h3 { font-family: var(--dm-mono); font-size: .95rem; font-weight: 600; color: var(--dm-sky); margin-bottom: .5rem; }
-.card p { font-size: .9rem; color: var(--dm-muted); line-height: 1.6; }
-.card ul { margin: .5rem 0 0 1rem; font-size: .88rem; color: var(--dm-muted); line-height: 1.7; }
+.card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: var(--card-color, var(--violet));
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+.card:hover { background: var(--panel-lit); }
+.card:hover::before { opacity: 0.8; }
+.card:hover .card-icon { transform: scale(1.05); }
 
-/* STATS */
-.stats { background: var(--dm-panel); border-top: 1px solid var(--dm-border); border-bottom: 1px solid var(--dm-border); padding: 2.5rem 1.5rem; }
-.stats-inner { max-width: 900px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1.5rem; text-align: center; }
-.stat-val { font-family: var(--dm-mono); font-size: 2rem; font-weight: 600; color: var(--dm-violet); }
-.stat-label { font-size: .8rem; color: var(--dm-muted); margin-top: .25rem; }
+.card-icon {
+  font-size: 1.6rem; margin-bottom: 1rem;
+  display: block; transition: transform 0.2s;
+  line-height: 1;
+}
+.card h3 {
+  font-family: var(--mono); font-size: 0.95rem; font-weight: 600;
+  color: var(--sky); margin-bottom: 0.6rem;
+}
+.card p { font-size: 0.88rem; color: var(--muted); line-height: 1.65; }
+.card ul {
+  margin: 0.75rem 0 0; padding: 0; list-style: none;
+  font-size: 0.84rem; color: var(--muted);
+}
+.card ul li {
+  padding: 0.15rem 0;
+  display: flex; align-items: baseline; gap: 0.4rem;
+}
+.card ul li::before { content: '›'; color: var(--card-color, var(--violet)); opacity: 0.7; }
 
-/* GENRES TABLE */
-.genres { max-width: 900px; margin: 3rem auto; padding: 0 1.5rem; }
-.genres h2 { font-family: var(--dm-mono); color: var(--dm-violet); font-size: 1.1rem; margin-bottom: 1.25rem; }
-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
-th { font-family: var(--dm-mono); font-size: .75rem; color: var(--dm-dim); letter-spacing: .1em; text-transform: uppercase; border-bottom: 1px solid var(--dm-border); padding: .5rem .75rem; text-align: left; }
-td { border-bottom: 1px solid rgba(30,42,60,.6); padding: .5rem .75rem; color: var(--dm-text); }
-tr:hover td { background: rgba(167,139,250,.04); }
-.tag { display: inline-block; font-family: var(--dm-mono); font-size: .72em; padding: 1px 6px; border-radius: 2px; margin: 1px; }
-.tag-metal  { color: var(--dm-amber);  border: 1px solid rgba(251,191,36,.35);  background: rgba(251,191,36,.06); }
-.tag-rock   { color: var(--dm-sky);    border: 1px solid rgba(56,189,248,.35);  background: rgba(56,189,248,.06); }
-.tag-jazz   { color: var(--dm-violet); border: 1px solid rgba(167,139,250,.35); background: rgba(167,139,250,.06); }
-.tag-funk   { color: var(--dm-green);  border: 1px solid rgba(74,222,128,.35);  background: rgba(74,222,128,.06); }
+/* Per-card accent colors */
+.card-metal  { --card-color: var(--amber); }
+.card-drum   { --card-color: var(--rose); }
+.card-struct { --card-color: var(--sky); }
+.card-reaper { --card-color: var(--green); }
+.card-ai     { --card-color: var(--violet); }
+.card-plugin { --card-color: #a5f3fc; }
 
-/* FOOTER */
-footer { text-align: center; padding: 2.5rem 1.5rem; border-top: 1px solid var(--dm-border); font-family: var(--dm-mono); font-size: .8rem; color: var(--dm-dim); }
-footer a { color: var(--dm-muted); text-decoration: none; }
-footer a:hover { color: var(--dm-violet); }
+/* ── GENRES SECTION ──────────────────────────────────────────────────────── */
+.genres-section {
+  background: var(--bg-raised);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 3.5rem 1.75rem;
+}
+.genres-inner { max-width: 920px; margin: 0 auto; }
 
-@media (max-width: 600px) {
-  .hero { padding: 3rem 1.5rem 2.5rem; }
-  .dm-links { display: none; }
+.genre-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem; margin-top: 2rem;
+}
+.genre-block {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem 1.4rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.genre-block:hover {
+  border-color: var(--gb-color, var(--violet));
+  box-shadow: 0 0 20px rgba(0,0,0,0.3), 0 0 0 1px rgba(167,139,250,0.05);
+}
+.gb-metal  { --gb-color: var(--amber); }
+.gb-rock   { --gb-color: var(--sky); }
+.gb-jazz   { --gb-color: var(--violet); }
+.gb-funk   { --gb-color: var(--green); }
+
+.genre-name {
+  font-family: var(--mono); font-size: 0.82rem; font-weight: 600;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--gb-color, var(--violet));
+  margin-bottom: 0.75rem;
+  display: flex; align-items: center; gap: 0.4rem;
+}
+.genre-name .g-icon { font-size: 1rem; }
+.genre-styles {
+  display: flex; flex-wrap: wrap; gap: 0.35rem;
+}
+.style-chip {
+  font-family: var(--mono); font-size: 0.69rem;
+  padding: 2px 7px; border-radius: 2px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  letter-spacing: 0.03em;
+}
+
+/* ── DRUMMERS SECTION ────────────────────────────────────────────────────── */
+.drummers-section { max-width: 960px; margin: 0 auto; padding: 4rem 1.75rem; }
+.drummers-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 0.85rem; margin-top: 2rem;
+}
+.drummer-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.1rem 1.25rem;
+  display: flex; flex-direction: column; gap: 0.4rem;
+  transition: border-color 0.2s, transform 0.15s;
+}
+.drummer-card:hover { border-color: var(--border-glow); transform: translateY(-2px); }
+.drummer-name {
+  font-family: var(--mono); font-size: 0.88rem; font-weight: 600;
+  color: var(--white);
+}
+.drummer-handle {
+  font-size: 0.75rem; color: var(--amber);
+  font-family: var(--mono); letter-spacing: 0.04em;
+}
+.drummer-desc { font-size: 0.82rem; color: var(--muted); line-height: 1.55; }
+.drummer-tags { display: flex; gap: 0.35rem; flex-wrap: wrap; margin-top: 0.2rem; }
+.dtag {
+  font-family: var(--mono); font-size: 0.68rem;
+  padding: 1px 6px; border-radius: 2px;
+  border: 1px solid var(--border-lit); color: var(--muted);
+}
+
+/* ── INSTALL STRIP ───────────────────────────────────────────────────────── */
+.install-strip {
+  background: linear-gradient(135deg, rgba(167,139,250,0.06) 0%, rgba(56,189,248,0.04) 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  max-width: 860px; margin: 0 auto 4rem;
+  overflow: hidden;
+}
+.install-header {
+  background: var(--panel-lit);
+  padding: 1rem 1.5rem;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.install-header h3 {
+  font-family: var(--mono); font-size: 0.88rem; font-weight: 600;
+  color: var(--white);
+}
+.install-tabs { display: flex; gap: 0; }
+.itab {
+  font-family: var(--mono); font-size: 0.75rem;
+  padding: 3px 10px; cursor: pointer;
+  color: var(--muted); border: 1px solid var(--border);
+  background: transparent; border-radius: 2px;
+  transition: color 0.15s;
+}
+.itab:hover { color: var(--violet); }
+.install-body { padding: 1.25rem 1.5rem; }
+.install-cmd {
+  font-family: var(--mono); font-size: 0.9rem;
+  color: var(--text); display: flex; gap: 0.75rem; align-items: center;
+  flex-wrap: wrap;
+}
+.install-cmd .prompt { color: var(--dim); user-select: none; }
+.install-cmd .cmd    { color: var(--green); }
+.install-cmd .arg    { color: var(--sky); }
+
+/* ── FOOTER ──────────────────────────────────────────────────────────────── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 2.5rem 1.75rem;
+  font-family: var(--mono); font-size: 0.78rem; color: var(--dim);
+}
+.footer-inner {
+  max-width: 960px; margin: 0 auto;
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 1rem;
+}
+.footer-brand { color: var(--muted); }
+.footer-brand strong { color: var(--violet); }
+.footer-links { display: flex; gap: 1.25rem; }
+.footer-links a { color: var(--dim); text-decoration: none; transition: color 0.15s; }
+.footer-links a:hover { color: var(--violet); }
+.footer-right { color: var(--dim); text-align: right; }
+
+@media (max-width: 640px) {
+  .nav-links { display: none; }
+  .hero { padding: 4rem 1.5rem 3.5rem; }
+  .stats-inner { grid-template-columns: repeat(3, 1fr); }
+  .stat-item:nth-child(4), .stat-item:nth-child(5) { border-right: none; }
+  .footer-inner { flex-direction: column; text-align: center; }
+  .footer-right { text-align: center; }
 }
 </style>
 </head>
 <body>
 
-<div id="dm-bar">
-  <a class="dm-logo" href="index.html">midi-drums</a>
-  <span class="dm-badge">stable</span>
-  <span class="dm-sep">|</span>
-  <div class="dm-links">
+<!-- NAV -->
+<nav id="nav">
+  <a class="nav-logo" href="index.html">
+    <span class="nav-logo-prompt">&gt;</span> midi-drums
+  </a>
+  <span class="nav-badge">v1.0  stable</span>
+  <span class="nav-sep">·</span>
+  <div class="nav-links">
     <a href="index.html" class="active">Home</a>
     <a href="quickstart.html">Quickstart</a>
     <a href="recipes.html">Recipes</a>
     <a href="reaper.html">Reaper</a>
-    <a href="midi_drums.html" class="api-link">API →</a>
+    <a href="midi_drums.html" class="nav-api">API ref →</a>
   </div>
-</div>
+</nav>
 
+<!-- HERO -->
 <section class="hero">
-  <div class="hero-pre">// professional drum track generation</div>
-  <h1>MIDI <span>Drums</span> Generator</h1>
-  <p>A plugin-based Python system for creating realistic drum tracks across Metal, Rock, Jazz, and Funk with 7 legendary drummer styles and Reaper DAW integration.</p>
-  <div class="hero-actions">
-    <a class="btn btn-primary" href="quickstart.html">Get Started →</a>
-    <a class="btn btn-secondary" href="recipes.html">See Recipes</a>
-    <a class="btn btn-secondary" href="midi_drums.html">API Reference</a>
+  <div class="hero-inner">
+    <div class="hero-label">// professional drum track generation</div>
+    <h1>MIDI <span class="hl-violet">Drums</span><br>Generator</h1>
+    <div class="waveform" aria-hidden="true">
+      <span></span><span></span><span></span><span></span><span></span>
+      <span></span><span></span><span></span><span></span><span></span>
+      <span></span><span></span><span></span><span></span>
+    </div>
+    <p>
+      A plugin-based Python system for creating professional MIDI drum tracks
+      across Metal, Rock, Jazz, and Funk — with 7 legendary drummer personalities,
+      Reaper DAW integration, and optional AI-powered natural language generation.
+    </p>
+    <div class="hero-btns">
+      <a class="btn btn-primary" href="quickstart.html">Get Started →</a>
+      <a class="btn btn-secondary" href="recipes.html">See Recipes</a>
+      <a class="btn btn-ghost" href="midi_drums.html">API Reference</a>
+    </div>
   </div>
 </section>
 
-<div class="quick-example">
-<pre><span class="c"># Generate a complete death metal song in 3 lines</span>
-<span class="k">from</span> midi_drums.api.python_api <span class="k">import</span> DrumGeneratorAPI
+<!-- TERMINAL CODE BLOCK -->
+<div class="terminal">
+  <div class="term-chrome">
+    <span class="term-dot term-dot-r"></span>
+    <span class="term-dot term-dot-y"></span>
+    <span class="term-dot term-dot-g"></span>
+    <span class="term-title">example.py</span>
+  </div>
+  <pre class="term-pre"><span class="c"># Generate a complete death metal song in 3 lines</span>
+<span class="k">from</span> midi_drums.api.python_api <span class="k">import</span> <span class="p">DrumGeneratorAPI</span>
 
-api = <span class="f">DrumGeneratorAPI</span>()
-song = api.<span class="f">create_song</span>(<span class="s">"metal"</span>, <span class="s">"death"</span>, tempo=<span class="n">180</span>, complexity=<span class="n">0.85</span>)
-api.<span class="f">save_as_midi</span>(song, <span class="s">"death_metal.mid"</span>)
+api  <span class="p">=</span> <span class="f">DrumGeneratorAPI</span><span class="p">()</span>
+song <span class="p">=</span> api<span class="p">.</span><span class="f">create_song</span><span class="p">(</span><span class="s">"metal"</span><span class="p">,</span> <span class="s">"death"</span><span class="p">,</span> tempo<span class="p">=</span><span class="n">180</span><span class="p">,</span> complexity<span class="p">=</span><span class="n">0.85</span><span class="p">)</span>
+api<span class="p">.</span><span class="f">save_as_midi</span><span class="p">(</span>song<span class="p">,</span> <span class="s">"death_metal.mid"</span><span class="p">)</span>
 
-<span class="c"># Or apply a legendary drummer's signature style</span>
-pattern = api.<span class="f">generate_pattern</span>(<span class="s">"jazz"</span>, <span class="s">"verse"</span>, <span class="s">"swing"</span>)
-weckl_pattern = api.<span class="f">apply_drummer_style</span>(pattern, <span class="s">"weckl"</span>)
-api.<span class="f">save_pattern_as_midi</span>(weckl_pattern, <span class="s">"jazz_weckl.mid"</span>, tempo=<span class="n">130</span>)
+<span class="c"># Apply a legendary drummer's signature style to any pattern</span>
+pattern      <span class="p">=</span> api<span class="p">.</span><span class="f">generate_pattern</span><span class="p">(</span><span class="s">"jazz"</span><span class="p">,</span> <span class="s">"verse"</span><span class="p">,</span> <span class="s">"swing"</span><span class="p">)</span>
+weckl_groove <span class="p">=</span> api<span class="p">.</span><span class="f">apply_drummer_style</span><span class="p">(</span>pattern<span class="p">,</span> <span class="s">"weckl"</span><span class="p">)</span>
+api<span class="p">.</span><span class="f">save_pattern_as_midi</span><span class="p">(</span>weckl_groove<span class="p">,</span> <span class="s">"jazz_weckl.mid"</span><span class="p">,</span> tempo<span class="p">=</span><span class="n">130</span><span class="p">)</span>
 
-<span class="c"># Or describe what you want in plain English</span>
-pattern, info = <span class="k">await</span> ai.<span class="f">generate_pattern_from_text</span>(
-    <span class="s">"heavy progressive rock with polyrhythmic fills and ghost notes"</span>,
-    tempo=<span class="n">145</span>, bars=<span class="n">4</span>
-)</pre>
+<span class="c"># Or export a full song directly to a Reaper project with markers</span>
+<span class="k">from</span> midi_drums.api.cli <span class="k">import</span> <span class="p">main</span>  <span class="c"># or use the CLI:</span>
+<span class="c"># midi-drums reaper export --genre metal --style doom --tempo 120 --output doom.rpp --midi</span></pre>
 </div>
 
-<section class="stats">
+<!-- STATS STRIP -->
+<div class="stats-strip">
   <div class="stats-inner">
-    <div><div class="stat-val">4</div><div class="stat-label">Genres</div></div>
-    <div><div class="stat-val">28</div><div class="stat-label">Styles</div></div>
-    <div><div class="stat-val">7</div><div class="stat-label">Drummer Personalities</div></div>
-    <div><div class="stat-val">62%</div><div class="stat-label">Code Reduction</div></div>
-    <div><div class="stat-val">257+</div><div class="stat-label">Tests Passing</div></div>
+    <div class="stat-item">
+      <div class="stat-val">4</div>
+      <div class="stat-label">Genres</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-val">28</div>
+      <div class="stat-label">Distinct Styles</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-val">7</div>
+      <div class="stat-label">Legendary Drummers</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-val">62%</div>
+      <div class="stat-label">Code Reduction</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-val">257+</div>
+      <div class="stat-label">Tests Passing</div>
+    </div>
   </div>
-</section>
+</div>
 
-<section class="features">
-  <h2># features</h2>
-  <div class="grid">
-    <div class="card">
-      <div class="card-icon">🎸</div>
+<!-- FEATURES -->
+<section class="section-wrap">
+  <div class="section-label">capabilities</div>
+  <h2 class="section-title">Everything you need to produce drums</h2>
+  <p class="section-sub">From single patterns to complete songs with Reaper integration — all from Python or the CLI.</p>
+  <div class="cards-grid">
+    <div class="card card-metal">
+      <span class="card-icon">🎸</span>
       <h3>Multi-Genre Engine</h3>
-      <p>Four fully-realized genres, each with 7 distinct styles covering the full spectrum from death metal blast beats to bebop swing.</p>
+      <p>Four fully-realized genre engines, each with 7 distinct styles covering the full spectrum from blast beats to bebop.</p>
       <ul>
         <li>Metal · Rock · Jazz · Funk</li>
-        <li>7 styles per genre</li>
-        <li>Authentic pattern libraries</li>
+        <li>7 authentic styles per genre</li>
+        <li>Research-based pattern libraries</li>
       </ul>
     </div>
-    <div class="card">
-      <div class="card-icon">🥁</div>
+    <div class="card card-drum">
+      <span class="card-icon">🥁</span>
       <h3>Legendary Drummers</h3>
-      <p>Seven iconic playing styles implemented as composable modifications — apply any drummer to any genre pattern.</p>
+      <p>Seven iconic playing styles as composable modifications — apply any drummer's feel to any genre pattern.</p>
       <ul>
         <li>Bonham · Porcaro · Weckl</li>
         <li>Chambers · Roeder · Dee · Hoglan</li>
         <li>Signature fills included</li>
       </ul>
     </div>
-    <div class="card">
-      <div class="card-icon">🏗️</div>
+    <div class="card card-struct">
+      <span class="card-icon">🏗️</span>
       <h3>Song Structure</h3>
-      <p>Generate complete songs with configurable section arrangements, dynamic fills, and pattern variations across bars.</p>
+      <p>Generate complete arrangements with configurable section sequences, dynamic fills, and velocity humanization.</p>
       <ul>
         <li>Intro · Verse · Chorus · Bridge</li>
-        <li>Configurable bar counts</li>
+        <li>Configurable bar counts per section</li>
         <li>Automatic fill placement</li>
       </ul>
     </div>
-    <div class="card">
-      <div class="card-icon">🎛️</div>
+    <div class="card card-reaper">
+      <span class="card-icon">🎛️</span>
       <h3>Reaper Integration</h3>
-      <p>Export drum tracks directly to Reaper projects with automatically placed section markers at exact bar positions.</p>
+      <p>Export drum tracks directly to Reaper <code>.rpp</code> projects with section markers placed at exact bar positions.</p>
       <ul>
-        <li>Creates <code>.rpp</code> project files</li>
-        <li>Section markers auto-placed</li>
+        <li>Creates or modifies .rpp files</li>
+        <li>Markers from metadata or structure</li>
         <li>Works on existing projects</li>
       </ul>
     </div>
-    <div class="card">
-      <div class="card-icon">🤖</div>
+    <div class="card card-ai">
+      <span class="card-icon">🤖</span>
       <h3>AI Generation</h3>
-      <p>Describe the drum track you want in plain English. Supports Anthropic, OpenAI, Groq, and Cohere backends.</p>
+      <p>Describe drum tracks in plain English. Anthropic, OpenAI, Groq, and Cohere backends all supported.</p>
       <ul>
         <li>Natural language input</li>
-        <li>Genre/style auto-detection</li>
+        <li>Auto genre &amp; style detection</li>
         <li>Provider-agnostic API</li>
       </ul>
     </div>
-    <div class="card">
-      <div class="card-icon">🔌</div>
+    <div class="card card-plugin">
+      <span class="card-icon">🔌</span>
       <h3>Plugin Architecture</h3>
-      <p>Clean SOLID architecture with strategy, builder, and factory patterns. Add new genres or drummers in ~60 lines.</p>
+      <p>SOLID design with strategy, builder, and factory patterns. Add a new genre or drummer in ~60 lines of code.</p>
       <ul>
-        <li>Composable templates &amp; mods</li>
-        <li>Type-safe throughout</li>
+        <li>Composable templates &amp; modifications</li>
+        <li>Full type hints throughout</li>
         <li>Zero magic numbers</li>
       </ul>
     </div>
   </div>
 </section>
 
-<section class="genres">
-  <h2># available genres &amp; styles</h2>
-  <table>
-    <thead>
-      <tr><th>Genre</th><th>Styles</th><th>CLI Flag</th></tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><span class="tag tag-metal">metal</span></td>
-        <td>heavy · death · power · progressive · thrash · doom · breakdown</td>
-        <td><code>--genre metal --style death</code></td>
-      </tr>
-      <tr>
-        <td><span class="tag tag-rock">rock</span></td>
-        <td>classic · blues · alternative · progressive · punk · hard · pop</td>
-        <td><code>--genre rock --style classic</code></td>
-      </tr>
-      <tr>
-        <td><span class="tag tag-jazz">jazz</span></td>
-        <td>swing · bebop · fusion · latin · ballad · hard_bop · contemporary</td>
-        <td><code>--genre jazz --style swing</code></td>
-      </tr>
-      <tr>
-        <td><span class="tag tag-funk">funk</span></td>
-        <td>classic · pfunk · shuffle · new_orleans · fusion · minimal · heavy</td>
-        <td><code>--genre funk --style shuffle</code></td>
-      </tr>
-    </tbody>
-  </table>
+<!-- GENRES -->
+<section class="genres-section">
+  <div class="genres-inner">
+    <div class="section-label">supported genres</div>
+    <h2 class="section-title">28 styles across 4 genres</h2>
+    <div class="genre-grid">
+      <div class="genre-block gb-metal">
+        <div class="genre-name"><span class="g-icon">🤘</span> metal</div>
+        <div class="genre-styles">
+          <span class="style-chip">heavy</span>
+          <span class="style-chip">death</span>
+          <span class="style-chip">power</span>
+          <span class="style-chip">progressive</span>
+          <span class="style-chip">thrash</span>
+          <span class="style-chip">doom</span>
+          <span class="style-chip">breakdown</span>
+        </div>
+      </div>
+      <div class="genre-block gb-rock">
+        <div class="genre-name"><span class="g-icon">🎸</span> rock</div>
+        <div class="genre-styles">
+          <span class="style-chip">classic</span>
+          <span class="style-chip">blues</span>
+          <span class="style-chip">alternative</span>
+          <span class="style-chip">progressive</span>
+          <span class="style-chip">punk</span>
+          <span class="style-chip">hard</span>
+          <span class="style-chip">pop</span>
+        </div>
+      </div>
+      <div class="genre-block gb-jazz">
+        <div class="genre-name"><span class="g-icon">🎷</span> jazz</div>
+        <div class="genre-styles">
+          <span class="style-chip">swing</span>
+          <span class="style-chip">bebop</span>
+          <span class="style-chip">fusion</span>
+          <span class="style-chip">latin</span>
+          <span class="style-chip">ballad</span>
+          <span class="style-chip">hard_bop</span>
+          <span class="style-chip">contemporary</span>
+        </div>
+      </div>
+      <div class="genre-block gb-funk">
+        <div class="genre-name"><span class="g-icon">🕺</span> funk</div>
+        <div class="genre-styles">
+          <span class="style-chip">classic</span>
+          <span class="style-chip">pfunk</span>
+          <span class="style-chip">shuffle</span>
+          <span class="style-chip">new_orleans</span>
+          <span class="style-chip">fusion</span>
+          <span class="style-chip">minimal</span>
+          <span class="style-chip">heavy</span>
+        </div>
+      </div>
+    </div>
+  </div>
 </section>
 
+<!-- DRUMMERS -->
+<section class="drummers-section">
+  <div class="section-label">drummer personalities</div>
+  <h2 class="section-title">7 legendary styles</h2>
+  <p class="section-sub">Each drummer is a composable modification you can apply to any genre pattern.</p>
+  <div class="drummers-grid">
+    <div class="drummer-card">
+      <div class="drummer-name">John Bonham</div>
+      <div class="drummer-handle">--drummer bonham</div>
+      <div class="drummer-desc">Triplet vocabulary, behind-the-beat groove, crushing power</div>
+      <div class="drummer-tags">
+        <span class="dtag">rock</span><span class="dtag">metal</span><span class="dtag">blues</span>
+      </div>
+    </div>
+    <div class="drummer-card">
+      <div class="drummer-name">Jeff Porcaro</div>
+      <div class="drummer-handle">--drummer porcaro</div>
+      <div class="drummer-desc">Half-time shuffle mastery, ghost notes, studio precision</div>
+      <div class="drummer-tags">
+        <span class="dtag">rock</span><span class="dtag">funk</span><span class="dtag">jazz</span>
+      </div>
+    </div>
+    <div class="drummer-card">
+      <div class="drummer-name">Dave Weckl</div>
+      <div class="drummer-handle">--drummer weckl</div>
+      <div class="drummer-desc">Linear playing, sophisticated coordination, fusion mastery</div>
+      <div class="drummer-tags">
+        <span class="dtag">jazz</span><span class="dtag">fusion</span><span class="dtag">rock</span>
+      </div>
+    </div>
+    <div class="drummer-card">
+      <div class="drummer-name">Dennis Chambers</div>
+      <div class="drummer-handle">--drummer chambers</div>
+      <div class="drummer-desc">Funk mastery, incredible chops, pocket stretching</div>
+      <div class="drummer-tags">
+        <span class="dtag">funk</span><span class="dtag">jazz</span><span class="dtag">rock</span>
+      </div>
+    </div>
+    <div class="drummer-card">
+      <div class="drummer-name">Jason Roeder</div>
+      <div class="drummer-handle">--drummer roeder</div>
+      <div class="drummer-desc">Atmospheric sludge, minimal creativity, crushing weight</div>
+      <div class="drummer-tags">
+        <span class="dtag">metal</span><span class="dtag">doom</span>
+      </div>
+    </div>
+    <div class="drummer-card">
+      <div class="drummer-name">Mikkey Dee</div>
+      <div class="drummer-handle">--drummer dee</div>
+      <div class="drummer-desc">Speed &amp; precision, versatile power, twisted backbeats</div>
+      <div class="drummer-tags">
+        <span class="dtag">metal</span><span class="dtag">rock</span>
+      </div>
+    </div>
+    <div class="drummer-card">
+      <div class="drummer-name">Gene Hoglan</div>
+      <div class="drummer-handle">--drummer hoglan</div>
+      <div class="drummer-desc">Mechanical precision, blast beats, progressive complexity</div>
+      <div class="drummer-tags">
+        <span class="dtag">metal</span><span class="dtag">death</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- INSTALL STRIP -->
+<div style="padding: 0 1.75rem; max-width: 1060px; margin: 0 auto 4rem;">
+  <div class="install-strip">
+    <div class="install-header">
+      <h3>Quick Install</h3>
+    </div>
+    <div class="install-body">
+      <div class="install-cmd">
+        <span class="prompt">$</span>
+        <span class="cmd">uv tool install</span>
+        <span class="arg">.</span>
+        <span class="prompt">&nbsp;&nbsp;# installs the midi-drums CLI globally</span>
+      </div>
+      <div class="install-cmd" style="margin-top:.65rem;">
+        <span class="prompt">$</span>
+        <span class="cmd">midi-drums generate</span>
+        <span class="arg">--genre metal --style death --tempo 180 --output track.mid</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
 <footer>
-  <p>
-    <a href="https://github.com/fsecada01/midi-drums">GitHub</a> &nbsp;·&nbsp;
-    <a href="midi_drums.html">API Reference</a> &nbsp;·&nbsp;
-    <a href="quickstart.html">Quickstart</a> &nbsp;·&nbsp;
-    MIT License
-  </p>
-  <p style="margin-top:.75rem;">Built with <a href="https://pdoc.dev">pdoc</a> · MIDI for humans</p>
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <strong>midi-drums</strong> · professional drum track generation
+    </div>
+    <div class="footer-links">
+      <a href="https://github.com/fsecada01/midi-drums">GitHub</a>
+      <a href="quickstart.html">Quickstart</a>
+      <a href="recipes.html">Recipes</a>
+      <a href="reaper.html">Reaper</a>
+      <a href="midi_drums.html">API</a>
+    </div>
+    <div class="footer-right">
+      MIT License · Built with <a href="https://pdoc.dev" style="color:var(--muted);text-decoration:none;">pdoc</a>
+    </div>
+  </div>
 </footer>
 
 </body>
