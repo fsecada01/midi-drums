@@ -88,6 +88,17 @@ Examples:
     )
     gen_parser.add_argument("--drummer", help="Drummer style to apply")
     gen_parser.add_argument(
+        "--sidecar",
+        metavar="JSON",
+        help=(
+            "Path to a midi_drums_sections.json sidecar written by the "
+            "REAPER create_song_sections.lua script. When provided the "
+            "section structure (names and bar counts) is taken from the "
+            "sidecar instead of the genre default; the sidecar tempo is "
+            "used unless --tempo is also specified."
+        ),
+    )
+    gen_parser.add_argument(
         "--mapping",
         "--vst",
         default="ezdrummer3",
@@ -335,6 +346,15 @@ Examples:
         action="store_true",
         help="Save a JSON metadata file alongside the MIDI (e.g. output.json)",
     )
+    prompt_parser.add_argument(
+        "--write-sidecar",
+        metavar="JSON",
+        help=(
+            "Write a midi_drums_sections.json sidecar at this path after "
+            "generation. Used by the REAPER create_song_sections.lua script "
+            "to create matching timeline regions."
+        ),
+    )
 
     return parser
 
@@ -342,18 +362,42 @@ Examples:
 def handle_generate_command(args, generator: DrumGenerator) -> None:
     """Handle song generation command."""
     try:
-        # Create drum kit from mapping preset
-        drum_kit = DrumKit.from_preset(args.mapping)
+        from midi_drums.api.python_api import DrumGeneratorAPI
 
-        song = generator.create_song(
-            genre=args.genre,
-            style=args.style,
-            tempo=args.tempo,
-            complexity=args.complexity,
-            humanization=args.humanization,
-            drummer=args.drummer,
-            drum_kit=drum_kit,
-        )
+        drum_kit = DrumKit.from_preset(args.mapping)
+        api = DrumGeneratorAPI()
+
+        if getattr(args, "sidecar", None):
+            # Sidecar-driven: section structure comes from REAPER JSON file.
+            # --tempo overrides the sidecar tempo when explicitly supplied.
+            extra = {"drum_kit": drum_kit}
+            if args.complexity is not None:
+                extra["complexity"] = args.complexity
+            if args.humanization is not None:
+                extra["humanization"] = args.humanization
+            if args.drummer:
+                extra["drummer"] = args.drummer
+            # Only pass tempo if the user explicitly set it (not the default).
+            # argparse default is 120; check against it as a proxy.
+            if args.tempo != 120:
+                extra["tempo"] = args.tempo
+
+            song = api.create_song_from_sections_json(
+                json_path=args.sidecar,
+                genre=args.genre,
+                style=args.style,
+                **extra,
+            )
+        else:
+            song = generator.create_song(
+                genre=args.genre,
+                style=args.style,
+                tempo=args.tempo,
+                complexity=args.complexity,
+                humanization=args.humanization,
+                drummer=args.drummer,
+                drum_kit=drum_kit,
+            )
 
         if args.name:
             song.name = args.name
@@ -364,9 +408,10 @@ def handle_generate_command(args, generator: DrumGenerator) -> None:
         print(f"Generated song: {song.name}")
         print(f"Saved to: {output_path}")
         print(f"Genre: {args.genre} ({args.style})")
-        print(f"Tempo: {args.tempo} BPM")
+        print(f"Tempo: {song.tempo} BPM")
+        if getattr(args, "sidecar", None):
+            print(f"Structure from sidecar: {args.sidecar}")
 
-        # Show song info
         info = generator.get_song_info(song)
         print(f"Duration: {info['duration_seconds']:.1f}s")
         print(f"Bars: {info['total_bars']}")
@@ -840,6 +885,7 @@ def handle_prompt_command(args) -> None:
     description = args.text
     save_metadata = getattr(args, "save_metadata", False)
     rpp_path = getattr(args, "rpp", None)
+    write_sidecar = getattr(args, "write_sidecar", None)
 
     # Derive a filesystem-safe slug from --output stem or the first 4 prompt words
     if args.output:
@@ -968,6 +1014,13 @@ def handle_prompt_command(args) -> None:
                 meta_path.write_text(json.dumps(meta, indent=2))
                 print(f"  Metadata   : {meta_path}")
 
+            # ── optional sidecar for REAPER Lua integration ──────────────────
+            if write_sidecar and song_obj:
+                from midi_drums.api.python_api import DrumGeneratorAPI
+
+                DrumGeneratorAPI().export_sections_json(song_obj, write_sidecar)
+                print(f"  Sidecar    : {write_sidecar}")
+
             print(f"\nDone!\n  Output : {output_path}")
 
         else:
@@ -1039,6 +1092,12 @@ def handle_prompt_command(args) -> None:
                 meta_path.write_text(json.dumps(meta, indent=2))
                 print(f"  Metadata   : {meta_path}")
 
+            # ── optional sidecar for REAPER Lua integration ──────────────────
+            if write_sidecar and song_obj:
+                from midi_drums.api.python_api import DrumGeneratorAPI
+
+                DrumGeneratorAPI().export_sections_json(song_obj, write_sidecar)
+
             print("\nDone!")
             print(f"  Output     : {output_path}")
             print(f"  Genre      : {chars.genre} / {chars.style}")
@@ -1046,6 +1105,8 @@ def handle_prompt_command(args) -> None:
             print(f"  Confidence : {info.confidence:.0%}")
             if info.suggestions:
                 print(f"  Tip        : {info.suggestions[0]}")
+            if write_sidecar:
+                print(f"  Sidecar    : {write_sidecar}")
 
     except Exception as e:
         print(f"AI generation failed: {e}", file=sys.stderr)

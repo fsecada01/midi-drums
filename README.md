@@ -409,6 +409,131 @@ midi-drums reaper add-markers \
 
 See [docs/REAPER_INTEGRATION.md](docs/REAPER_INTEGRATION.md) for complete documentation.
 
+### ReaScript Lua Integration (`create_song_sections.lua`)
+
+The script `C:/REAPER/Scripts/create_song_sections.lua` provides a three-mode
+bi-directional bridge between REAPER and the midi_drums Python module.
+
+#### Quick Setup
+
+1. Open the script in a text editor and set `PYTHON_EXE` to your virtualenv:
+   ```lua
+   local PYTHON_EXE = "C:/dev/python/projects/midi_drums/.venv/Scripts/pythonw.exe"
+   ```
+2. Add it as a REAPER action: **Actions → Load ReaScript** → select the file.
+3. Bind it to a key shortcut for quick access.
+4. Run **`midi_drums_help.lua`** from the same directory at any time for in-REAPER usage instructions.
+
+#### Three Modes
+
+| Mode | When to use | Wait time |
+|------|-------------|-----------|
+| **REAPER** (default, YES) | You define the structure in the script | ~1–2 s |
+| **Python sidecar** (NO → YES) | Python already generated MIDI + sidecar | instant |
+| **AI agent** (NO → NO) | Natural language description drives everything | ~20–45 s |
+
+#### REAPER Mode Workflow
+
+```
+Run script → choose YES → regions created → prompted to generate MIDI?
+  → YES → genre/style/mapping dialog → template engine generates drums.mid
+        → drums.mid auto-imported on a new track
+  → NO  → midi_drums_sections.json written (load manually in Python later)
+```
+
+```python
+# Load the REAPER-written sidecar in Python:
+song = api.create_song_from_sections_json(
+    r"C:/path/to/project/midi_drums_sections.json",
+    genre="metal", style="doom"
+)
+api.save_as_midi(song, "drums.mid")
+```
+
+#### Python Sidecar Mode Workflow
+
+```python
+# 1. Generate in Python first, write sidecar alongside MIDI:
+api = DrumGeneratorAPI()
+song = api.create_song("metal", "doom", tempo=70)
+api.save_as_midi_with_sidecar(song, "drums.mid")
+# → writes drums.mid  +  midi_drums_sections.json
+
+# 2. Run script in REAPER (choose NO → YES) — regions created automatically.
+```
+
+#### AI Agent Mode Workflow
+
+```
+Run script → choose NO → NO
+  → Enter description: "heavy doom riff, slow and crushing"
+  → Enter tempo (or blank to let AI decide)
+  → Confirm (~20-45s wait)
+  → AI agent composes song → drums.mid + sidecar written
+  → Project tempo synced to AI-chosen BPM
+  → Regions created from AI structure
+  → drums.mid auto-imported
+```
+
+Requires AI setup:
+```bash
+uv sync --group ai
+# Add to C:/dev/python/projects/midi_drums/.env:
+# ANTHROPIC_API_KEY=sk-ant-...   (or OPENAI_API_KEY / GROQ_API_KEY)
+```
+
+#### New Python API Methods
+
+```python
+from midi_drums.api.python_api import DrumGeneratorAPI
+
+api = DrumGeneratorAPI()
+
+# Write a sidecar from any Song object
+api.export_sections_json(song, "midi_drums_sections.json")
+
+# Read a REAPER-written sidecar and generate matching MIDI
+song = api.create_song_from_sections_json(
+    "midi_drums_sections.json", genre="metal", style="doom"
+)
+
+# Save MIDI + sidecar in one call (Python-drives workflow)
+sidecar_path = api.save_as_midi_with_sidecar(song, "drums.mid")
+```
+
+#### New CLI Flags
+
+```bash
+# generate: use sidecar for section structure (REAPER-driven workflow)
+midi-drums generate --genre metal --style doom \
+    --sidecar midi_drums_sections.json \
+    --output drums.mid
+
+# prompt: write sidecar after AI generation (AI-driven workflow)
+midi-drums prompt "heavy doom metal, slow and crushing" \
+    --song --write-sidecar midi_drums_sections.json \
+    --output drums.mid
+```
+
+#### Sidecar JSON Format
+
+```json
+{
+  "source": "reaper",
+  "tempo": 70,
+  "time_signature": [4, 4],
+  "sections": [
+    {"name": "Intro",  "bars": 8},
+    {"name": "Verse",  "bars": 16},
+    {"name": "Chorus", "bars": 16},
+    {"name": "Bridge", "bars": 8},
+    {"name": "Outro",  "bars": 4}
+  ]
+}
+```
+
+`"source"` is either `"reaper"` (written by Lua) or `"python"` (written by `export_sections_json`).
+
 ## 📖 Documentation
 
 ### Architecture

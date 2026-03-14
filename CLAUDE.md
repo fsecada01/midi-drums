@@ -680,6 +680,83 @@ class BonhamPluginRefactored(DrummerPlugin):
 
 For complete refactoring documentation, see `claudedocs/REFACTORING_PROGRESS.md`.
 
+## REAPER Lua Script Integration
+
+### Overview
+
+`C:/REAPER/Scripts/create_song_sections.lua` is the bi-directional bridge between
+REAPER and the midi_drums Python module. It has three modes and calls Python via
+`io.popen` (blocking subprocess, ~1-2 s for templates, ~20-45 s for AI).
+
+A standalone help script `C:/REAPER/Scripts/midi_drums_help.lua` can be run as a
+REAPER action to display usage instructions inside REAPER at any time.
+
+### Modes
+
+| Mode | Triggered by | Python command | Regions source |
+|------|-------------|----------------|----------------|
+| **REAPER** (default) | YES on first dialog | `generate --sidecar` | `REAPER_SECTIONS` table |
+| **Python sidecar** | NO → YES | *(none — reads existing sidecar)* | JSON from `save_as_midi_with_sidecar` |
+| **AI agent** | NO → NO | `prompt --song --write-sidecar` | AI-chosen structure |
+
+### Sidecar Format (`midi_drums_sections.json`)
+
+```json
+{
+  "source": "reaper",          // "reaper" | "python"
+  "tempo": 70,
+  "time_signature": [4, 4],
+  "sections": [
+    {"name": "Intro",  "bars": 8},
+    {"name": "Verse",  "bars": 16},
+    {"name": "Chorus", "bars": 16},
+    {"name": "Bridge", "bars": 8},
+    {"name": "Outro",  "bars": 4}
+  ]
+}
+```
+
+Written by Lua (REAPER mode) or by `DrumGeneratorAPI.export_sections_json()` (Python mode).
+Parsed in Lua using targeted string patterns — no external JSON library required.
+
+### New Python API Methods
+
+Added to `midi_drums/api/python_api.py`:
+
+| Method | Purpose |
+|--------|---------|
+| `export_sections_json(song, path)` | Serialize a `Song`'s sections to sidecar JSON |
+| `create_song_from_sections_json(path, genre, style, **kw)` | Read sidecar → generate matching `Song` |
+| `save_as_midi_with_sidecar(song, filename)` | `save_as_midi` + `export_sections_json` in one call |
+
+### New CLI Flags
+
+| Command | Flag | Effect |
+|---------|------|--------|
+| `generate` | `--sidecar JSON` | Read section structure from sidecar instead of genre default |
+| `prompt` | `--write-sidecar JSON` | Write sidecar after AI generation |
+
+### Lua Config Block
+
+At the top of the Lua script — the only values users need to edit:
+
+```lua
+local PYTHON_EXE     = "C:/dev/python/projects/midi_drums/.venv/Scripts/pythonw.exe"
+local SIDECAR_PATH   = nil            -- nil = <project dir>/midi_drums_sections.json
+local DEFAULT_GENRE  = "metal"
+local DEFAULT_STYLE  = "doom"
+local DEFAULT_MAPPING = "ezdrummer3"
+local DEFAULT_AI_TEMPO = "120"
+```
+
+### IPC Pattern
+
+Uses **file sidecar + `io.popen` subprocess** — the recommended community pattern for
+REAPER↔Python batch workflows. No server, no ports, no extra dependencies.
+
+For AI mode the wait (~20-45 s) is expected; a confirmation dialog warns the user before
+blocking. All Python output is printed to the REAPER console for debugging.
+
 ## Common Development Tasks
 
 ### Adding a New Metal Style

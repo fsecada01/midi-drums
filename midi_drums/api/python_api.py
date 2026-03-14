@@ -353,6 +353,114 @@ class DrumGeneratorAPI:
         )
         return str(Path(output_rpp).resolve())
 
+    # ------------------------------------------------------------------
+    # Bi-directional REAPER sidecar integration
+    # ------------------------------------------------------------------
+
+    def export_sections_json(self, song: Song, path: str | Path) -> None:
+        """Write a JSON sidecar describing this song's section structure.
+
+        The sidecar is consumed by the REAPER ``create_song_sections.lua``
+        script when running in Python-driven mode.  It is also the output
+        written by :meth:`save_as_midi_with_sidecar`.
+
+        Args:
+            song: Song whose sections should be serialised.
+            path: Destination ``.json`` file path.
+        """
+        import json
+
+        from midi_drums.models.reaper_models import get_section_color
+
+        data = {
+            "source": "python",
+            "tempo": song.tempo,
+            "time_signature": [
+                song.time_signature.numerator,
+                song.time_signature.denominator,
+            ],
+            "sections": [
+                {
+                    "name": section.name.title(),
+                    "bars": section.bars,
+                    "color": get_section_color(section.name),
+                }
+                for section in song.sections
+            ],
+        }
+        Path(path).write_text(json.dumps(data, indent=2))
+
+    def create_song_from_sections_json(
+        self,
+        json_path: str | Path,
+        genre: str,
+        style: str = "default",
+        **kwargs,
+    ) -> Song:
+        """Generate a song whose structure mirrors a REAPER sidecar JSON file.
+
+        Use this when REAPER drives the section layout: the Lua script writes
+        ``midi_drums_sections.json``, then you call this method to produce
+        MIDI that matches it bar-for-bar.
+
+        Args:
+            json_path: Path to the ``midi_drums_sections.json`` sidecar.
+            genre: Genre to generate (``"metal"``, ``"rock"``, etc.).
+            style: Style within the genre.
+            **kwargs: Extra parameters forwarded to :meth:`create_song`
+                (e.g. ``complexity``, ``humanization``).
+
+        Returns:
+            Song with section structure taken from the sidecar.
+
+        Raises:
+            FileNotFoundError: If *json_path* does not exist.
+            ValueError: If the sidecar contains no sections.
+        """
+        import json
+
+        sidecar = Path(json_path)
+        if not sidecar.exists():
+            raise FileNotFoundError(f"Sidecar not found: {sidecar}")
+
+        data = json.loads(sidecar.read_text())
+        sections = data.get("sections", [])
+        if not sections:
+            raise ValueError(f"No sections found in sidecar: {sidecar}")
+
+        tempo = data.get("tempo", kwargs.pop("tempo", 120))
+        structure = [(s["name"].lower(), s["bars"]) for s in sections]
+
+        return self.create_song(
+            genre=genre,
+            style=style,
+            tempo=tempo,
+            structure=structure,
+            **kwargs,
+        )
+
+    def save_as_midi_with_sidecar(
+        self, song: Song, filename: str | Path
+    ) -> Path:
+        """Save MIDI and write a JSON sidecar alongside it.
+
+        Convenience wrapper that calls :meth:`save_as_midi` and then
+        :meth:`export_sections_json` in one step.  The sidecar path is
+        the same as *filename* but with a ``.json`` extension.
+
+        Args:
+            song: Song to export.
+            filename: Output ``.mid`` file path.
+
+        Returns:
+            Path to the written sidecar ``.json`` file.
+        """
+        output_path = Path(filename)
+        self.save_as_midi(song, output_path)
+        sidecar_path = output_path.with_suffix(".json")
+        self.export_sections_json(song, sidecar_path)
+        return sidecar_path
+
     def list_genre_presets(self) -> dict[str, list[str]]:
         """List all available genre/style structure presets.
 

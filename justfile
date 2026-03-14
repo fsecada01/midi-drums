@@ -41,6 +41,9 @@ claude-orchestrate *ARGS:
 update:
     uv sync --all-groups
 
+upgrade:
+    uv sync --all-groups --upgrade
+
 # Update dependencies (Windows batch script)
 update-win:
     bin/py_update.bat
