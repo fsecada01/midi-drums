@@ -32,6 +32,41 @@ just test      # pytest with markers
 just check     # format + lint + test
 ```
 
+## Claude Code Sub-Agent Workflow Policy
+
+### General Rule
+
+Default to single-agent. Multi-agent systems cost roughly 15x a plain chat turn, and
+Anthropic's own multi-agent research writeup names **coding tasks specifically** as a
+poor multi-agent fit, because most coding subtasks share files/state — true here too:
+`constants.py`, `templates.py`, and `drummer_mods.py` are shared across genre and
+drummer plugins. Reach for the Agent/Workflow tools deliberately, when subtasks are
+genuinely independent — not by default.
+
+- **1 agent** (default): single-file change, lookup, bugfix, most plugin edits.
+- **2-4 agents**: only for genuinely independent slices — e.g., one agent per genre
+  plugin, one per drummer plugin.
+- **Never approach the 15-agent Workflow ceiling** for this repo's size; needing that
+  many agents is a signal the task is mis-scoped, not a signal to add more agents.
+- Every dispatch prompt states: objective, expected output format, in-scope
+  files/tools, explicit boundaries. Vague delegation is the most common cause of
+  duplicated work or missed scope, and the single highest-leverage token lever
+  available — ahead of model choice or caching.
+
+### Repo-Specific Patterns
+
+- **Cross-genre pattern audit** -> one agent per genre plugin (metal/rock/jazz/funk),
+  each checks for magic numbers / constants usage / template composition compliance,
+  then one synthesis pass.
+- **Drummer-plugin compatibility sweep** -> one agent per drummer plugin, tested
+  against its declared `compatible_genres`.
+- **New genre or drummer plugin** -> **sequential, not parallel**: brainstorm/design ->
+  single implementation agent -> test-writing agent -> review agent. Shared-file
+  dependency rule applies (new plugins touch shared infra modules).
+- **REAPER Lua <-> Python sidecar changes** -> **sequential, never parallel** — both
+  sides share the `midi_drums_sections.json` sidecar contract; parallel edits risk
+  drifting the schema out of sync between the two languages.
+
 ## AI Module Runtime Model Routing (Product Backend)
 
 > This section governs the **product's own** AI generation backend (the `midi_drums.ai`
