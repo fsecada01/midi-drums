@@ -2,14 +2,24 @@
 
 import importlib
 import logging
+import math
 import pkgutil
 from abc import ABC, abstractmethod
 from pathlib import Path
 
-from midi_drums.models.pattern import Pattern
+from midi_drums.config import VELOCITY
+from midi_drums.models.pattern import DrumInstrument, Pattern
 from midi_drums.models.song import Fill, GenerationParameters
 
 logger = logging.getLogger(__name__)
+
+# Sections that always count as "high energy" for ride/hi-hat switching,
+# regardless of complexity.
+_RIDE_SECTIONS = frozenset({"chorus", "bridge", "pre_chorus"})
+
+_HIHAT_INSTRUMENTS = frozenset(
+    {DrumInstrument.CLOSED_HH, DrumInstrument.OPEN_HH}
+)
 
 
 class GenrePlugin(ABC):
@@ -175,6 +185,78 @@ class GenrePlugin(ABC):
                 adapted.beats.extend(new_beats)
 
         return adapted
+
+    def _high_energy_timekeeper(
+        self, section: str, parameters: GenerationParameters
+    ) -> DrumInstrument:
+        """Instrument that hi-hat timekeeping is promoted to for
+        high-energy sections.
+
+        Defaults to the ride cymbal, matching traditional timekeeping
+        practice. Extension point: subclasses may override this to
+        select crash, china, or another cymbal instead - ride is not
+        the universal high-energy timekeeper across genres (e.g. rock
+        and extreme metal idiomatically favor crash/china for this
+        role). Genre-aware selection logic is deliberately deferred to
+        a follow-up issue; this hook only exists so that follow-up
+        doesn't have to touch _apply_ride_hihat_logic itself.
+        """
+        return DrumInstrument.RIDE
+
+    def _apply_ride_hihat_logic(
+        self,
+        pattern: Pattern,
+        section: str,
+        parameters: GenerationParameters,
+    ) -> Pattern:
+        """Switch hi-hat timekeeping to a higher-energy cymbal (ride by
+        default - see _high_energy_timekeeper) for higher-energy
+        sections, adding a hi-hat foot pedal ("chick" on every other
+        beat) once switched.
+
+        A section is high-energy if its name is chorus/bridge/pre_chorus,
+        or if parameters.complexity has crossed parameters.ride_threshold.
+        Only ever promotes hi-hat away from hi-hat, never the reverse - a
+        pattern that already rides on its own (e.g. jazz's swing verse via
+        JazzRidePattern) is left untouched rather than downgraded.
+        """
+        is_high_energy = (
+            section in _RIDE_SECTIONS
+            or parameters.complexity >= parameters.ride_threshold
+        )
+        if not is_high_energy:
+            return pattern
+
+        if not any(
+            beat.instrument in _HIHAT_INSTRUMENTS for beat in pattern.beats
+        ):
+            return pattern
+
+        timekeeper = self._high_energy_timekeeper(section, parameters)
+
+        switched = pattern.copy()
+        for beat in switched.beats:
+            if beat.instrument in _HIHAT_INSTRUMENTS:
+                beat.instrument = timekeeper
+
+        existing_pedal_positions = {
+            beat.position
+            for beat in switched.beats
+            if beat.instrument == DrumInstrument.PEDAL_HH
+        }
+        beats_per_bar = switched.time_signature.beats_per_bar
+        for bar in range(math.ceil(switched.duration_bars())):
+            bar_offset = bar * beats_per_bar
+            beat_num = 1.0
+            while beat_num < beats_per_bar:
+                position = bar_offset + beat_num
+                if position not in existing_pedal_positions:
+                    switched.add_beat(
+                        position, DrumInstrument.PEDAL_HH, VELOCITY.HIHAT_PEDAL
+                    )
+                beat_num += 2.0
+
+        return switched
 
     def get_section_variations(self, section: str) -> list[Pattern]:
         """Get pattern variations for a specific section.

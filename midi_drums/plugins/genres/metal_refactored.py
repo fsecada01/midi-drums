@@ -63,19 +63,21 @@ class MetalGenrePlugin(GenrePlugin):
         complexity = parameters.complexity
 
         if section == "intro":
-            return self._generate_intro(style, complexity)
+            pattern = self._generate_intro(style, complexity)
         elif section == "verse":
-            return self._generate_verse(style, complexity)
+            pattern = self._generate_verse(style, complexity)
         elif section == "chorus":
-            return self._generate_chorus(style, complexity)
+            pattern = self._generate_chorus(style, complexity)
         elif section == "breakdown":
-            return self._generate_breakdown(style, complexity)
+            pattern = self._generate_breakdown(style, complexity)
         elif section in ["bridge", "pre_chorus"]:
-            return self._generate_bridge(style, complexity)
+            pattern = self._generate_bridge(style, complexity)
         elif section in ["outro", "ending"]:
-            return self._generate_outro(style, complexity)
+            pattern = self._generate_outro(style, complexity)
         else:
-            return self._generate_verse(style, complexity)
+            pattern = self._generate_verse(style, complexity)
+
+        return self._apply_ride_hihat_logic(pattern, section, parameters)
 
     def get_common_fills(self) -> list[Fill]:
         """Get common metal fill patterns using TomFill template."""
