@@ -9,8 +9,14 @@ genre plugins named in issue #1: metal, rock, jazz, funk.
 
 import pytest
 
-from midi_drums.models.pattern import DrumInstrument, PatternBuilder
+from midi_drums.models.pattern import (
+    DrumInstrument,
+    Pattern,
+    PatternBuilder,
+    TimeSignature,
+)
 from midi_drums.models.song import GenerationParameters
+from midi_drums.plugins.base import GenrePlugin
 from midi_drums.plugins.genres.funk_refactored import FunkGenrePlugin
 from midi_drums.plugins.genres.jazz_refactored import JazzGenrePlugin
 from midi_drums.plugins.genres.metal_refactored import MetalGenrePlugin
@@ -143,3 +149,97 @@ def test_all_genres_chorus_uses_ride(plugin_cls, style):
     pattern = plugin.generate_pattern("chorus", params)
 
     assert DrumInstrument.RIDE in _instruments(pattern)
+
+
+class _StubGenrePlugin(GenrePlugin):
+    """Minimal concrete GenrePlugin for testing _apply_ride_hihat_logic
+    in isolation from any genre's actual pattern generation.
+    """
+
+    @property
+    def genre_name(self) -> str:
+        return "stub"
+
+    @property
+    def supported_styles(self) -> list[str]:
+        return ["default"]
+
+    def generate_pattern(self, section, parameters):
+        raise NotImplementedError
+
+    def get_common_fills(self):
+        return []
+
+
+class _CrashTimekeeperPlugin(_StubGenrePlugin):
+    """Stub that overrides the high-energy timekeeper extension point."""
+
+    def _high_energy_timekeeper(self, section, parameters):
+        return DrumInstrument.CRASH
+
+
+@pytest.mark.unit
+class TestApplyRideHihatLogicEdgeCases:
+    """Direct tests of GenrePlugin._apply_ride_hihat_logic edge cases
+    found during adversarial review of #1's implementation: hardcoded
+    4/4 pedal placement and truncation of partial trailing bars.
+    """
+
+    def test_pedal_positions_respect_non_4_4_time_signature(self):
+        pattern = Pattern(name="waltz", time_signature=TimeSignature(3, 4))
+        pattern.add_beat(0.0, DrumInstrument.CLOSED_HH)
+        pattern.add_beat(1.0, DrumInstrument.CLOSED_HH)
+        pattern.add_beat(2.0, DrumInstrument.CLOSED_HH)
+
+        plugin = _StubGenrePlugin()
+        params = GenerationParameters(genre="stub")
+        result = plugin._apply_ride_hihat_logic(pattern, "chorus", params)
+
+        pedal_positions = sorted(
+            beat.position
+            for beat in result.beats
+            if beat.instrument == DrumInstrument.PEDAL_HH
+        )
+        # A 3/4 bar has beats 0, 1, 2 - only position 1.0 is a valid
+        # backbeat-equivalent; there is no "beat 4" to place a second
+        # pedal hit at within the bar.
+        assert pedal_positions == [1.0]
+
+    def test_pedal_added_in_partial_trailing_bar(self):
+        pattern = Pattern(name="partial")
+        for pos in (0.0, 1.0, 4.0, 5.0, 6.5):
+            pattern.add_beat(pos, DrumInstrument.CLOSED_HH)
+
+        plugin = _StubGenrePlugin()
+        params = GenerationParameters(genre="stub")
+        result = plugin._apply_ride_hihat_logic(pattern, "chorus", params)
+
+        pedal_positions = {
+            beat.position
+            for beat in result.beats
+            if beat.instrument == DrumInstrument.PEDAL_HH
+        }
+        # duration_bars() is 1.875 (not an integer) - the pedal must
+        # still land in the partial second bar (positions 5.0/7.0),
+        # not just the first complete bar.
+        assert {1.0, 3.0, 5.0}.issubset(pedal_positions)
+
+    def test_high_energy_timekeeper_extension_point_is_used(self):
+        pattern = Pattern(name="test")
+        pattern.add_beat(0.0, DrumInstrument.CLOSED_HH)
+
+        plugin = _CrashTimekeeperPlugin()
+        params = GenerationParameters(genre="stub")
+        result = plugin._apply_ride_hihat_logic(pattern, "chorus", params)
+
+        instruments = _instruments(result)
+        assert DrumInstrument.CRASH in instruments
+        assert DrumInstrument.RIDE not in instruments
+
+    def test_default_high_energy_timekeeper_is_ride(self):
+        plugin = _StubGenrePlugin()
+        params = GenerationParameters(genre="stub")
+        assert (
+            plugin._high_energy_timekeeper("chorus", params)
+            == DrumInstrument.RIDE
+        )
