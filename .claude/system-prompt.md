@@ -67,6 +67,51 @@ genuinely independent — not by default.
   sides share the `midi_drums_sections.json` sidecar contract; parallel edits risk
   drifting the schema out of sync between the two languages.
 
+## Claude Code Model Tiers
+
+Which model to use for *Claude Code's own* Agent/Workflow subagent calls in this repo.
+Distinct from "AI Module Runtime Model Routing" below, which governs the product's own
+generation backend — do not conflate the two.
+
+| Task type | Model | Why |
+|---|---|---|
+| Lookups, greps, Explore-agent searches, mechanical lint/format fixups | Haiku 4.5 | Cheap, no judgment required |
+| Plugin/pattern implementation, test writing, docs updates, CLI/API wiring | Sonnet 5 (session default — inherit, don't override) | Standard repo work |
+| DDD re-architecture planning (Epic #8), cross-cutting SOLID/architecture review, ambiguous multi-genre design tradeoffs, hard debugging with unclear root cause | Opus 5 | Token usage explains most quality variance, but a model-tier upgrade beats doubling the token budget — spend the upgrade on genuinely hard reasoning, not on volume |
+| Prose meant for a human reader's enjoyment/persuasion — README feature copy, GitHub Pages site copy, drummer-plugin flavor text/bios, personality-driven changelog entries | Fable 5 | Narrative voice, not structural correctness. **Opt-in only.** If the deliverable is something a developer will reference for facts (docstrings, API docs, CLAUDE.md) or feeds back into code/config, stay on Sonnet. Default to Sonnet when in doubt. |
+
+## SuperClaude vs Superpowers
+
+No hard precedence — resolve by task shape:
+
+| Task shape | Use |
+|---|---|
+| New feature, needs a spec before code | `superpowers:brainstorming` |
+| Bug / unexpected behavior | `superpowers:systematic-debugging` |
+| External/current information needed | `sc:research` |
+| Multi-file independent implementation tasks | `superpowers:subagent-driven-development` |
+| Implementing any feature/bugfix (test-first) | `superpowers:test-driven-development` |
+| Business/strategy tradeoffs | `sc:business-panel` |
+| Cheap session start / repo orientation | `sc:load` / `sc:index-repo` |
+
+## Token Reduction Strategies for Subagent Work
+
+Condensed from `claudedocs/research_subagent_token_reduction_20260810.md`:
+
+1. Write tight dispatch prompts (objective/format/scope/boundaries) — highest-leverage
+   lever, ahead of model choice or caching.
+2. Subagents return a condensed answer (~1,000-2,000 tokens), never a raw tool-call
+   trace — point at file paths/diffs instead of inlining large content back into the
+   parent context.
+3. Force structured/schema output for verdicts and extraction tasks; leave free-form
+   reasoning for open design/judgment calls (schemas measurably reduce reasoning
+   quality on genuinely open-ended work).
+4. Use compaction / scratch-file note-taking for long sessions instead of letting
+   context grow unbounded.
+5. Don't treat prompt caching as justification for fan-out — caching lowers the fixed
+   scaffolding cost (shared system prompt/tool schemas across a parallel batch), it
+   does not reduce the N-times marginal cost of running N agents instead of 1.
+
 ## AI Module Runtime Model Routing (Product Backend)
 
 > This section governs the **product's own** AI generation backend (the `midi_drums.ai`
