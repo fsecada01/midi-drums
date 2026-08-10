@@ -6,6 +6,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
+from midi_drums.config import VELOCITY
+
 logger = logging.getLogger(__name__)
 
 
@@ -221,6 +223,13 @@ class PatternBuilder:
     def ride(self, position: float, velocity: int = 80) -> "PatternBuilder":
         """Add ride cymbal at position."""
         self.pattern.add_beat(position, DrumInstrument.RIDE, velocity)
+        return self
+
+    def hihat_foot(
+        self, position: float, velocity: int = VELOCITY.HIHAT_PEDAL
+    ) -> "PatternBuilder":
+        """Add hi-hat foot pedal ("chick") at position."""
+        self.pattern.add_beat(position, DrumInstrument.PEDAL_HH, velocity)
         return self
 
     def crash(self, position: float, velocity: int = 110) -> "PatternBuilder":

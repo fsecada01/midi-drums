@@ -18,6 +18,12 @@ class GenerationParameters:
     humanization: float = 0.3  # 0.0-1.0, affects timing/velocity variation
     fill_frequency: float = 0.2  # 0.0-1.0, how often fills occur
     swing_ratio: float = 0.0  # 0.0-1.0, swing feel
+    ride_threshold: float = 0.9  # 0.0-1.0, complexity above which a
+    # section switches from hi-hat to ride cymbal timekeeping regardless
+    # of section name. High by default so section name (chorus/bridge)
+    # stays the primary trigger; existing patterns commonly run
+    # complexity 0.7-0.8 for busy-but-still-hihat verses, so this only
+    # fires as a deliberate high-complexity override.
 
     # Genre context adaptation (NEW)
     song_genre_context: str | None = None  # Overall song genre for adaptation
@@ -33,6 +39,7 @@ class GenerationParameters:
             ("humanization", self.humanization),
             ("fill_frequency", self.fill_frequency),
             ("swing_ratio", self.swing_ratio),
+            ("ride_threshold", self.ride_threshold),
             ("context_blend", self.context_blend),
         ]:
             if not 0.0 <= value <= 1.0:

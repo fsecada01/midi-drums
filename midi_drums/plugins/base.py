@@ -6,10 +6,19 @@ import pkgutil
 from abc import ABC, abstractmethod
 from pathlib import Path
 
-from midi_drums.models.pattern import Pattern
+from midi_drums.config import VELOCITY
+from midi_drums.models.pattern import DrumInstrument, Pattern
 from midi_drums.models.song import Fill, GenerationParameters
 
 logger = logging.getLogger(__name__)
+
+# Sections that always count as "high energy" for ride/hi-hat switching,
+# regardless of complexity.
+_RIDE_SECTIONS = frozenset({"chorus", "bridge", "pre_chorus"})
+
+_HIHAT_INSTRUMENTS = frozenset(
+    {DrumInstrument.CLOSED_HH, DrumInstrument.OPEN_HH}
+)
 
 
 class GenrePlugin(ABC):
@@ -175,6 +184,56 @@ class GenrePlugin(ABC):
                 adapted.beats.extend(new_beats)
 
         return adapted
+
+    def _apply_ride_hihat_logic(
+        self,
+        pattern: Pattern,
+        section: str,
+        parameters: GenerationParameters,
+    ) -> Pattern:
+        """Switch hi-hat timekeeping to ride cymbal for higher-energy
+        sections, adding a hi-hat foot pedal ("chick" on beats 2 and 4)
+        once riding.
+
+        A section is high-energy if its name is chorus/bridge/pre_chorus,
+        or if parameters.complexity has crossed parameters.ride_threshold.
+        Only ever promotes hi-hat to ride, never the reverse - a pattern
+        that already rides on its own (e.g. jazz's swing verse via
+        JazzRidePattern) is left untouched rather than downgraded.
+        """
+        is_high_energy = (
+            section in _RIDE_SECTIONS
+            or parameters.complexity >= parameters.ride_threshold
+        )
+        if not is_high_energy:
+            return pattern
+
+        if not any(
+            beat.instrument in _HIHAT_INSTRUMENTS for beat in pattern.beats
+        ):
+            return pattern
+
+        switched = pattern.copy()
+        for beat in switched.beats:
+            if beat.instrument in _HIHAT_INSTRUMENTS:
+                beat.instrument = DrumInstrument.RIDE
+
+        existing_pedal_positions = {
+            beat.position
+            for beat in switched.beats
+            if beat.instrument == DrumInstrument.PEDAL_HH
+        }
+        beats_per_bar = switched.time_signature.beats_per_bar
+        for bar in range(int(switched.duration_bars())):
+            bar_offset = bar * beats_per_bar
+            for beat_num in (1.0, 3.0):
+                position = bar_offset + beat_num
+                if position not in existing_pedal_positions:
+                    switched.add_beat(
+                        position, DrumInstrument.PEDAL_HH, VELOCITY.HIHAT_PEDAL
+                    )
+
+        return switched
 
     def get_section_variations(self, section: str) -> list[Pattern]:
         """Get pattern variations for a specific section.
