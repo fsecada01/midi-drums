@@ -329,15 +329,8 @@ class PluginManager:
         """Load plugins from a specific directory."""
         logger.info(f"Loading plugins from: {plugin_dir}")
 
-        # Add the directory to Python path temporarily
-        import sys
-
-        if str(plugin_dir.parent) not in sys.path:
-            sys.path.insert(0, str(plugin_dir.parent))
-
         try:
-            # Import all Python modules in the directory
-            package_name = plugin_dir.name
+            package_name = self._module_package_name(plugin_dir)
             for _finder, name, _ispkg in pkgutil.iter_modules(
                 [str(plugin_dir)]
             ):
@@ -350,15 +343,55 @@ class PluginManager:
         except Exception as e:
             logger.error(f"Failed to load plugins from {plugin_dir}: {e}")
 
+    @staticmethod
+    def _module_package_name(plugin_dir: Path) -> str:
+        """Resolve the dotted package name to import plugin_dir's modules
+        under.
+
+        Built-in directories (genres/, drummers/) are real subpackages of
+        midi_drums.plugins, already imported elsewhere under their real
+        fully-qualified path (their __init__.py files import the
+        _refactored plugin classes directly). Importing them again here
+        under a bare top-level alias would give the same file two
+        separate module identities, and every plugin class in it would
+        get registered twice - once per identity. So built-in
+        directories are imported by that same fully-qualified path.
+
+        Arbitrary external plugin directories (a documented use case via
+        discover_plugins(plugin_dirs=...)) aren't part of any package and
+        have no dotted path of their own, so for those we fall back to
+        aliasing them onto sys.path as a new top-level package - safe
+        here since nothing else imports them by a competing name.
+        """
+        builtin_root = Path(__file__).parent
+        try:
+            plugin_dir.relative_to(builtin_root)
+        except ValueError:
+            import sys
+
+            if str(plugin_dir.parent) not in sys.path:
+                sys.path.insert(0, str(plugin_dir.parent))
+            return plugin_dir.name
+
+        return f"{__package__}.{plugin_dir.name}"
+
     def _register_plugins_from_module(self, module) -> None:
         """Register all plugin classes found in a module."""
+        seen: set[type] = set()
         for attr_name in dir(module):
             attr = getattr(module, attr_name)
             if (
                 isinstance(attr, type)
                 and issubclass(attr, (GenrePlugin, DrummerPlugin))
                 and attr not in (GenrePlugin, DrummerPlugin)
+                # Only classes defined here, not ones imported for
+                # internal use (e.g. composite plugins importing their
+                # component plugins) or bound to a second name (e.g. a
+                # "FooRefactored = Foo" backward-compat alias).
+                and attr.__module__ == module.__name__
+                and attr not in seen
             ):
+                seen.add(attr)
                 try:
                     plugin_instance = attr()
                     if isinstance(plugin_instance, GenrePlugin):
