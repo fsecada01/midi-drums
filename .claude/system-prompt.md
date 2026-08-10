@@ -82,17 +82,23 @@ generation backend — do not conflate the two.
 
 ## SuperClaude vs Superpowers
 
-No hard precedence — resolve by task shape:
+**Default to SuperClaude (`/sc:*`).** Superpowers' process skills
+(`brainstorming` -> `writing-plans` -> `subagent-driven-development`) dispatch a fresh
+implementer + fresh reviewer subagent per task, which is real overhead — worth it for
+genuinely risky multi-file code changes, not for routine work. Reserve Superpowers for
+tasks with real cross-file correctness risk, or where SuperClaude has no equivalent.
+When in doubt, do the work directly or with a single Agent dispatch instead of routing
+it through either framework's ceremony.
 
 | Task shape | Use |
 |---|---|
-| New feature, needs a spec before code | `superpowers:brainstorming` |
-| Bug / unexpected behavior | `superpowers:systematic-debugging` |
+| New feature, needs a spec before code | `sc:design` or `sc:brainstorm` |
+| Bug / unexpected behavior | `sc:troubleshoot` |
 | External/current information needed | `sc:research` |
-| Multi-file independent implementation tasks | `superpowers:subagent-driven-development` |
-| Implementing any feature/bugfix (test-first) | `superpowers:test-driven-development` |
+| Multi-file implementation tasks | `sc:implement` / `sc:task`; escalate to `superpowers:subagent-driven-development` only for genuinely high-risk, tightly-coupled multi-file work |
 | Business/strategy tradeoffs | `sc:business-panel` |
 | Cheap session start / repo orientation | `sc:load` / `sc:index-repo` |
+| No SuperClaude equivalent (e.g. systematic root-cause debugging loop) | fall back to the matching `superpowers:*` skill |
 
 ## Token Reduction Strategies for Subagent Work
 
