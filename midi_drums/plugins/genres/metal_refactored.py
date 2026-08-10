@@ -6,8 +6,11 @@ full functional equivalence with the original metal.py plugin.
 """
 
 from midi_drums.config import TIMING
-from midi_drums.models.pattern import Pattern
-from midi_drums.models.song import Fill, GenerationParameters
+from midi_drums.core.models.pattern import Pattern
+from midi_drums.core.models.song import Fill
+from midi_drums.core.value_objects.generation_parameters import (
+    GenerationParameters,
+)
 from midi_drums.patterns import (
     BasicGroove,
     BlastBeat,

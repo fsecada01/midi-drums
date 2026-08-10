@@ -1,21 +1,6 @@
-"""Data models for the MIDI drums system."""
+"""Reaper-specific models.
 
-from midi_drums.models.kit import DrumKit
-from midi_drums.models.pattern import (
-    Beat,
-    DrumInstrument,
-    Pattern,
-    TimeSignature,
-)
-from midi_drums.models.song import GenerationParameters, Section, Song
-
-__all__ = [
-    "Pattern",
-    "Beat",
-    "TimeSignature",
-    "DrumInstrument",
-    "Song",
-    "Section",
-    "GenerationParameters",
-    "DrumKit",
-]
+Pattern/Beat/Song/Section/DrumKit/TimeSignature/DrumInstrument/
+GenerationParameters moved to midi_drums.core (see #9). reaper_models.py
+stays here pending its own move to export/reaper/ in #10.
+"""

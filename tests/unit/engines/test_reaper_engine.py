@@ -5,6 +5,9 @@ from __future__ import annotations
 import pytest
 import rpp
 
+from midi_drums.core.models.pattern import Pattern
+from midi_drums.core.models.song import Section, Song
+from midi_drums.core.value_objects.time_signature import TimeSignature
 from midi_drums.engines.reaper_engine import ReaperEngine, bars_to_seconds
 from midi_drums.models.reaper_models import (
     GENRE_STRUCTURE_PRESETS,
@@ -14,7 +17,6 @@ from midi_drums.models.reaper_models import (
     get_section_color,
     list_genre_presets,
 )
-from midi_drums.models.song import Pattern, Section, Song, TimeSignature
 
 
 class TestBarsToSeconds:

@@ -7,14 +7,14 @@ Emphasizes "the one", ghost notes, syncopated patterns, and deep pocket.
 
 import random
 
-from midi_drums.models.pattern import (
-    Beat,
-    DrumInstrument,
-    Pattern,
-    PatternBuilder,
-    TimeSignature,
+from midi_drums.core.builders.pattern_builder import PatternBuilder
+from midi_drums.core.models.pattern import Beat, Pattern
+from midi_drums.core.models.song import Fill
+from midi_drums.core.value_objects.drum_instrument import DrumInstrument
+from midi_drums.core.value_objects.generation_parameters import (
+    GenerationParameters,
 )
-from midi_drums.models.song import Fill, GenerationParameters
+from midi_drums.core.value_objects.time_signature import TimeSignature
 from midi_drums.plugins.base import GenrePlugin
 
 

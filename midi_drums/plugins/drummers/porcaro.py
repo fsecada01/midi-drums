@@ -8,8 +8,9 @@ and the famous "Rosanna Shuffle" - combining Bernard Purdie and Bonham.
 
 import random
 
-from midi_drums.models.pattern import Beat, DrumInstrument, Pattern
-from midi_drums.models.song import Fill
+from midi_drums.core.models.pattern import Beat, Pattern
+from midi_drums.core.models.song import Fill
+from midi_drums.core.value_objects.drum_instrument import DrumInstrument
 from midi_drums.plugins.base import DrummerPlugin
 
 # Type annotations use built-in list for Python 3.9+
@@ -282,7 +283,7 @@ class PorcaroPlugin(DrummerPlugin):
 
     def _create_rosanna_shuffle(self) -> Pattern:
         """Create the famous Rosanna Shuffle pattern."""
-        from midi_drums.models.pattern import PatternBuilder
+        from midi_drums.core.builders.pattern_builder import PatternBuilder
 
         builder = PatternBuilder("porcaro_rosanna_shuffle")
 
@@ -313,7 +314,7 @@ class PorcaroPlugin(DrummerPlugin):
 
     def _create_half_time_shuffle(self) -> Pattern:
         """Create half-time shuffle variation."""
-        from midi_drums.models.pattern import PatternBuilder
+        from midi_drums.core.builders.pattern_builder import PatternBuilder
 
         builder = PatternBuilder("porcaro_half_time_shuffle")
 
@@ -333,7 +334,7 @@ class PorcaroPlugin(DrummerPlugin):
 
     def _create_ghost_note_fill(self) -> Pattern:
         """Create ghost note showcase pattern."""
-        from midi_drums.models.pattern import PatternBuilder
+        from midi_drums.core.builders.pattern_builder import PatternBuilder
 
         builder = PatternBuilder("porcaro_ghost_notes")
 
@@ -354,7 +355,7 @@ class PorcaroPlugin(DrummerPlugin):
 
     def _create_studio_precision_fill(self) -> Pattern:
         """Create precision studio fill pattern."""
-        from midi_drums.models.pattern import PatternBuilder
+        from midi_drums.core.builders.pattern_builder import PatternBuilder
 
         builder = PatternBuilder("porcaro_studio_precision")
 

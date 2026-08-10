@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from midi_drums.core.models.song import Song
 from midi_drums.engines.midi_engine import MIDIEngine
 from midi_drums.engines.reaper_engine import ReaperEngine
 from midi_drums.models.reaper_models import (
     GenreStructurePreset,
 )
-from midi_drums.models.song import Song
 
 
 class ReaperExporter:
@@ -201,7 +201,7 @@ class ReaperExporter:
         preset = self.reaper_engine.get_genre_preset(genre, style)
         resolved_tempo = tempo if tempo is not None else preset.default_tempo
         num, den = preset.time_signature
-        from midi_drums.models.song import TimeSignature
+        from midi_drums.core.value_objects.time_signature import TimeSignature
 
         time_sig = TimeSignature(num, den)
 

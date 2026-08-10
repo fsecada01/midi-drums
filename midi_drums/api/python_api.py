@@ -5,9 +5,9 @@ from __future__ import annotations
 from pathlib import Path
 
 from midi_drums.core.engine import DrumGenerator
-from midi_drums.models.kit import DrumKit
-from midi_drums.models.pattern import Pattern
-from midi_drums.models.song import Song
+from midi_drums.core.models.kit import DrumKit
+from midi_drums.core.models.pattern import Pattern
+from midi_drums.core.models.song import Song
 
 
 class DrumGeneratorAPI:

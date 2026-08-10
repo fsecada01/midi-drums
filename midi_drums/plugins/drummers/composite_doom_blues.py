@@ -2,7 +2,7 @@
 
 import logging
 
-from midi_drums.models.pattern import Pattern
+from midi_drums.core.models.pattern import Pattern
 from midi_drums.plugins.base import DrummerPlugin
 from midi_drums.plugins.drummers.chambers import ChambersPlugin
 from midi_drums.plugins.drummers.porcaro import PorcaroPlugin

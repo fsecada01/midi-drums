@@ -4,8 +4,8 @@ Reduced from ~389 lines to ~63 lines (84% reduction) by using the
 DrummerModification system instead of manual pattern manipulation.
 """
 
-from midi_drums.models.pattern import Pattern
-from midi_drums.models.song import Fill
+from midi_drums.core.models.pattern import Pattern
+from midi_drums.core.models.song import Fill
 from midi_drums.modifications import (
     HeavyAccents,
     MechanicalPrecision,

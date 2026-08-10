@@ -8,7 +8,8 @@ import logging
 from dataclasses import dataclass
 from enum import Enum
 
-from midi_drums.models.pattern import DrumInstrument, Pattern
+from midi_drums.core.models.pattern import Pattern
+from midi_drums.core.value_objects.drum_instrument import DrumInstrument
 
 logger = logging.getLogger(__name__)
 

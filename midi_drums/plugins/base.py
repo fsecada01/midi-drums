@@ -8,8 +8,12 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 
 from midi_drums.config import VELOCITY
-from midi_drums.models.pattern import DrumInstrument, Pattern
-from midi_drums.models.song import Fill, GenerationParameters
+from midi_drums.core.models.pattern import Pattern
+from midi_drums.core.models.song import Fill
+from midi_drums.core.value_objects.drum_instrument import DrumInstrument
+from midi_drums.core.value_objects.generation_parameters import (
+    GenerationParameters,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -111,7 +115,7 @@ class GenrePlugin(ABC):
             - Context: metal's high aggression and power
             - Result: Complex progressive with heavier, more aggressive feel
         """
-        from midi_drums.models.pattern import DrumInstrument
+        from midi_drums.core.value_objects.drum_instrument import DrumInstrument
 
         if blend_amount <= 0.0:
             return pattern
@@ -172,7 +176,7 @@ class GenrePlugin(ABC):
                 for pos in snare_positions:
                     if random.random() < density_increase:
                         # Add ghost note before main hit
-                        from midi_drums.models.pattern import Beat
+                        from midi_drums.core.models.pattern import Beat
 
                         ghost = Beat(
                             position=max(0, pos - 0.125),

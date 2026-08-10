@@ -1,6 +1,6 @@
 """Test all refactored drummer plugins."""
 
-from midi_drums.models.pattern import PatternBuilder
+from midi_drums.core.builders.pattern_builder import PatternBuilder
 from midi_drums.plugins.drummers.bonham import BonhamPlugin
 from midi_drums.plugins.drummers.bonham_refactored import BonhamPluginRefactored
 from midi_drums.plugins.drummers.chambers import ChambersPlugin

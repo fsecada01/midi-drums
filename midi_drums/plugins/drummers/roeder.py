@@ -8,8 +8,9 @@ of minimal kit, and the crushing, cinematic drumming of Neurosis and Sleep.
 
 import random
 
-from midi_drums.models.pattern import Beat, DrumInstrument, Pattern
-from midi_drums.models.song import Fill
+from midi_drums.core.models.pattern import Beat, Pattern
+from midi_drums.core.models.song import Fill
+from midi_drums.core.value_objects.drum_instrument import DrumInstrument
 from midi_drums.plugins.base import DrummerPlugin
 
 # Type annotations use built-in list for Python 3.9+
@@ -284,7 +285,7 @@ class RoederPlugin(DrummerPlugin):
 
     def _create_atmospheric_tom_roll(self) -> Pattern:
         """Create atmospheric tom roll pattern."""
-        from midi_drums.models.pattern import PatternBuilder
+        from midi_drums.core.builders.pattern_builder import PatternBuilder
 
         builder = PatternBuilder("roeder_atmospheric_toms")
 
@@ -306,7 +307,7 @@ class RoederPlugin(DrummerPlugin):
 
     def _create_labyrinthine_fill(self) -> Pattern:
         """Create complex, winding labyrinthine fill."""
-        from midi_drums.models.pattern import PatternBuilder
+        from midi_drums.core.builders.pattern_builder import PatternBuilder
 
         builder = PatternBuilder("roeder_labyrinthine")
 
@@ -331,7 +332,7 @@ class RoederPlugin(DrummerPlugin):
 
     def _create_crushing_pattern(self) -> Pattern:
         """Create crushing, weighty pattern."""
-        from midi_drums.models.pattern import PatternBuilder
+        from midi_drums.core.builders.pattern_builder import PatternBuilder
 
         builder = PatternBuilder("roeder_crushing")
 
@@ -350,7 +351,7 @@ class RoederPlugin(DrummerPlugin):
 
     def _create_minimal_kit_showcase(self) -> Pattern:
         """Create pattern showcasing creativity with minimal kit."""
-        from midi_drums.models.pattern import PatternBuilder
+        from midi_drums.core.builders.pattern_builder import PatternBuilder
 
         builder = PatternBuilder("roeder_minimal_creativity")
 

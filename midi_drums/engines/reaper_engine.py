@@ -6,13 +6,14 @@ from pathlib import Path
 
 import rpp
 
+from midi_drums.core.models.song import Song
+from midi_drums.core.value_objects.time_signature import TimeSignature
 from midi_drums.models.reaper_models import (
     GenreStructurePreset,
     Marker,
     get_genre_preset,
     get_section_color,
 )
-from midi_drums.models.song import Song, TimeSignature
 
 
 def bars_to_seconds(
@@ -33,7 +34,7 @@ def bars_to_seconds(
         Position in seconds
 
     Examples:
-        >>> from midi_drums.models.song import TimeSignature
+        >>> from midi_drums.core.value_objects.time_signature import TimeSignature
         >>> bars_to_seconds(4, 120, TimeSignature(4, 4))
         8.0
         >>> bars_to_seconds(8, 120, TimeSignature(4, 4))
@@ -190,7 +191,7 @@ class ReaperEngine:
             List of Markers with calculated positions
 
         Example:
-            >>> from midi_drums.models.song import Song, Section
+            >>> from midi_drums.core.models.song import Song, Section
             >>> song = Song(
             ...     name="Test",
             ...     tempo=120,
@@ -268,7 +269,7 @@ class ReaperEngine:
         Returns:
             A :class:`Song` instance ready for Reaper marker export.
         """
-        from midi_drums.models.song import Section, Song
+        from midi_drums.core.models.song import Section, Song
 
         resolved_tempo = tempo if tempo is not None else preset.default_tempo
         num, den = preset.time_signature

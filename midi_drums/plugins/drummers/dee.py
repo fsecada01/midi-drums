@@ -8,8 +8,9 @@ from Motörhead, and the versatility spanning horror metal to speed metal.
 
 import random
 
-from midi_drums.models.pattern import Beat, DrumInstrument, Pattern
-from midi_drums.models.song import Fill
+from midi_drums.core.models.pattern import Beat, Pattern
+from midi_drums.core.models.song import Fill
+from midi_drums.core.value_objects.drum_instrument import DrumInstrument
 from midi_drums.plugins.base import DrummerPlugin
 
 # Type annotations use built-in list for Python 3.9+
@@ -274,7 +275,7 @@ class DeePlugin(DrummerPlugin):
 
     def _create_king_diamond_technical_fill(self) -> Pattern:
         """Create King Diamond era technical complexity fill."""
-        from midi_drums.models.pattern import PatternBuilder
+        from midi_drums.core.builders.pattern_builder import PatternBuilder
 
         builder = PatternBuilder("dee_king_diamond_technical")
 
@@ -299,7 +300,7 @@ class DeePlugin(DrummerPlugin):
 
     def _create_motorhead_power_fill(self) -> Pattern:
         """Create Motörhead era driving power fill."""
-        from midi_drums.models.pattern import PatternBuilder
+        from midi_drums.core.builders.pattern_builder import PatternBuilder
 
         builder = PatternBuilder("dee_motorhead_power")
 
@@ -319,7 +320,7 @@ class DeePlugin(DrummerPlugin):
 
     def _create_speed_metal_showcase(self) -> Pattern:
         """Create speed metal precision showcase."""
-        from midi_drums.models.pattern import PatternBuilder
+        from midi_drums.core.builders.pattern_builder import PatternBuilder
 
         builder = PatternBuilder("dee_speed_metal")
 
@@ -338,7 +339,7 @@ class DeePlugin(DrummerPlugin):
 
     def _create_twisted_backbeat_fill(self) -> Pattern:
         """Create twisted backbeat pattern."""
-        from midi_drums.models.pattern import PatternBuilder
+        from midi_drums.core.builders.pattern_builder import PatternBuilder
 
         builder = PatternBuilder("dee_twisted_backbeat")
 

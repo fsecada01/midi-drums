@@ -187,7 +187,8 @@ class TestReaperExportWorkflow:
 
     def test_error_on_empty_song(self):
         """Test that exporting song with no sections raises error."""
-        from midi_drums.models.song import Song, TimeSignature
+        from midi_drums.core.models.song import Song
+        from midi_drums.core.value_objects.time_signature import TimeSignature
 
         song = Song(
             name="empty",
@@ -423,7 +424,7 @@ class TestExportComplete:
 
     def test_raises_on_empty_song(self, tmp_path):
         """export_complete raises ValueError for songs with no sections."""
-        from midi_drums.models.song import Song
+        from midi_drums.core.models.song import Song
 
         empty_song = Song(name="empty", tempo=120, sections=[])
         exporter = ReaperExporter()

@@ -16,7 +16,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
 from midi_drums.config import TIMING, VELOCITY
-from midi_drums.models.pattern import Beat, DrumInstrument, Pattern
+from midi_drums.core.models.pattern import Beat, Pattern
+from midi_drums.core.value_objects.drum_instrument import DrumInstrument
 
 
 class DrummerModification(ABC):

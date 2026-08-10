@@ -1,7 +1,9 @@
 """Test refactored Rock genre plugin."""
 
-from midi_drums.models.pattern import DrumInstrument
-from midi_drums.models.song import GenerationParameters
+from midi_drums.core.value_objects.drum_instrument import DrumInstrument
+from midi_drums.core.value_objects.generation_parameters import (
+    GenerationParameters,
+)
 from midi_drums.plugins.genres.rock import RockGenrePlugin
 from midi_drums.plugins.genres.rock_refactored import RockGenrePluginRefactored
 
