@@ -32,7 +32,12 @@ just test      # pytest with markers
 just check     # format + lint + test
 ```
 
-## Multi-Model Workflow
+## AI Module Runtime Model Routing (Product Backend)
+
+> This section governs the **product's own** AI generation backend (the `midi_drums.ai`
+> module calling Anthropic/OpenAI/Groq/Cohere at runtime for pattern/song generation).
+> It is unrelated to which model *Claude Code itself* should use for development
+> subagents — see "Claude Code Model Tiers" below for that.
 
 ### Model Tiers
 | Tier | Models | Use For | Tokens |
