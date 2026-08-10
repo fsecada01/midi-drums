@@ -140,7 +140,8 @@ song = api.create_song(
 import random
 import numpy as np
 from typing import Dict, Callable
-from midi_drums.models.pattern import Pattern, Beat, DrumInstrument
+from midi_drums.core.models.pattern import Pattern, Beat
+from midi_drums.core.value_objects.drum_instrument import DrumInstrument
 
 class AdvancedHumanizer:
     """Professional-grade humanization engine.

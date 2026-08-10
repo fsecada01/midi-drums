@@ -34,7 +34,9 @@ def bars_to_seconds(
         Position in seconds
 
     Examples:
-        >>> from midi_drums.core.value_objects.time_signature import TimeSignature
+        >>> from midi_drums.core.value_objects.time_signature import (
+        ...     TimeSignature,
+        ... )
         >>> bars_to_seconds(4, 120, TimeSignature(4, 4))
         8.0
         >>> bars_to_seconds(8, 120, TimeSignature(4, 4))
@@ -256,9 +258,10 @@ class ReaperEngine:
     ) -> Song:
         """Create a minimal :class:`Song` from a :class:`GenreStructurePreset`.
 
-        The :class:`~midi_drums.models.song.Section` objects produced here have
-        ``pattern=None`` — they exist solely to carry section names and bar
-        counts for marker calculation, without requiring actual audio
+        The :class:`~midi_drums.core.models.song.Section` objects produced
+        here have ``pattern=None`` — they exist solely to carry section
+        names and bar counts for marker calculation, without requiring
+        actual audio
         generation.
 
         Args:

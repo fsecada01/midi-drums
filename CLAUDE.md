@@ -76,11 +76,22 @@ midi_drums/
 ├── __main__.py           # CLI entry point
 ├── core/
 │   ├── engine.py         # DrumGenerator - main composition engine
+│   ├── models/
+│   │   ├── pattern.py    # Pattern, Beat
+│   │   ├── song.py       # Song, Section, Fill, PatternVariation
+│   │   ├── kit.py        # DrumKit configurations (EZDrummer3, Metal, Jazz)
+│   │   └── __init__.py
+│   ├── value_objects/
+│   │   ├── time_signature.py       # TimeSignature
+│   │   ├── drum_instrument.py      # DrumInstrument
+│   │   ├── generation_parameters.py # GenerationParameters
+│   │   └── __init__.py
+│   ├── builders/
+│   │   ├── pattern_builder.py      # PatternBuilder
+│   │   └── __init__.py
 │   └── __init__.py
 ├── models/
-│   ├── pattern.py        # Pattern, Beat, DrumInstrument, PatternBuilder
-│   ├── song.py          # Song, Section, GenerationParameters
-│   ├── kit.py           # DrumKit configurations (EZDrummer3, Metal, Jazz)
+│   ├── reaper_models.py  # Reaper-specific models (pending move to export/reaper/)
 │   └── __init__.py
 ├── plugins/
 │   ├── base.py          # GenrePlugin, DrummerPlugin, PluginManager
@@ -267,8 +278,10 @@ The plugin system is designed for easy addition of:
 ### Creating a Genre Plugin
 ```python
 from midi_drums.plugins.base import GenrePlugin
-from midi_drums.models.pattern import PatternBuilder, DrumInstrument
-from midi_drums.models.song import GenerationParameters, Fill
+from midi_drums.core.builders.pattern_builder import PatternBuilder
+from midi_drums.core.value_objects.drum_instrument import DrumInstrument
+from midi_drums.core.value_objects.generation_parameters import GenerationParameters
+from midi_drums.core.models.song import Fill
 
 class RockGenrePlugin(GenrePlugin):
     @property
@@ -305,7 +318,8 @@ class RockGenrePlugin(GenrePlugin):
 ### Creating a Drummer Plugin
 ```python
 from midi_drums.plugins.base import DrummerPlugin
-from midi_drums.models.pattern import Pattern, Beat, DrumInstrument
+from midi_drums.core.models.pattern import Pattern, Beat
+from midi_drums.core.value_objects.drum_instrument import DrumInstrument
 
 class BonhamPlugin(DrummerPlugin):
     @property
