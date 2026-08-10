@@ -199,3 +199,4 @@ ai_requirements.txt
 !.claude/system-prompt.md
 memo.txt
 memo.md
+.worktrees/
