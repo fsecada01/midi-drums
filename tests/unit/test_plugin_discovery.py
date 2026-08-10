@@ -118,6 +118,43 @@ def test_register_plugins_from_module_ignores_backward_compat_alias():
 
 
 @pytest.mark.unit
+def test_discover_plugins_loads_external_directory(tmp_path):
+    """discover_plugins(plugin_dirs=[...]) must still support directories
+    outside midi_drums.plugins (a documented extension point for
+    third-party/custom plugins) - not just the built-in genres/drummers
+    subpackages.
+    """
+    external_dir = tmp_path / "my_custom_plugins"
+    external_dir.mkdir()
+    (external_dir / "__init__.py").write_text("")
+    (external_dir / "custom_drummer.py").write_text(
+        "from midi_drums.plugins.base import DrummerPlugin\n"
+        "\n"
+        "class CustomDrummerPlugin(DrummerPlugin):\n"
+        "    @property\n"
+        "    def drummer_name(self):\n"
+        "        return '_external_test_drummer'\n"
+        "\n"
+        "    @property\n"
+        "    def compatible_genres(self):\n"
+        "        return ['rock']\n"
+        "\n"
+        "    def apply_style(self, pattern):\n"
+        "        return pattern\n"
+        "\n"
+        "    def get_signature_fills(self):\n"
+        "        return []\n"
+    )
+
+    manager = PluginManager()
+    manager.discover_plugins([external_dir])
+
+    plugin = manager.registry.get_drummer_plugin("_external_test_drummer")
+    assert plugin is not None
+    assert type(plugin).__module__ == "my_custom_plugins.custom_drummer"
+
+
+@pytest.mark.unit
 def test_register_plugins_from_module_registers_locally_defined_class_once():
     """A plugin class actually defined in the scanned module registers
     exactly once, even if bound to two attribute names in that module.
