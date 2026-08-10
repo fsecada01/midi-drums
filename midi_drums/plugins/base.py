@@ -329,15 +329,15 @@ class PluginManager:
         """Load plugins from a specific directory."""
         logger.info(f"Loading plugins from: {plugin_dir}")
 
-        # Add the directory to Python path temporarily
-        import sys
-
-        if str(plugin_dir.parent) not in sys.path:
-            sys.path.insert(0, str(plugin_dir.parent))
-
         try:
-            # Import all Python modules in the directory
-            package_name = plugin_dir.name
+            # Import modules by their fully-qualified package path (e.g.
+            # "midi_drums.plugins.drummers.bonham"). Importing them under a
+            # bare top-level alias instead (via a sys.path hack) makes
+            # Python treat each file as two distinct modules - one already
+            # imported normally through midi_drums.plugins.<pkg>.__init__,
+            # and one re-imported here under the alias - so every plugin
+            # class gets registered twice.
+            package_name = f"{__name__.rsplit('.', 1)[0]}.{plugin_dir.name}"
             for _finder, name, _ispkg in pkgutil.iter_modules(
                 [str(plugin_dir)]
             ):
@@ -352,13 +352,21 @@ class PluginManager:
 
     def _register_plugins_from_module(self, module) -> None:
         """Register all plugin classes found in a module."""
+        seen: set[type] = set()
         for attr_name in dir(module):
             attr = getattr(module, attr_name)
             if (
                 isinstance(attr, type)
                 and issubclass(attr, (GenrePlugin, DrummerPlugin))
                 and attr not in (GenrePlugin, DrummerPlugin)
+                # Only classes defined here, not ones imported for
+                # internal use (e.g. composite plugins importing their
+                # component plugins) or bound to a second name (e.g. a
+                # "FooRefactored = Foo" backward-compat alias).
+                and attr.__module__ == module.__name__
+                and attr not in seen
             ):
+                seen.add(attr)
                 try:
                     plugin_instance = attr()
                     if isinstance(plugin_instance, GenrePlugin):
