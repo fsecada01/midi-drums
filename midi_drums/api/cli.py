@@ -849,7 +849,7 @@ def _print_ai_setup_help(provider: str | None = None) -> None:
         f"\n    COHERE_API_KEY=...              → Cohere"
         f"\n"
         f"\n  Optional tuning:"
-        f"\n    AI_MODEL=claude-sonnet-4-20250514"
+        f"\n    AI_MODEL=claude-sonnet-5"
         f"\n    AI_TEMPERATURE=0.7"
         f"\n    AI_MAX_TOKENS=4096"
         f"\n"

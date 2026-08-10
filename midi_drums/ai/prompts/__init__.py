@@ -39,7 +39,7 @@ MODEL_TIERS = {
         "temperature": 0.3,
     },
     "balanced": {
-        "anthropic": "claude-sonnet-4-20250514",
+        "anthropic": "claude-sonnet-5",
         "openai": "gpt-4o",
         "groq": "llama-3.3-70b-versatile",
         "cohere": "command-r",
@@ -47,7 +47,7 @@ MODEL_TIERS = {
         "temperature": 0.7,
     },
     "advanced": {
-        "anthropic": "claude-sonnet-4-20250514",
+        "anthropic": "claude-sonnet-5",
         "openai": "gpt-4o",
         "groq": "llama-3.3-70b-versatile",
         "cohere": "command-r-plus",

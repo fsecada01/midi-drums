@@ -110,7 +110,7 @@ pattern = behind_beat.apply(triplets.apply(pattern))
 **Option 1: Install as CLI tool (Recommended)**
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/midi-drums.git
+git clone https://github.com/fsecada01/midi-drums.git
 cd midi-drums
 
 # Install as a global CLI tool
@@ -123,7 +123,7 @@ midi-drums --help
 **Option 2: Development installation**
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/midi-drums.git
+git clone https://github.com/fsecada01/midi-drums.git
 cd midi-drums
 
 # Install with uv (recommended)
@@ -198,7 +198,7 @@ uv sync --group ai
 # Configure your preferred AI provider
 export AI_PROVIDER="anthropic"  # or openai, groq, cohere
 export ANTHROPIC_API_KEY="your-api-key"
-export AI_MODEL="claude-sonnet-4-20250514"  # optional, has smart defaults
+export AI_MODEL="claude-sonnet-5"  # optional, has smart defaults
 ```
 
 ### Natural Language Pattern Generation
@@ -310,7 +310,7 @@ ai_groq = DrumGeneratorAI(backend_config=groq_config)
 
 | Provider | Models | Best For |
 |----------|--------|----------|
-| **Anthropic** | Claude Sonnet 4 | High-quality, nuanced generation |
+| **Anthropic** | Claude Sonnet 5 | High-quality, nuanced generation |
 | **OpenAI** | GPT-4o, GPT-4 Turbo | Versatile, well-tested |
 | **Groq** | Llama 3.3 70B | Fast inference, cost-effective |
 | **Cohere** | Command R+ | Enterprise use cases |
@@ -854,9 +854,9 @@ pytest -m "not requires_api"
 ```
 
 **Test Organization:**
-- `tests/unit/` - Unit tests for individual components (8 files)
-- `tests/integration/` - End-to-end integration tests (6 files)
-- `tests/ai/` - AI-powered generation tests (4 files)
+- `tests/unit/` - Unit tests for individual components (9 files)
+- `tests/integration/` - End-to-end integration tests (9 files)
+- `tests/ai/` - AI-powered generation tests (6 files)
 - `tests/conftest.py` - Shared fixtures and configuration
 
 **Test Markers:**
@@ -916,10 +916,18 @@ midi_drums/
 │   ├── python_api.py       # High-level Python API
 │   └── cli.py              # Command-line interface
 ├── ai/                     # AI-powered generation (optional)
-│   ├── agent.py            # Langchain agent orchestration
+│   ├── ai_api.py           # High-level AI generation API
+│   ├── backends.py         # Multi-provider backend config
+│   ├── pattern_generator.py # Pydantic AI pattern generation
+│   ├── agents/
+│   │   └── pattern_agent.py # Langchain agent orchestration
 │   └── prompts/            # Prompt templates for AI generation
+├── validation/
+│   └── physical_constraints.py # Drummer-physically-playable checks
+├── humanization/
+│   └── advanced_humanization.py # Timing/velocity humanization
 └── utils/
-    └── pattern_fixer.py    # Physical feasibility validation
+    └── pattern_fixer.py    # Post-generation pattern repair
 ```
 
 ### Running Examples
@@ -1044,6 +1052,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Made with ❤️ for drummers, producers, and music creators**
 
-[⭐ Star this project](https://github.com/yourusername/midi-drums) • [🐛 Report Bug](https://github.com/yourusername/midi-drums/issues) • [💡 Request Feature](https://github.com/yourusername/midi-drums/issues)
+[⭐ Star this project](https://github.com/fsecada01/midi-drums) • [🐛 Report Bug](https://github.com/fsecada01/midi-drums/issues) • [💡 Request Feature](https://github.com/fsecada01/midi-drums/issues)
 
 </div>

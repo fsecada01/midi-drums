@@ -63,7 +63,7 @@ Langchain 1.0 introduced breaking API changes:
 ```bash
 # Use Anthropic (default)
 export ANTHROPIC_API_KEY="sk-ant-..."
-export AI_MODEL="claude-sonnet-4-20250514"
+export AI_MODEL="claude-sonnet-5"
 
 # Switch to OpenAI
 export AI_PROVIDER="openai"

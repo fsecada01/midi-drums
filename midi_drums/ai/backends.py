@@ -44,7 +44,7 @@ class AIBackendConfig(BaseModel):
         description="AI provider to use (anthropic, openai, groq, cohere)",
     )
     model: str = Field(
-        default="claude-sonnet-4-20250514",
+        default="claude-sonnet-5",
         description="Model identifier for the provider",
     )
     api_key: str | None = Field(
@@ -87,7 +87,7 @@ class AIBackendConfig(BaseModel):
 
         # Default models per provider
         default_models = {
-            AIProvider.ANTHROPIC: "claude-sonnet-4-20250514",
+            AIProvider.ANTHROPIC: "claude-sonnet-5",
             AIProvider.OPENAI: "gpt-4o",
             AIProvider.GROQ: "llama-3.3-70b-versatile",
             AIProvider.COHERE: "command-r-plus",

@@ -13,7 +13,7 @@ class TestAIBackendConfig:
         """Test default configuration."""
         config = AIBackendConfig()
         assert config.provider == AIProvider.ANTHROPIC
-        assert config.model == "claude-sonnet-4-20250514"
+        assert config.model == "claude-sonnet-5"
         assert config.temperature == 0.7
         assert config.max_tokens == 4096
 
@@ -41,7 +41,7 @@ class TestAIBackendConfig:
 
         config = AIBackendConfig.from_env()
         assert config.provider == AIProvider.ANTHROPIC
-        assert config.model == "claude-sonnet-4-20250514"
+        assert config.model == "claude-sonnet-5"
 
     def test_from_env_custom_provider(self, monkeypatch):
         """Test configuration with custom provider."""
@@ -99,7 +99,7 @@ class TestAIBackendFactory:
         if not os.getenv("ANTHROPIC_API_KEY"):
             pytest.skip("ANTHROPIC_API_KEY not set")
         config = AIBackendConfig(
-            provider=AIProvider.ANTHROPIC, model="claude-sonnet-4-20250514"
+            provider=AIProvider.ANTHROPIC, model="claude-sonnet-5"
         )
         model = AIBackendFactory.create_pydantic_model(config)
         assert model is not None
@@ -110,7 +110,7 @@ class TestAIBackendFactory:
         """Test creating Anthropic Langchain LLM."""
         config = AIBackendConfig(
             provider=AIProvider.ANTHROPIC,
-            model="claude-sonnet-4-20250514",
+            model="claude-sonnet-5",
             temperature=0.8,
         )
         llm = AIBackendFactory.create_langchain_llm(config)
