@@ -33,6 +33,24 @@ _TIMEKEEPING_CYMBALS = frozenset(
     }
 )
 
+# Cymbals MinimalCreativity is willing to thin for a sparse feel: every
+# timekeeping cymbal plus OPEN_HH, which isn't a timekeeper-promotion
+# target but is still ambient cymbal texture, not an essential hit.
+_THINNABLE_CYMBALS = _TIMEKEEPING_CYMBALS | {DrumInstrument.OPEN_HH}
+
+# SpeedPrecision's per-instrument velocity-consistency target. Each
+# timekeeping cymbal normalizes toward its own genre-correct velocity
+# constant rather than a shared one - CRASH/CHINA/RIDE each read as very
+# different volumes at the same MIDI velocity value.
+_SPEED_PRECISION_TARGETS = {
+    DrumInstrument.KICK: VELOCITY.KICK_HEAVY,
+    DrumInstrument.SNARE: VELOCITY.SNARE_HEAVY,
+    DrumInstrument.CLOSED_HH: VELOCITY.HIHAT_NORMAL,
+    DrumInstrument.RIDE: VELOCITY.RIDE_NORMAL,
+    DrumInstrument.CRASH: VELOCITY.CRASH_NORMAL,
+    DrumInstrument.CHINA: VELOCITY.CHINA_NORMAL,
+}
+
 
 class DrummerModification(ABC):
     """Base class for drummer style modifications.
@@ -566,13 +584,7 @@ class MinimalCreativity(DrummerModification):
 
         # Keep kick and snare, thin out cymbals
         for beat in pattern.beats:
-            is_cymbal = beat.instrument in [
-                DrumInstrument.CLOSED_HH,
-                DrumInstrument.OPEN_HH,
-                DrumInstrument.RIDE,
-                DrumInstrument.CRASH,
-                DrumInstrument.CHINA,
-            ]
+            is_cymbal = beat.instrument in _THINNABLE_CYMBALS
 
             if is_cymbal:
                 # Probabilistically remove cymbal hits
@@ -614,14 +626,9 @@ class SpeedPrecision(DrummerModification):
 
         for beat in pattern.beats:
             # Reduce velocity variation
-            target_velocity = {
-                DrumInstrument.KICK: VELOCITY.KICK_HEAVY,
-                DrumInstrument.SNARE: VELOCITY.SNARE_HEAVY,
-                DrumInstrument.CLOSED_HH: VELOCITY.HIHAT_NORMAL,
-                DrumInstrument.RIDE: VELOCITY.RIDE_NORMAL,
-                DrumInstrument.CRASH: VELOCITY.CRASH_NORMAL,
-                DrumInstrument.CHINA: VELOCITY.CHINA_NORMAL,
-            }.get(beat.instrument, beat.velocity)
+            target_velocity = _SPEED_PRECISION_TARGETS.get(
+                beat.instrument, beat.velocity
+            )
 
             # Blend current velocity with target
             blend = self.consistency * intensity
