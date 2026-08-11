@@ -24,6 +24,7 @@ FORBIDDEN_DOMAIN_PREFIXES = (
     "midi_drums.plugins",
     "midi_drums.humanization",
     "midi_drums.validation",
+    "midi_drums.generation",
     "midi_drums.ai",
     "midi_drums.modifications",
     "midi_drums.parsers",

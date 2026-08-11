@@ -75,7 +75,6 @@ midi_drums/
 ├── __init__.py           # Main exports (DrumGenerator, Pattern, Song)
 ├── __main__.py           # CLI entry point
 ├── core/
-│   ├── engine.py         # DrumGenerator - main composition engine
 │   ├── models/
 │   │   ├── pattern.py    # Pattern, Beat
 │   │   ├── song.py       # Song, Section, Fill, PatternVariation
@@ -86,8 +85,20 @@ midi_drums/
 │   │   ├── drum_instrument.py      # DrumInstrument
 │   │   ├── generation_parameters.py # GenerationParameters
 │   │   └── __init__.py
+│   └── __init__.py
+├── generation/
+│   ├── engines/
+│   │   ├── drum_generator.py  # DrumGenerator - main composition engine
+│   │   └── __init__.py
 │   ├── builders/
-│   │   ├── pattern_builder.py      # PatternBuilder
+│   │   ├── pattern_builder.py # PatternBuilder
+│   │   └── __init__.py
+│   ├── strategies/
+│   │   ├── pattern_strategy.py # PatternStrategy interface
+│   │   ├── fill_strategy.py    # FillStrategy interface
+│   │   └── __init__.py
+│   ├── services/
+│   │   ├── generation_service.py # GenerationService - high-level orchestration
 │   │   └── __init__.py
 │   └── __init__.py
 ├── export/
@@ -295,7 +306,7 @@ The plugin system is designed for easy addition of:
 ### Creating a Genre Plugin
 ```python
 from midi_drums.plugins.interfaces.genre_plugin import GenrePlugin
-from midi_drums.core.builders.pattern_builder import PatternBuilder
+from midi_drums.generation.builders.pattern_builder import PatternBuilder
 from midi_drums.core.value_objects.drum_instrument import DrumInstrument
 from midi_drums.core.value_objects.generation_parameters import GenerationParameters
 from midi_drums.core.models.song import Fill

@@ -3,7 +3,7 @@
 import pytest
 
 from midi_drums.api.python_api import DrumGeneratorAPI
-from midi_drums.core.engine import DrumGenerator
+from midi_drums.generation.engines.drum_generator import DrumGenerator
 
 
 # Test output directory

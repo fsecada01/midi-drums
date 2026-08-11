@@ -275,7 +275,9 @@ class DeePlugin(DrummerPlugin):
 
     def _create_king_diamond_technical_fill(self) -> Pattern:
         """Create King Diamond era technical complexity fill."""
-        from midi_drums.core.builders.pattern_builder import PatternBuilder
+        from midi_drums.generation.builders.pattern_builder import (
+            PatternBuilder,
+        )
 
         builder = PatternBuilder("dee_king_diamond_technical")
 
@@ -300,7 +302,9 @@ class DeePlugin(DrummerPlugin):
 
     def _create_motorhead_power_fill(self) -> Pattern:
         """Create Motörhead era driving power fill."""
-        from midi_drums.core.builders.pattern_builder import PatternBuilder
+        from midi_drums.generation.builders.pattern_builder import (
+            PatternBuilder,
+        )
 
         builder = PatternBuilder("dee_motorhead_power")
 
@@ -320,7 +324,9 @@ class DeePlugin(DrummerPlugin):
 
     def _create_speed_metal_showcase(self) -> Pattern:
         """Create speed metal precision showcase."""
-        from midi_drums.core.builders.pattern_builder import PatternBuilder
+        from midi_drums.generation.builders.pattern_builder import (
+            PatternBuilder,
+        )
 
         builder = PatternBuilder("dee_speed_metal")
 
@@ -339,7 +345,9 @@ class DeePlugin(DrummerPlugin):
 
     def _create_twisted_backbeat_fill(self) -> Pattern:
         """Create twisted backbeat pattern."""
-        from midi_drums.core.builders.pattern_builder import PatternBuilder
+        from midi_drums.generation.builders.pattern_builder import (
+            PatternBuilder,
+        )
 
         builder = PatternBuilder("dee_twisted_backbeat")
 

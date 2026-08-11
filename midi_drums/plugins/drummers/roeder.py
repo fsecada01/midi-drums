@@ -285,7 +285,9 @@ class RoederPlugin(DrummerPlugin):
 
     def _create_atmospheric_tom_roll(self) -> Pattern:
         """Create atmospheric tom roll pattern."""
-        from midi_drums.core.builders.pattern_builder import PatternBuilder
+        from midi_drums.generation.builders.pattern_builder import (
+            PatternBuilder,
+        )
 
         builder = PatternBuilder("roeder_atmospheric_toms")
 
@@ -307,7 +309,9 @@ class RoederPlugin(DrummerPlugin):
 
     def _create_labyrinthine_fill(self) -> Pattern:
         """Create complex, winding labyrinthine fill."""
-        from midi_drums.core.builders.pattern_builder import PatternBuilder
+        from midi_drums.generation.builders.pattern_builder import (
+            PatternBuilder,
+        )
 
         builder = PatternBuilder("roeder_labyrinthine")
 
@@ -332,7 +336,9 @@ class RoederPlugin(DrummerPlugin):
 
     def _create_crushing_pattern(self) -> Pattern:
         """Create crushing, weighty pattern."""
-        from midi_drums.core.builders.pattern_builder import PatternBuilder
+        from midi_drums.generation.builders.pattern_builder import (
+            PatternBuilder,
+        )
 
         builder = PatternBuilder("roeder_crushing")
 
@@ -351,7 +357,9 @@ class RoederPlugin(DrummerPlugin):
 
     def _create_minimal_kit_showcase(self) -> Pattern:
         """Create pattern showcasing creativity with minimal kit."""
-        from midi_drums.core.builders.pattern_builder import PatternBuilder
+        from midi_drums.generation.builders.pattern_builder import (
+            PatternBuilder,
+        )
 
         builder = PatternBuilder("roeder_minimal_creativity")
 

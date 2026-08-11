@@ -7,10 +7,10 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
-from midi_drums.core.engine import DrumGenerator
 from midi_drums.core.value_objects.generation_parameters import (
     GenerationParameters,
 )
+from midi_drums.generation.engines.drum_generator import DrumGenerator
 from midi_drums.validation.physical_constraints import PhysicalValidator
 
 # Set up logging to see validation messages

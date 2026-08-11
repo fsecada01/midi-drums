@@ -258,7 +258,9 @@ class BonhamPlugin(DrummerPlugin):
 
     def _create_moby_dick_fill(self) -> Pattern:
         """Create Moby Dick inspired triplet fill."""
-        from midi_drums.core.builders.pattern_builder import PatternBuilder
+        from midi_drums.generation.builders.pattern_builder import (
+            PatternBuilder,
+        )
 
         builder = PatternBuilder("bonham_moby_dick")
 
@@ -275,7 +277,9 @@ class BonhamPlugin(DrummerPlugin):
 
     def _create_sixtuplet_fill(self) -> Pattern:
         """Create signature sixtuplet fill pattern."""
-        from midi_drums.core.builders.pattern_builder import PatternBuilder
+        from midi_drums.generation.builders.pattern_builder import (
+            PatternBuilder,
+        )
 
         builder = PatternBuilder("bonham_sixtuplet")
 
@@ -299,7 +303,9 @@ class BonhamPlugin(DrummerPlugin):
 
     def _create_gtbt_triplet_fill(self) -> Pattern:
         """Create 'Good Times Bad Times' triplet pattern."""
-        from midi_drums.core.builders.pattern_builder import PatternBuilder
+        from midi_drums.generation.builders.pattern_builder import (
+            PatternBuilder,
+        )
 
         builder = PatternBuilder("bonham_gtbt_triplets")
 
@@ -315,7 +321,9 @@ class BonhamPlugin(DrummerPlugin):
 
     def _create_hand_drumming_fill(self) -> Pattern:
         """Create hand drumming inspired fill (Moby Dick live versions)."""
-        from midi_drums.core.builders.pattern_builder import PatternBuilder
+        from midi_drums.generation.builders.pattern_builder import (
+            PatternBuilder,
+        )
 
         builder = PatternBuilder("bonham_hand_drumming")
 
