@@ -104,7 +104,15 @@ midi_drums/
 ├── exporters/
 │   └── __init__.py       # Compat shim: re-exports ReaperExporter from export/reaper/
 ├── plugins/
-│   ├── base.py          # GenrePlugin, DrummerPlugin, PluginManager
+│   ├── base.py          # Compat shim: re-exports interfaces/ + registry/ symbols
+│   ├── interfaces/
+│   │   ├── genre_plugin.py    # GenrePlugin
+│   │   ├── drummer_plugin.py  # DrummerPlugin
+│   │   └── __init__.py
+│   ├── registry/
+│   │   ├── plugin_registry.py # PluginRegistry, PluginManager
+│   │   ├── discovery.py       # PluginDiscovery - auto-discovery
+│   │   └── __init__.py
 │   ├── genres/
 │   │   ├── metal.py     # MetalGenrePlugin with 7 styles
 │   │   ├── rock.py      # RockGenrePlugin with 7 styles
@@ -117,7 +125,9 @@ midi_drums/
 │   │   ├── chambers.py  # Dennis Chambers - funk mastery
 │   │   ├── roeder.py    # Jason Roeder - atmospheric sludge
 │   │   ├── dee.py       # Mikkey Dee - speed/precision
-│   │   └── hoglan.py    # Gene Hoglan - blast beats
+│   │   ├── hoglan.py    # Gene Hoglan - blast beats
+│   │   └── composite/
+│   │       └── doom_blues.py  # CompositeDoomBluesPlugin - layers Roeder/Porcaro/Chambers
 │   └── __init__.py
 ├── api/
 │   ├── python_api.py    # DrumGeneratorAPI - high-level interface
@@ -284,7 +294,7 @@ The plugin system is designed for easy addition of:
 
 ### Creating a Genre Plugin
 ```python
-from midi_drums.plugins.base import GenrePlugin
+from midi_drums.plugins.interfaces.genre_plugin import GenrePlugin
 from midi_drums.core.builders.pattern_builder import PatternBuilder
 from midi_drums.core.value_objects.drum_instrument import DrumInstrument
 from midi_drums.core.value_objects.generation_parameters import GenerationParameters
@@ -324,7 +334,7 @@ class RockGenrePlugin(GenrePlugin):
 
 ### Creating a Drummer Plugin
 ```python
-from midi_drums.plugins.base import DrummerPlugin
+from midi_drums.plugins.interfaces.drummer_plugin import DrummerPlugin
 from midi_drums.core.models.pattern import Pattern, Beat
 from midi_drums.core.value_objects.drum_instrument import DrumInstrument
 
@@ -810,5 +820,5 @@ blocking. All Python output is printed to the REAPER console for debugging.
 ### Debugging Plugin Issues
 1. Check plugin loading with `DrumGenerator().get_available_genres()`
 2. Use `test_new_architecture.py` for systematic testing
-3. Enable logging in `midi_drums.plugins.base` module
+3. Enable logging in `midi_drums.plugins.registry.plugin_registry` (registration) or `midi_drums.plugins.registry.discovery` (auto-discovery)
 4. Test plugin isolation with unit tests

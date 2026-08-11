@@ -19,7 +19,7 @@ from midi_drums.patterns import (
     TemplateComposer,
     TomFill,
 )
-from midi_drums.plugins.base import GenrePlugin
+from midi_drums.plugins.interfaces.genre_plugin import GenrePlugin
 
 
 class JazzGenrePlugin(GenrePlugin):

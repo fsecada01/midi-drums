@@ -10,7 +10,7 @@ from midi_drums.core.value_objects.generation_parameters import (
     GenerationParameters,
 )
 from midi_drums.export.midi.engine import MIDIEngine
-from midi_drums.plugins.base import PluginManager
+from midi_drums.plugins.registry.plugin_registry import PluginManager
 
 logger = logging.getLogger(__name__)
 

@@ -11,7 +11,7 @@ from midi_drums.modifications import (
     HeavyAccents,
     TripletVocabulary,
 )
-from midi_drums.plugins.base import DrummerPlugin
+from midi_drums.plugins.interfaces.drummer_plugin import DrummerPlugin
 
 
 class BonhamPlugin(DrummerPlugin):

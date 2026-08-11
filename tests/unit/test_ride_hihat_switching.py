@@ -16,11 +16,11 @@ from midi_drums.core.value_objects.generation_parameters import (
     GenerationParameters,
 )
 from midi_drums.core.value_objects.time_signature import TimeSignature
-from midi_drums.plugins.base import GenrePlugin
 from midi_drums.plugins.genres.funk_refactored import FunkGenrePlugin
 from midi_drums.plugins.genres.jazz_refactored import JazzGenrePlugin
 from midi_drums.plugins.genres.metal_refactored import MetalGenrePlugin
 from midi_drums.plugins.genres.rock_refactored import RockGenrePlugin
+from midi_drums.plugins.interfaces.genre_plugin import GenrePlugin
 
 HIHAT_INSTRUMENTS = {DrumInstrument.CLOSED_HH, DrumInstrument.OPEN_HH}
 

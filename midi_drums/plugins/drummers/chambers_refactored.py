@@ -12,7 +12,7 @@ from midi_drums.modifications import (
     GhostNoteLayer,
     PocketStretching,
 )
-from midi_drums.plugins.base import DrummerPlugin
+from midi_drums.plugins.interfaces.drummer_plugin import DrummerPlugin
 
 
 class ChambersPlugin(DrummerPlugin):

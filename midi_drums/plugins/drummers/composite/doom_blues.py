@@ -3,10 +3,10 @@
 import logging
 
 from midi_drums.core.models.pattern import Pattern
-from midi_drums.plugins.base import DrummerPlugin
 from midi_drums.plugins.drummers.chambers import ChambersPlugin
 from midi_drums.plugins.drummers.porcaro import PorcaroPlugin
 from midi_drums.plugins.drummers.roeder import RoederPlugin
+from midi_drums.plugins.interfaces.drummer_plugin import DrummerPlugin
 from midi_drums.utils.pattern_fixer import PatternFixer
 from midi_drums.validation.physical_constraints import PhysicalValidator
 
