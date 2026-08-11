@@ -68,10 +68,12 @@ bump.
    git tag -a vX.Y.Z -m "vX.Y.Z"
    git push origin main --tags
    ```
-6. `.github/workflows/release.yml` picks up the tag push, re-runs the test
-   suite, verifies `CHANGELOG.md` has a matching `## [X.Y.Z]` heading (fails
-   the release if you forgot step 1), and creates the GitHub Release with
-   that section's content as the release notes.
+6. `.github/workflows/release.yml` picks up the tag push, verifies
+   `pyproject.toml` and `midi_drums/__init__.py` both declare the tagged
+   version, verifies `CHANGELOG.md` has a matching `## [X.Y.Z]` heading with
+   content underneath it (fails the release if you forgot step 1 or 2),
+   re-runs the test suite, and creates the GitHub Release with that
+   section's content as the release notes.
 7. Verify the release at
    `https://github.com/fsecada01/midi-drums/releases/tag/vX.Y.Z` looks right.
 
