@@ -60,9 +60,22 @@ know or care how a pattern was generated.
 ### `plugins/` — genre & drummer strategies
 
 Genre plugins turn `GenerationParameters` into `Pattern`s; drummer plugins
-apply style modifications. May depend on `core/`. Does not depend on
-`export/` or `generation/` — a plugin has no reason to know how its output
-gets exported or which engine invoked it.
+apply style modifications. May depend on `core/`, plus the application-level
+packages it consumes for pattern construction and validation
+(`modifications/`, `patterns/`, `utils/`, `validation/` — see
+[Dependency Rule](#dependency-rule)). Does not depend on `export/`,
+`generation/engines/`, `generation/services/`, or `generation/strategies/` —
+a plugin has no reason to know how its output gets exported, which engine
+invoked it, or how generation is orchestrated.
+
+**Named exception**: every genre plugin and several drummer plugins
+construct patterns via `midi_drums.generation.builders.pattern_builder.PatternBuilder`
+— `PatternBuilder` is a shared, dependency-free construction utility (it
+only imports from `core/` and `config/` itself), not part of the
+composition/orchestration surface the rest of `generation/` represents. This
+makes `generation/builders/` the one specifically-allowed import out of
+`generation/` from within `plugins/`; `generation/engines/`,
+`generation/services/`, and `generation/strategies/` remain off-limits.
 
 ### `generation/` — composition & orchestration
 
@@ -73,19 +86,22 @@ three.
 
 ## Dependency Rule
 
-Dependencies point **downward only**:
+Dependencies point **downward only**, with one named exception:
 
 ```
 generation/ ──▶ plugins/ ──▶ core/
-      │                        ▲
+      │              │          ▲
+      │              └╌╌╌╌╌╌╌╌╌╌┤  (plugins/ -> generation/builders/
+      │                            PatternBuilder only - see plugins/
+      │                            section above)
       └────────▶ export/ ──────┘
 ```
 
-No domain imports from a domain above it in this graph, and `core/` imports
-from nothing (other than `config/`). Application-level packages — `ai/`,
-`api/`, `validation/`, `humanization/`, `utils/`, `modifications/`,
-`patterns/` — sit outside this graph entirely; they're consumers of it, not
-part of the layering.
+No domain imports from a domain above it in this graph except for that one
+named exception, and `core/` imports from nothing (other than `config/`).
+Application-level packages — `ai/`, `api/`, `validation/`, `humanization/`,
+`utils/`, `modifications/`, `patterns/` — sit outside this graph entirely;
+they're consumers of it, not part of the layering.
 
 ## Compatibility Shims
 
