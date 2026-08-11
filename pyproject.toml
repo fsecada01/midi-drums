@@ -1,9 +1,9 @@
 [project]
 name = "midi-drums"
 authors = [
-    { name = "Developer", email = "dev@example.com" },
+    { name = "Francis Secada", email = "francis.secada@gmail.com" },
 ]
-readme = "CLAUDE.md"
+readme = "README.md"
 requires-python = ">=3.12,<3.14"
 license = { text = "MIT" }
 classifiers = [
@@ -11,8 +11,8 @@ classifiers = [
     "Operating System :: OS Independent",
     "Topic :: Multimedia :: Sound/Audio :: MIDI",
 ]
-version = "1.0.0"
-description = "Heavy metal drum track generator for EZDrummer 3"
+version = "0.1.0"
+description = "Plugin-based, multi-genre MIDI drum track generator with drummer-style imitation, AI-assisted composition, and Reaper DAW integration"
 dependencies = [
     "midiutil>=1.2.1",
     "numpy>=1.24.0",
