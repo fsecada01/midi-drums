@@ -6,11 +6,12 @@ midi_drums.models.{pattern,song,kit} modules are gone, the core domain has
 no dependency on other domains, and the top-level public API is unchanged.
 """
 
-import ast
 import importlib
 from pathlib import Path
 
 import pytest
+
+from tests.unit._domain_migration_helpers import imported_modules
 
 CORE_PACKAGE_ROOT = Path(__file__).resolve().parents[2] / "midi_drums" / "core"
 
@@ -42,19 +43,6 @@ NEW_CORE_SUBPACKAGES = ["models", "value_objects"]
 def _iter_new_core_files():
     for subpackage in NEW_CORE_SUBPACKAGES:
         yield from (CORE_PACKAGE_ROOT / subpackage).glob("*.py")
-
-
-def _imported_modules(file_path: Path) -> list[str]:
-    tree = ast.parse(
-        file_path.read_text(encoding="utf-8"), filename=str(file_path)
-    )
-    modules = []
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Import):
-            modules.extend(alias.name for alias in node.names)
-        elif isinstance(node, ast.ImportFrom) and node.module:
-            modules.append(node.module)
-    return modules
 
 
 class TestNewImportPaths:
@@ -145,7 +133,7 @@ class TestCoreDomainHasNoOtherDomainDependency:
         "file_path", list(_iter_new_core_files()), ids=lambda p: p.name
     )
     def test_file_has_no_cross_domain_import(self, file_path):
-        modules = _imported_modules(file_path)
+        modules = imported_modules(file_path)
         violations = [
             m
             for m in modules

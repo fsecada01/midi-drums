@@ -18,7 +18,8 @@ class GenerationService:
     :class:`~midi_drums.export.midi.exporter.MIDIExporter`): DrumGenerator
     owns pattern/song composition, GenerationService is the stable entry
     point other layers call through - and the natural place to route
-    generation through a :class:`~midi_drums.generation.strategies.pattern_strategy.PatternStrategy`
+    generation through a
+    :class:`~midi_drums.generation.strategies.pattern_strategy.PatternStrategy`
     or :class:`~midi_drums.generation.strategies.fill_strategy.FillStrategy`
     once concrete strategies exist.
 
@@ -35,7 +36,13 @@ class GenerationService:
         config_path: Path | None = None,
         drum_generator: DrumGenerator | None = None,
     ):
-        """Initialize the service with an optional pre-configured engine."""
+        """Initialize the service with an optional pre-configured engine.
+
+        Args:
+            config_path: Passed through to a new DrumGenerator. Ignored if
+                drum_generator is also given - the pre-built instance wins.
+            drum_generator: Use this engine instead of constructing one.
+        """
         self.drum_generator = drum_generator or DrumGenerator(config_path)
 
     def generate_song(
