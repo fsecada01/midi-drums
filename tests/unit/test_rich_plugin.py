@@ -76,6 +76,31 @@ class TestRichPlugin:
         plugin = RichPlugin()
         assert plugin.is_compatible_with_genre(genre)
 
+    def test_fast_chops_applied_before_heavy_accents(self):
+        # FastChopsTriplets creates new beats with accent=True; HeavyAccents
+        # only boosts beats that already exist when it runs. If accents ran
+        # first, fast_chops' newly created accented beats would never get
+        # boosted, so the two modifications must run in this order.
+        plugin = RichPlugin()
+        call_order = []
+        original_fast_chops_apply = plugin.fast_chops.apply
+        original_accents_apply = plugin.accents.apply
+
+        def tracked_fast_chops(*args, **kwargs):
+            call_order.append("fast_chops")
+            return original_fast_chops_apply(*args, **kwargs)
+
+        def tracked_accents(*args, **kwargs):
+            call_order.append("accents")
+            return original_accents_apply(*args, **kwargs)
+
+        plugin.fast_chops.apply = tracked_fast_chops
+        plugin.accents.apply = tracked_accents
+
+        plugin.apply_style(_test_pattern())
+
+        assert call_order == ["fast_chops", "accents"]
+
 
 class TestRichPluginDiscovery:
     def test_rich_auto_discovered_by_registry(self):

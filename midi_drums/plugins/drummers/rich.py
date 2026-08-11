@@ -56,8 +56,8 @@ class RichPlugin(DrummerPlugin):
         styled.name = f"{pattern.name}_rich"
 
         styled = self.ghost_notes.apply(styled, intensity=0.6)
-        styled = self.accents.apply(styled, intensity=0.9)
         styled = self.fast_chops.apply(styled, intensity=0.7)
+        styled = self.accents.apply(styled, intensity=0.9)
 
         return styled
 
