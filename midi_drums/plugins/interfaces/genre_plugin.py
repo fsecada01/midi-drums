@@ -109,8 +109,6 @@ class GenrePlugin(ABC):
             - Context: metal's high aggression and power
             - Result: Complex progressive with heavier, more aggressive feel
         """
-        from midi_drums.core.value_objects.drum_instrument import DrumInstrument
-
         if blend_amount <= 0.0:
             return pattern
 
