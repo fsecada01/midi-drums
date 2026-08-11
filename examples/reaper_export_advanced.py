@@ -4,7 +4,7 @@
 from pathlib import Path
 
 from midi_drums import DrumGenerator
-from midi_drums.exporters import ReaperExporter
+from midi_drums.export.reaper.exporter import ReaperExporter
 
 
 def export_multiple_genres():

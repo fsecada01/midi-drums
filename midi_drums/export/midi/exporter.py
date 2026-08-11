@@ -38,8 +38,16 @@ class MIDIExporter:
         Args:
             song: Song to export.
             output_path: Destination ``.mid`` file path.
+
+        Raises:
+            ValueError: If song has no sections.
         """
-        self.midi_engine.save_song_midi(song, Path(output_path))
+        if not song.sections:
+            raise ValueError("Song must have at least one section")
+
+        output_path = Path(output_path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        self.midi_engine.save_song_midi(song, output_path)
 
     def export_pattern(
         self, pattern: Pattern, output_path: str | Path, tempo: int = 120
@@ -51,7 +59,9 @@ class MIDIExporter:
             output_path: Destination ``.mid`` file path.
             tempo: Tempo in BPM.
         """
-        self.midi_engine.save_pattern_midi(pattern, Path(output_path), tempo)
+        output_path = Path(output_path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        self.midi_engine.save_pattern_midi(pattern, output_path, tempo)
 
     def export_patterns(
         self,

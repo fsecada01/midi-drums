@@ -20,7 +20,7 @@ class ReaperExporter:
 
     Example:
         >>> from midi_drums import DrumGenerator
-        >>> from midi_drums.exporters import ReaperExporter
+        >>> from midi_drums.export.reaper.exporter import ReaperExporter
         >>>
         >>> # Generate drums
         >>> generator = DrumGenerator()
