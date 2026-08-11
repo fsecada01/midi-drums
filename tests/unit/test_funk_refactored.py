@@ -1,7 +1,9 @@
 """Test refactored Funk genre plugin."""
 
-from midi_drums.models.pattern import DrumInstrument
-from midi_drums.models.song import GenerationParameters
+from midi_drums.core.value_objects.drum_instrument import DrumInstrument
+from midi_drums.core.value_objects.generation_parameters import (
+    GenerationParameters,
+)
 from midi_drums.plugins.genres.funk import FunkGenrePlugin
 from midi_drums.plugins.genres.funk_refactored import FunkGenrePluginRefactored
 

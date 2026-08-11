@@ -6,7 +6,8 @@ inspired by Toontrack MIDI libraries and real drummer analysis.
 
 import random
 
-from midi_drums.models.pattern import Beat, DrumInstrument, Pattern
+from midi_drums.core.models.pattern import Beat, Pattern
+from midi_drums.core.value_objects.drum_instrument import DrumInstrument
 
 # Try to import numpy for Gaussian distribution, fallback to random if not available
 try:

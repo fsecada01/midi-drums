@@ -8,7 +8,9 @@ from datetime import datetime
 from pathlib import Path
 
 from midi_drums.core.engine import DrumGenerator
-from midi_drums.models.song import GenerationParameters
+from midi_drums.core.value_objects.generation_parameters import (
+    GenerationParameters,
+)
 from midi_drums.validation.physical_constraints import PhysicalValidator
 
 # Set up logging to see validation messages

@@ -8,7 +8,7 @@ This test suite validates the pattern template system including:
 """
 
 from midi_drums.config import TIMING
-from midi_drums.models.pattern import DrumInstrument
+from midi_drums.core.value_objects.drum_instrument import DrumInstrument
 from midi_drums.patterns import (
     BasicGroove,
     BlastBeat,

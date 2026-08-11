@@ -2,7 +2,8 @@
 
 import pytest
 
-from midi_drums.models.pattern import DrumInstrument, Pattern
+from midi_drums.core.models.pattern import Pattern
+from midi_drums.core.value_objects.drum_instrument import DrumInstrument
 from midi_drums.validation.physical_constraints import (
     Conflict,
     LimbAssignment,

@@ -736,7 +736,7 @@ class MetalGenrePluginRefactored(GenrePlugin):
 
 ```python
 from midi_drums.plugins.base import GenrePlugin
-from midi_drums.models.pattern import PatternBuilder
+from midi_drums.core.builders.pattern_builder import PatternBuilder
 
 class RockGenrePlugin(GenrePlugin):
     def generate_pattern(self, section: str, parameters: GenerationParameters) -> Pattern:

@@ -15,9 +15,15 @@ def test_imports():
         # Test that imports work (imports are only used for testing)
         from midi_drums import Beat, DrumGenerator  # noqa: F401
         from midi_drums.api.python_api import DrumGeneratorAPI  # noqa: F401
-        from midi_drums.models.pattern import DrumInstrument  # noqa: F401
-        from midi_drums.models.pattern import PatternBuilder  # noqa: F401
-        from midi_drums.models.song import GenerationParameters  # noqa: F401
+        from midi_drums.core.builders.pattern_builder import (  # noqa: F401
+            PatternBuilder,
+        )
+        from midi_drums.core.value_objects.drum_instrument import (  # noqa: F401
+            DrumInstrument,
+        )
+        from midi_drums.core.value_objects.generation_parameters import (  # noqa: F401
+            GenerationParameters,
+        )
         from midi_drums.plugins.genres.metal import (  # noqa: F401
             MetalGenrePlugin,
         )
@@ -34,7 +40,7 @@ def test_pattern_creation():
     print("🧪 Testing pattern creation...")
 
     try:
-        from midi_drums.models.pattern import PatternBuilder
+        from midi_drums.core.builders.pattern_builder import PatternBuilder
 
         # Create a simple pattern
         builder = PatternBuilder("test_pattern")
@@ -68,7 +74,9 @@ def test_metal_plugin():
     print("🧪 Testing metal plugin...")
 
     try:
-        from midi_drums.models.song import GenerationParameters
+        from midi_drums.core.value_objects.generation_parameters import (
+            GenerationParameters,
+        )
         from midi_drums.plugins.genres.metal import MetalGenrePlugin
 
         plugin = MetalGenrePlugin()

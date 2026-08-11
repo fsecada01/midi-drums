@@ -15,8 +15,8 @@ from midi_drums.ai.schemas import (
     PatternGenerationRequest,
     PatternGenerationResponse,
 )
-from midi_drums.models.pattern import Pattern
-from midi_drums.models.song import Song
+from midi_drums.core.models.pattern import Pattern
+from midi_drums.core.models.song import Song
 
 
 class DrumGeneratorAI:

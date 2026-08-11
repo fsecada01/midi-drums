@@ -105,7 +105,7 @@ def export_individual_sections(api, song, output_dir: Path):
         section_path = section_dir / section_filename
 
         # Create a temporary song with just this section
-        from midi_drums.models.song import Song
+        from midi_drums.core.models.song import Song
 
         single_section_song = Song(
             name=f"{section.name}_{i+1}",

@@ -13,8 +13,8 @@ from loguru import logger
 
 from midi_drums.ai.backends import AIBackendConfig, AIBackendFactory
 from midi_drums.core.engine import DrumGenerator
-from midi_drums.models.pattern import Pattern
-from midi_drums.models.song import Song
+from midi_drums.core.models.pattern import Pattern
+from midi_drums.core.models.song import Song
 
 SYSTEM_PROMPT = (
     "You are an expert drum pattern composer and music producer. "

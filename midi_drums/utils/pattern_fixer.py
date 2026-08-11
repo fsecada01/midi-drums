@@ -7,7 +7,8 @@ preserving musical intent.
 import logging
 from collections import defaultdict
 
-from midi_drums.models.pattern import DrumInstrument, Pattern
+from midi_drums.core.models.pattern import Pattern
+from midi_drums.core.value_objects.drum_instrument import DrumInstrument
 
 logger = logging.getLogger(__name__)
 
@@ -263,7 +264,7 @@ class PatternFixer:
                 # Create foot pedal beat
                 # Use the first hi-hat beat's position for timing
                 if hihat_beats:
-                    from midi_drums.models.pattern import Beat
+                    from midi_drums.core.models.pattern import Beat
 
                     foot_beat = Beat(
                         position=hihat_beats[0].position,

@@ -11,7 +11,9 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 
 from midi_drums.config import TIMING, VELOCITY
-from midi_drums.models.pattern import DrumInstrument, Pattern, PatternBuilder
+from midi_drums.core.builders.pattern_builder import PatternBuilder
+from midi_drums.core.models.pattern import Pattern
+from midi_drums.core.value_objects.drum_instrument import DrumInstrument
 
 
 class PatternTemplate(ABC):

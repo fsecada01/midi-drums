@@ -8,8 +8,8 @@ import sys
 from pathlib import Path
 
 from midi_drums.core.engine import DrumGenerator
+from midi_drums.core.models.kit import DrumKit
 from midi_drums.exporters.reaper_exporter import ReaperExporter
-from midi_drums.models.kit import DrumKit
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -631,7 +631,8 @@ def handle_reaper_add_markers_command(args, generator: DrumGenerator) -> None:
     try:
         import json
 
-        from midi_drums.models.song import Section, Song, TimeSignature
+        from midi_drums.core.models.song import Section, Song
+        from midi_drums.core.value_objects.time_signature import TimeSignature
 
         # Auto-detect metadata from song directory if not explicitly provided
         metadata_file = args.metadata
@@ -1043,8 +1044,11 @@ def handle_prompt_command(args) -> None:
 
             # ── optional Reaper project ──────────────────────────────────────
             if rpp_path:
+                from midi_drums.core.models.song import Section, Song
+                from midi_drums.core.value_objects.time_signature import (
+                    TimeSignature,
+                )
                 from midi_drums.exporters.reaper_exporter import ReaperExporter
-                from midi_drums.models.song import Section, Song, TimeSignature
 
                 Path(rpp_path).parent.mkdir(parents=True, exist_ok=True)
                 song_obj = Song(

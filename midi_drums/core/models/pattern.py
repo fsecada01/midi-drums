@@ -1,55 +1,14 @@
-"""Pattern data models and core drum pattern structures."""
+"""Pattern data models - Beat and Pattern."""
 
 import logging
 import random
 from dataclasses import dataclass, field
-from enum import Enum
 from typing import Any
 
-from midi_drums.config import VELOCITY
+from midi_drums.core.value_objects.drum_instrument import DrumInstrument
+from midi_drums.core.value_objects.time_signature import TimeSignature
 
 logger = logging.getLogger(__name__)
-
-
-class DrumInstrument(Enum):
-    """Standard drum kit instruments with MIDI note mappings."""
-
-    KICK = 36
-    SNARE = 38
-    RIM = 40
-    CLOSED_HH = 42  # GM standard
-    CLOSED_HH_EDGE = 22  # EZDrummer specific
-    CLOSED_HH_TIP = 61  # EZDrummer specific
-    TIGHT_HH_EDGE = 62  # EZDrummer specific
-    TIGHT_HH_TIP = 63  # EZDrummer specific
-    PEDAL_HH = 44
-    OPEN_HH = 46  # GM standard
-    OPEN_HH_1 = 24  # EZDrummer specific
-    OPEN_HH_2 = 25  # EZDrummer specific
-    OPEN_HH_3 = 26  # EZDrummer specific
-    OPEN_HH_MAX = 60  # EZDrummer specific - fully open
-    MID_TOM = 47
-    FLOOR_TOM = 43
-    CRASH = 49
-    RIDE = 51
-    RIDE_BELL = 53
-    SPLASH = 55
-    CHINA = 52
-
-
-@dataclass
-class TimeSignature:
-    """Time signature representation."""
-
-    numerator: int = 4
-    denominator: int = 4
-
-    @property
-    def beats_per_bar(self) -> float:
-        return self.numerator * (4.0 / self.denominator)
-
-    def __str__(self) -> str:
-        return f"{self.numerator}/{self.denominator}"
 
 
 @dataclass
@@ -190,53 +149,3 @@ class Pattern:
             swing_ratio=self.swing_ratio,
             metadata=self.metadata.copy(),
         )
-
-
-class PatternBuilder:
-    """Builder pattern for creating drum patterns."""
-
-    def __init__(self, name: str, time_signature: TimeSignature | None = None):
-        self.pattern = Pattern(
-            name=name, time_signature=time_signature or TimeSignature()
-        )
-
-    def kick(self, position: float, velocity: int = 100) -> "PatternBuilder":
-        """Add kick drum at position."""
-        self.pattern.add_beat(position, DrumInstrument.KICK, velocity)
-        return self
-
-    def snare(self, position: float, velocity: int = 100) -> "PatternBuilder":
-        """Add snare at position."""
-        self.pattern.add_beat(position, DrumInstrument.SNARE, velocity)
-        return self
-
-    def hihat(
-        self, position: float, velocity: int = 80, open: bool = False
-    ) -> "PatternBuilder":
-        """Add hi-hat at position."""
-        instrument = (
-            DrumInstrument.OPEN_HH if open else DrumInstrument.CLOSED_HH
-        )
-        self.pattern.add_beat(position, instrument, velocity)
-        return self
-
-    def ride(self, position: float, velocity: int = 80) -> "PatternBuilder":
-        """Add ride cymbal at position."""
-        self.pattern.add_beat(position, DrumInstrument.RIDE, velocity)
-        return self
-
-    def hihat_foot(
-        self, position: float, velocity: int = VELOCITY.HIHAT_PEDAL
-    ) -> "PatternBuilder":
-        """Add hi-hat foot pedal ("chick") at position."""
-        self.pattern.add_beat(position, DrumInstrument.PEDAL_HH, velocity)
-        return self
-
-    def crash(self, position: float, velocity: int = 110) -> "PatternBuilder":
-        """Add crash cymbal at position."""
-        self.pattern.add_beat(position, DrumInstrument.CRASH, velocity)
-        return self
-
-    def build(self) -> Pattern:
-        """Build and return the pattern."""
-        return self.pattern

@@ -14,7 +14,7 @@ from midi_drums.ai.schemas import (
     PatternGenerationResponse,
 )
 from midi_drums.core.engine import DrumGenerator
-from midi_drums.models.pattern import Pattern
+from midi_drums.core.models.pattern import Pattern
 
 
 class PydanticPatternGenerator:

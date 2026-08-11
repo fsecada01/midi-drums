@@ -8,7 +8,9 @@ This test suite validates the drummer modification system including:
 """
 
 from midi_drums.config import TIMING, VELOCITY
-from midi_drums.models.pattern import DrumInstrument, Pattern, PatternBuilder
+from midi_drums.core.builders.pattern_builder import PatternBuilder
+from midi_drums.core.models.pattern import Pattern
+from midi_drums.core.value_objects.drum_instrument import DrumInstrument
 from midi_drums.modifications import (
     BehindBeatTiming,
     FastChopsTriplets,

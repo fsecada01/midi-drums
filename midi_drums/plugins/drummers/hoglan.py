@@ -8,8 +8,9 @@ mastery, and progressive fill complexity.
 
 import random
 
-from midi_drums.models.pattern import Beat, DrumInstrument, Pattern
-from midi_drums.models.song import Fill
+from midi_drums.core.models.pattern import Beat, Pattern
+from midi_drums.core.models.song import Fill
+from midi_drums.core.value_objects.drum_instrument import DrumInstrument
 from midi_drums.plugins.base import DrummerPlugin
 
 # Type annotations use built-in list for Python 3.9+
@@ -311,7 +312,7 @@ class HoglanPlugin(DrummerPlugin):
 
     def _create_simple_kick_triplet_fill(self) -> Pattern:
         """Create a simple kick triplet fill pattern."""
-        from midi_drums.models.pattern import PatternBuilder
+        from midi_drums.core.builders.pattern_builder import PatternBuilder
 
         builder = PatternBuilder("hoglan_simple_triplets")
 
@@ -328,7 +329,7 @@ class HoglanPlugin(DrummerPlugin):
 
     def _create_advanced_kick_triplet_fill(self) -> Pattern:
         """Create advanced kick triplet with hand coordination."""
-        from midi_drums.models.pattern import PatternBuilder
+        from midi_drums.core.builders.pattern_builder import PatternBuilder
 
         builder = PatternBuilder("hoglan_advanced_triplets")
 
@@ -348,7 +349,7 @@ class HoglanPlugin(DrummerPlugin):
 
     def _create_atomic_chaos_fill(self) -> Pattern:
         """Create maximum complexity 'atomic chaos' fill."""
-        from midi_drums.models.pattern import PatternBuilder
+        from midi_drums.core.builders.pattern_builder import PatternBuilder
 
         builder = PatternBuilder("hoglan_atomic_chaos")
 
@@ -374,7 +375,7 @@ class HoglanPlugin(DrummerPlugin):
 
     def _create_32nd_kick_flurry(self) -> Pattern:
         """Create signature 32nd note kick flurry."""
-        from midi_drums.models.pattern import PatternBuilder
+        from midi_drums.core.builders.pattern_builder import PatternBuilder
 
         builder = PatternBuilder("hoglan_32nd_flurry")
 
