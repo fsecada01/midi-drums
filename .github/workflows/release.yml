@@ -1,0 +1,94 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Verify and publish GitHub Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Determine version from tag
+        id: version
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Verify pyproject.toml version matches tag
+        run: |
+          PYPROJECT_VERSION=$(grep -m1 '^version = ' pyproject.toml | sed -E 's/version = "(.*)"/\1/')
+          if [ "${PYPROJECT_VERSION}" != "${{ steps.version.outputs.version }}" ]; then
+            echo "::error::pyproject.toml version (${PYPROJECT_VERSION}) does not match tag version (${{ steps.version.outputs.version }})"
+            exit 1
+          fi
+
+      - name: Verify midi_drums/__init__.py version matches tag
+        run: |
+          INIT_VERSION=$(grep -m1 '^__version__ = ' midi_drums/__init__.py | sed -E 's/__version__ = "(.*)"/\1/')
+          if [ "${INIT_VERSION}" != "${{ steps.version.outputs.version }}" ]; then
+            echo "::error::midi_drums/__init__.py __version__ (${INIT_VERSION}) does not match tag version (${{ steps.version.outputs.version }})"
+            exit 1
+          fi
+
+      - name: Extract CHANGELOG section for this version
+        id: changelog
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          if ! grep -qF "## [${VERSION}]" CHANGELOG.md; then
+            echo "::error::No '## [${VERSION}]' heading found in CHANGELOG.md - add one before tagging (see docs/RELEASING.md)."
+            exit 1
+          fi
+          NOTES=$(awk -v ver="## [${VERSION}]" '
+            $0 ~ /^## \[/ { if (found) exit; if (index($0, ver) == 1) { found=1; next } }
+            found && $0 ~ /^\[.*\]:/ { exit }
+            found { print }
+          ' CHANGELOG.md)
+          if [ -z "${NOTES}" ]; then
+            echo "::error::Found '## [${VERSION}]' heading in CHANGELOG.md but it has no content beneath it - add release notes before tagging."
+            exit 1
+          fi
+          {
+            DELIM="RELEASE_NOTES_EOF_$(openssl rand -hex 8)"
+            echo "notes<<${DELIM}"
+            echo "${NOTES}"
+            echo "${DELIM}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: false
+
+      - name: Install dependencies
+        run: |
+          uv venv --python 3.12
+          source .venv/bin/activate
+          uv pip install -e ".[dev,ai]"
+
+      - name: Run full test suite
+        run: |
+          source .venv/bin/activate
+          pytest -q
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ steps.version.outputs.tag }}" \
+            --title "${{ steps.version.outputs.tag }}" \
+            --notes "${{ steps.changelog.outputs.notes }}"
