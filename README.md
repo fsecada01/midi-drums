@@ -1043,11 +1043,12 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ### Phase 2: Advanced Features 🚧
 - [ ] Electronic genre plugin (House, Techno, Drum'n'Bass)
 - [ ] More drummer plugins (Neil Peart, Buddy Rich, Stewart Copeland)
-- [ ] Reaper marker import (generate drums from existing markers)
+- [x] Reaper marker import (generate drums from existing markers) - via
+      the `create_song_sections.lua` REAPER-mode bridge (regions -> `drums.mid`)
 - [ ] Real-time audio synthesis
 - [ ] AI-driven pattern variations
-- [ ] Advanced humanization algorithms
-- [ ] Groove template system
+- [x] Advanced humanization algorithms - `midi_drums/humanization/advanced_humanization.py`
+- [x] Groove template system - `midi_drums/patterns/templates.py` (8 templates + `TemplateComposer`)
 
 ### Phase 3: Integration 🔮
 - [ ] REST API for web services
