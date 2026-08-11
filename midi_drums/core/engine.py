@@ -9,7 +9,7 @@ from midi_drums.core.models.song import Section, Song
 from midi_drums.core.value_objects.generation_parameters import (
     GenerationParameters,
 )
-from midi_drums.engines.midi_engine import MIDIEngine
+from midi_drums.export.midi.engine import MIDIEngine
 from midi_drums.plugins.base import PluginManager
 
 logger = logging.getLogger(__name__)

@@ -498,7 +498,7 @@ class PatternCompositionAgent:
         Returns:
             True if export succeeded, False otherwise
         """
-        from midi_drums.engines.midi_engine import MIDIEngine
+        from midi_drums.export.midi.engine import MIDIEngine
 
         if isinstance(pattern_or_id, str):
             pattern = self.get_pattern(pattern_or_id)
@@ -531,7 +531,7 @@ class PatternCompositionAgent:
         Returns:
             True if export succeeded, False otherwise
         """
-        from midi_drums.engines.midi_engine import MIDIEngine
+        from midi_drums.export.midi.engine import MIDIEngine
 
         if isinstance(song_or_id, str):
             song = self.get_song(song_or_id)

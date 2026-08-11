@@ -90,9 +90,19 @@ midi_drums/
 │   │   ├── pattern_builder.py      # PatternBuilder
 │   │   └── __init__.py
 │   └── __init__.py
-├── models/
-│   ├── reaper_models.py  # Reaper-specific models (pending move to export/reaper/)
+├── export/
+│   ├── midi/
+│   │   ├── engine.py     # MIDIEngine - MIDI file generation
+│   │   ├── exporter.py   # MIDIExporter - high-level MIDI export API
+│   │   └── __init__.py
+│   ├── reaper/
+│   │   ├── engine.py     # ReaperEngine - .RPP file manipulation
+│   │   ├── exporter.py   # ReaperExporter - high-level Reaper export API
+│   │   ├── models.py     # Marker, ReaperTrack, SectionTemplate, GenreStructurePreset
+│   │   └── __init__.py
 │   └── __init__.py
+├── exporters/
+│   └── __init__.py       # Compat shim: re-exports ReaperExporter from export/reaper/
 ├── plugins/
 │   ├── base.py          # GenrePlugin, DrummerPlugin, PluginManager
 │   ├── genres/
@@ -108,9 +118,6 @@ midi_drums/
 │   │   ├── roeder.py    # Jason Roeder - atmospheric sludge
 │   │   ├── dee.py       # Mikkey Dee - speed/precision
 │   │   └── hoglan.py    # Gene Hoglan - blast beats
-│   └── __init__.py
-├── engines/
-│   ├── midi_engine.py   # MIDI file generation
 │   └── __init__.py
 ├── api/
 │   ├── python_api.py    # DrumGeneratorAPI - high-level interface
@@ -795,8 +802,8 @@ blocking. All Python output is printed to the REAPER console for debugging.
 6. Examples: 7 drummers with research-based implementations
 
 ### Adding MIDI Export Features
-1. Extend `midi_drums/engines/midi_engine.py`
-2. Add new export methods to `MIDIEngine`
+1. Extend `midi_drums/export/midi/engine.py`
+2. Add new export methods to `MIDIEngine` (or the high-level `MIDIExporter` in `export/midi/exporter.py`)
 3. Update `DrumGeneratorAPI` with new interfaces
 4. Add CLI commands if needed
 

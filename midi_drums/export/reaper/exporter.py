@@ -5,9 +5,9 @@ from __future__ import annotations
 from pathlib import Path
 
 from midi_drums.core.models.song import Song
-from midi_drums.engines.midi_engine import MIDIEngine
-from midi_drums.engines.reaper_engine import ReaperEngine
-from midi_drums.models.reaper_models import (
+from midi_drums.export.midi.engine import MIDIEngine
+from midi_drums.export.reaper.engine import ReaperEngine
+from midi_drums.export.reaper.models import (
     GenreStructurePreset,
 )
 
@@ -20,7 +20,7 @@ class ReaperExporter:
 
     Example:
         >>> from midi_drums import DrumGenerator
-        >>> from midi_drums.exporters import ReaperExporter
+        >>> from midi_drums.export.reaper.exporter import ReaperExporter
         >>>
         >>> # Generate drums
         >>> generator = DrumGenerator()
@@ -63,7 +63,7 @@ class ReaperExporter:
             add_midi_track: Also add MIDI track with performance
             marker_color: Hex color for markers (e.g., "#FF5733").  When the
                 song carries genre metadata the per-section colors from
-                :func:`~midi_drums.models.reaper_models.get_section_color`
+                :func:`~midi_drums.export.reaper.models.get_section_color`
                 are used instead and this parameter is ignored.
 
         Raises:

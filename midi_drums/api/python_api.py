@@ -259,7 +259,7 @@ class DrumGeneratorAPI:
             * ``rpp_path`` (str) – absolute path to the written ``.rpp``.
             * ``midi_path`` (str | None) – absolute path to the MIDI file, or
               ``None`` when *with_midi* is ``False``.
-            * ``preset_used`` (:class:`~midi_drums.models.reaper_models.GenreStructurePreset`) –
+            * ``preset_used`` (:class:`~midi_drums.export.reaper.models.GenreStructurePreset`) –
               the preset that determined the song structure.
             * ``section_count`` (int) – number of sections / markers.
 
@@ -271,8 +271,8 @@ class DrumGeneratorAPI:
             >>> print(result["section_count"])
             6
         """
-        from midi_drums.exporters.reaper_exporter import ReaperExporter
-        from midi_drums.models.reaper_models import get_genre_preset
+        from midi_drums.export.reaper.exporter import ReaperExporter
+        from midi_drums.export.reaper.models import get_genre_preset
 
         preset = get_genre_preset(genre, style)
         resolved_tempo = tempo if tempo is not None else preset.default_tempo
@@ -319,7 +319,7 @@ class DrumGeneratorAPI:
         """Create a Reaper project with genre-smart structure markers only.
 
         No drum audio or MIDI is generated.  The section structure comes
-        entirely from the :class:`~midi_drums.models.reaper_models.GenreStructurePreset`
+        entirely from the :class:`~midi_drums.export.reaper.models.GenreStructurePreset`
         registry so this call is very fast.
 
         Args:
@@ -341,7 +341,7 @@ class DrumGeneratorAPI:
             >>> print(path)
             /absolute/path/to/jazz.rpp
         """
-        from midi_drums.exporters.reaper_exporter import ReaperExporter
+        from midi_drums.export.reaper.exporter import ReaperExporter
 
         exporter = ReaperExporter()
         exporter.export_with_genre_preset(
@@ -370,7 +370,7 @@ class DrumGeneratorAPI:
         """
         import json
 
-        from midi_drums.models.reaper_models import get_section_color
+        from midi_drums.export.reaper.models import get_section_color
 
         data = {
             "source": "python",
@@ -473,6 +473,6 @@ class DrumGeneratorAPI:
             >>> print(presets["metal"])
             ['breakdown', 'death', 'doom', 'heavy', 'power', 'progressive', 'thrash']
         """
-        from midi_drums.models.reaper_models import list_genre_presets
+        from midi_drums.export.reaper.models import list_genre_presets
 
         return list_genre_presets()

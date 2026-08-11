@@ -9,7 +9,7 @@ from pathlib import Path
 
 from midi_drums.core.engine import DrumGenerator
 from midi_drums.core.models.kit import DrumKit
-from midi_drums.exporters.reaper_exporter import ReaperExporter
+from midi_drums.export.reaper.exporter import ReaperExporter
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -536,7 +536,7 @@ def handle_reaper_export_command(args, generator: DrumGenerator) -> None:
             # ----------------------------------------------------------------
             # Preset-only mode: no MIDI generation
             # ----------------------------------------------------------------
-            from midi_drums.models.reaper_models import get_genre_preset
+            from midi_drums.export.reaper.models import get_genre_preset
 
             exporter = ReaperExporter()
             preset = exporter.export_with_genre_preset(
@@ -567,7 +567,7 @@ def handle_reaper_export_command(args, generator: DrumGenerator) -> None:
             drum_kit = DrumKit.from_preset("ezdrummer3")
 
             # Resolve tempo — use preset default when not supplied
-            from midi_drums.models.reaper_models import get_genre_preset
+            from midi_drums.export.reaper.models import get_genre_preset
 
             preset = get_genre_preset(args.genre, args.style)
             resolved_tempo = (
@@ -784,7 +784,7 @@ def _print_genre_presets(genre_filter: str | None = None) -> None:
     Args:
         genre_filter: When provided, only presets for this genre are shown.
     """
-    from midi_drums.models.reaper_models import (
+    from midi_drums.export.reaper.models import (
         GENRE_STRUCTURE_PRESETS,
         list_genre_presets,
     )
@@ -951,7 +951,7 @@ def handle_prompt_command(args) -> None:
 
             # ── export per-section parts ─────────────────────────────────────
             if parts_dir is not None and song_obj:
-                from midi_drums.engines.midi_engine import MIDIEngine
+                from midi_drums.export.midi.engine import MIDIEngine
 
                 parts_dir.mkdir(exist_ok=True)
                 engine = MIDIEngine()
@@ -967,7 +967,7 @@ def handle_prompt_command(args) -> None:
 
             # ── optional Reaper project ──────────────────────────────────────
             if rpp_path and song_obj:
-                from midi_drums.exporters.reaper_exporter import ReaperExporter
+                from midi_drums.export.reaper.exporter import ReaperExporter
 
                 Path(rpp_path).parent.mkdir(parents=True, exist_ok=True)
                 ReaperExporter().export_complete(
@@ -1048,7 +1048,7 @@ def handle_prompt_command(args) -> None:
                 from midi_drums.core.value_objects.time_signature import (
                     TimeSignature,
                 )
-                from midi_drums.exporters.reaper_exporter import ReaperExporter
+                from midi_drums.export.reaper.exporter import ReaperExporter
 
                 Path(rpp_path).parent.mkdir(parents=True, exist_ok=True)
                 song_obj = Song(

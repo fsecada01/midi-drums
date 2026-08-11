@@ -4,7 +4,7 @@
 from pathlib import Path
 
 from midi_drums import DrumGenerator
-from midi_drums.exporters import ReaperExporter
+from midi_drums.export.reaper.exporter import ReaperExporter
 
 
 def export_multiple_genres():
@@ -46,7 +46,7 @@ def export_with_template():
     print("\nExporting with custom template...")
 
     # First, create a template project
-    from midi_drums.engines.reaper_engine import ReaperEngine
+    from midi_drums.export.reaper.engine import ReaperEngine
 
     engine = ReaperEngine()
     template = engine.create_minimal_project(tempo=140)
