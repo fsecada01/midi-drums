@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 
-PACKAGE_ROOT = Path(__file__).resolve().parents[2] / "midi_drums"
+PACKAGE_ROOT = Path(__file__).resolve().parents[3] / "midi_drums"
 
 
 class TestNewImportPaths:

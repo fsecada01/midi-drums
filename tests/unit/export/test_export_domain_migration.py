@@ -16,7 +16,7 @@ import pytest
 
 from tests.unit._domain_migration_helpers import imported_modules
 
-PACKAGE_ROOT = Path(__file__).resolve().parents[2] / "midi_drums"
+PACKAGE_ROOT = Path(__file__).resolve().parents[3] / "midi_drums"
 EXPORT_PACKAGE_ROOT = PACKAGE_ROOT / "export"
 
 # Domains the export package must not depend on. midi_drums.core (shared

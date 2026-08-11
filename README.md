@@ -880,21 +880,22 @@ pytest -m "not requires_api"
 
 ```
 midi_drums/
-├── __init__.py              # Main exports
-├── config/
-│   └── constants.py        # VELOCITY, TIMING, DEFAULTS constants
-├── patterns/
-│   └── templates.py        # 8 reusable pattern templates
-├── modifications/
-│   └── drummer_mods.py     # 12 composable drummer modifications
-├── core/
-│   └── engine.py           # DrumGenerator - main composition engine
-├── models/
-│   ├── pattern.py          # Pattern, Beat, PatternBuilder
-│   ├── song.py             # Song, Section, GenerationParameters
-│   └── kit.py              # DrumKit configurations (EZDrummer3, Metal, Jazz)
-├── plugins/
-│   ├── base.py             # Plugin system foundation
+├── __init__.py              # Main exports (DrumGenerator, Pattern, Song, ...)
+├── core/                    # Domain models & value objects (no other-domain deps)
+│   ├── models/              # Pattern, Beat, Song, Section, Kit
+│   └── value_objects/       # TimeSignature, DrumInstrument, GenerationParameters
+├── generation/               # Composition engine, builder, strategies, orchestration
+│   ├── engines/              # DrumGenerator - main composition engine
+│   ├── builders/             # PatternBuilder - fluent pattern construction
+│   ├── strategies/           # PatternStrategy / FillStrategy interfaces
+│   └── services/             # GenerationService - high-level orchestration
+├── export/                   # MIDI + Reaper file export
+│   ├── midi/                 # MIDIEngine, MIDIExporter
+│   └── reaper/                # ReaperEngine, ReaperExporter, section/marker models
+├── exporters/                # Compat shim re-exporting ReaperExporter from export/reaper/
+├── plugins/                  # Genre + drummer plugin system
+│   ├── interfaces/            # GenrePlugin, DrummerPlugin
+│   ├── registry/               # PluginRegistry, PluginManager, auto-discovery
 │   ├── genres/
 │   │   ├── metal.py        # MetalGenrePlugin - 7 styles
 │   │   ├── rock.py         # RockGenrePlugin - 7 styles
@@ -907,21 +908,23 @@ midi_drums/
 │       ├── chambers.py     # Dennis Chambers style
 │       ├── roeder.py       # Jason Roeder style
 │       ├── dee.py          # Mikkey Dee style
-│       └── hoglan.py       # Gene Hoglan style
-├── engines/
-│   └── midi_engine.py      # MIDI file generation
-├── exporters/
-│   └── reaper.py           # Reaper .rpp project exporter
+│       ├── hoglan.py       # Gene Hoglan style
+│       └── composite/       # Layered drummer styles (e.g. doom_blues)
 ├── api/
 │   ├── python_api.py       # High-level Python API
-│   └── cli.py              # Command-line interface
-├── ai/                     # AI-powered generation (optional)
-│   ├── ai_api.py           # High-level AI generation API
-│   ├── backends.py         # Multi-provider backend config
+│   └── cli.py               # Command-line interface
+├── config/
+│   └── constants.py        # VELOCITY, TIMING, DEFAULTS constants
+├── patterns/
+│   └── templates.py        # 8 reusable pattern templates
+├── modifications/
+│   └── drummer_mods.py     # 12 composable drummer modifications
+├── ai/                      # AI-powered generation (optional)
+│   ├── ai_api.py            # High-level AI generation API
+│   ├── backends.py          # Multi-provider backend config
 │   ├── pattern_generator.py # Pydantic AI pattern generation
-│   ├── agents/
-│   │   └── pattern_agent.py # Langchain agent orchestration
-│   └── prompts/            # Prompt templates for AI generation
+│   ├── agents/               # Langchain agent orchestration
+│   └── prompts/              # Prompt templates for AI generation
 ├── validation/
 │   └── physical_constraints.py # Drummer-physically-playable checks
 ├── humanization/
@@ -929,6 +932,12 @@ midi_drums/
 └── utils/
     └── pattern_fixer.py    # Post-generation pattern repair
 ```
+
+See [`docs/DDD_ARCHITECTURE.md`](docs/DDD_ARCHITECTURE.md) for the
+domain-boundary rules behind this layout, and
+[`docs/MIGRATION_GUIDE.md`](docs/MIGRATION_GUIDE.md) if you have code
+importing from pre-DDD-migration paths (`midi_drums.core.engine`,
+`midi_drums.models.*`, `midi_drums.engines.*`, etc).
 
 ### Running Examples
 

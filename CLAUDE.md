@@ -144,9 +144,29 @@ midi_drums/
 │   ├── python_api.py    # DrumGeneratorAPI - high-level interface
 │   ├── cli.py           # Command-line interface
 │   └── __init__.py
-└── examples/            # Usage demonstrations
-    └── basic_usage.py   # Complete examples
+├── config/
+│   └── constants.py     # VELOCITY, TIMING, DEFAULTS constants
+├── patterns/
+│   └── templates.py     # 8 reusable pattern templates (BasicGroove, BlastBeat, ...)
+├── modifications/
+│   └── drummer_mods.py  # 12 composable drummer modifications
+├── validation/
+│   └── physical_constraints.py # Drummer-physically-playable checks
+├── humanization/
+│   └── advanced_humanization.py # Timing/velocity humanization
+├── utils/
+│   └── pattern_fixer.py # Post-generation pattern repair
+└── ai/                   # AI-powered generation (optional)
+    ├── ai_api.py         # High-level AI generation API
+    ├── backends.py       # Multi-provider backend config
+    ├── pattern_generator.py # Pydantic AI pattern generation
+    ├── agents/           # Langchain agent orchestration
+    └── prompts/          # Prompt templates for AI generation
 ```
+
+See `docs/DDD_ARCHITECTURE.md` for the domain-boundary rules (what each package
+is allowed to import) and `docs/MIGRATION_GUIDE.md` for a map from pre-epic-#8
+import paths to their current locations.
 
 ## Dependencies
 
