@@ -25,13 +25,16 @@ class CopelandPlugin(DrummerPlugin):
 
     Characteristics:
     - Reggae/ska-influenced off-beat hi-hat emphasis
-    - Cross-stick (rim click) snare texture rather than a full backbeat hit
+    - Cross-stick (rim click) snare texture in signature fills, rather than
+      a full backbeat hit
     - Unconventional, displaced accent placement
 
     Implemented using composable modifications:
     - TwistedAccents: displaces accents off the expected beat
     - PocketStretching: elastic, syncopated groove tension
-    - GhostNoteLayer: subtle texture standing in for cross-stick nuance
+    - GhostNoteLayer: subtle ghost-note snare texture underlying the groove
+      (cross-stick rim texture itself is added directly in the signature
+      fills, via DrumInstrument.RIM)
     """
 
     def __init__(self):
