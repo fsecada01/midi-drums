@@ -22,6 +22,7 @@ FORBIDDEN_DOMAIN_PREFIXES = (
     "midi_drums.humanization",
     "midi_drums.validation",
     "midi_drums.exporters",
+    "midi_drums.export",
     "midi_drums.ai",
     "midi_drums.modifications",
     "midi_drums.parsers",
@@ -118,11 +119,11 @@ class TestOldModelModulesRemoved:
         with pytest.raises(ModuleNotFoundError):
             importlib.import_module(f"midi_drums.models.{module_name}")
 
-    def test_reaper_models_untouched(self):
-        """reaper_models.py stays in midi_drums.models until #10 (Export
-        Domain) moves it - confirms this phase didn't overreach."""
-        module = importlib.import_module("midi_drums.models.reaper_models")
-        assert module is not None
+    # reaper_models.py stayed in midi_drums.models when this phase (#9) ran,
+    # deliberately out of scope pending #10 (Export Domain). #10 has since
+    # moved it and retired midi_drums/models/ entirely - see
+    # test_export_domain_migration.py's TestOldExportModulesRemoved for the
+    # current-state assertions.
 
 
 class TestCoreDomainHasNoOtherDomainDependency:

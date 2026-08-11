@@ -8,8 +8,8 @@ import rpp
 from midi_drums.core.models.pattern import Pattern
 from midi_drums.core.models.song import Section, Song
 from midi_drums.core.value_objects.time_signature import TimeSignature
-from midi_drums.engines.reaper_engine import ReaperEngine, bars_to_seconds
-from midi_drums.models.reaper_models import (
+from midi_drums.export.reaper.engine import ReaperEngine, bars_to_seconds
+from midi_drums.export.reaper.models import (
     GENRE_STRUCTURE_PRESETS,
     GenreStructurePreset,
     Marker,
@@ -460,7 +460,7 @@ class TestSectionColors:
 
     def test_unknown_section_returns_default(self):
         """Unknown section types fall back to the default color."""
-        from midi_drums.models.reaper_models import DEFAULT_SECTION_COLOR
+        from midi_drums.export.reaper.models import DEFAULT_SECTION_COLOR
 
         color = get_section_color("xyzzy_unknown")
         assert color == DEFAULT_SECTION_COLOR

@@ -5,12 +5,12 @@ from __future__ import annotations
 import pytest
 
 from midi_drums import DrumGenerator
-from midi_drums.engines.reaper_engine import ReaperEngine
-from midi_drums.exporters import ReaperExporter
-from midi_drums.models.reaper_models import (
+from midi_drums.export.reaper.engine import ReaperEngine
+from midi_drums.export.reaper.models import (
     GenreStructurePreset,
     get_genre_preset,
 )
+from midi_drums.exporters import ReaperExporter
 
 
 class TestReaperExportWorkflow:

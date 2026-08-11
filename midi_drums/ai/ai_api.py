@@ -227,7 +227,7 @@ class DrumGeneratorAI:
         # Handle Pattern object from Pydantic generator
         from pathlib import Path
 
-        from midi_drums.engines.midi_engine import MIDIEngine
+        from midi_drums.export.midi.engine import MIDIEngine
 
         engine = MIDIEngine()
         engine.save_pattern_midi(pattern, Path(output_path), tempo)
@@ -258,7 +258,7 @@ class DrumGeneratorAI:
         # Handle Song object
         from pathlib import Path
 
-        from midi_drums.engines.midi_engine import MIDIEngine
+        from midi_drums.export.midi.engine import MIDIEngine
 
         engine = MIDIEngine()
         engine.save_song_midi(song, Path(output_path))

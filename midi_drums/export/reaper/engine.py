@@ -8,7 +8,7 @@ import rpp
 
 from midi_drums.core.models.song import Song
 from midi_drums.core.value_objects.time_signature import TimeSignature
-from midi_drums.models.reaper_models import (
+from midi_drums.export.reaper.models import (
     GenreStructurePreset,
     Marker,
     get_genre_preset,
@@ -238,7 +238,7 @@ class ReaperEngine:
     ) -> GenreStructurePreset:
         """Return the best-matching structure preset for *genre*/*style*.
 
-        Delegates to :func:`midi_drums.models.reaper_models.get_genre_preset`
+        Delegates to :func:`midi_drums.export.reaper.models.get_genre_preset`
         so callers can use the engine as a single entry point.
 
         Args:
