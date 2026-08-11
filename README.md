@@ -707,7 +707,7 @@ The plugin architecture makes it easy to extend the system with new genres and d
 **Modern approach** using pattern templates for declarative composition:
 
 ```python
-from midi_drums.plugins.base import GenrePlugin
+from midi_drums.plugins.interfaces.genre_plugin import GenrePlugin
 from midi_drums.patterns import TemplateComposer, BasicGroove, DoubleBassPedal
 from midi_drums.config import VELOCITY, TIMING
 
@@ -735,7 +735,7 @@ class MetalGenrePluginRefactored(GenrePlugin):
 **Traditional approach** still available for custom patterns:
 
 ```python
-from midi_drums.plugins.base import GenrePlugin
+from midi_drums.plugins.interfaces.genre_plugin import GenrePlugin
 from midi_drums.core.builders.pattern_builder import PatternBuilder
 
 class RockGenrePlugin(GenrePlugin):
@@ -756,7 +756,7 @@ class RockGenrePlugin(GenrePlugin):
 **Modern approach** using composable modifications (reduced from ~380 to ~66 lines!):
 
 ```python
-from midi_drums.plugins.base import DrummerPlugin
+from midi_drums.plugins.interfaces.drummer_plugin import DrummerPlugin
 from midi_drums.modifications import BehindBeatTiming, TripletVocabulary, HeavyAccents
 
 class BonhamPluginRefactored(DrummerPlugin):

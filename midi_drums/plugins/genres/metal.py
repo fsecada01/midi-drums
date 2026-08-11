@@ -10,7 +10,7 @@ from midi_drums.core.value_objects.generation_parameters import (
     GenerationParameters,
 )
 from midi_drums.core.value_objects.time_signature import TimeSignature
-from midi_drums.plugins.base import GenrePlugin
+from midi_drums.plugins.interfaces.genre_plugin import GenrePlugin
 
 
 class MetalGenrePlugin(GenrePlugin):

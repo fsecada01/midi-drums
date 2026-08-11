@@ -12,7 +12,8 @@ from collections import Counter
 
 import pytest
 
-from midi_drums.plugins.base import DrummerPlugin, PluginManager
+from midi_drums.plugins.interfaces.drummer_plugin import DrummerPlugin
+from midi_drums.plugins.registry.plugin_registry import PluginManager
 
 EXPECTED_GENRES_WITH_REFACTORED_VARIANT = {"metal", "rock", "jazz", "funk"}
 EXPECTED_DRUMMERS_WITH_REFACTORED_VARIANT = {
@@ -33,7 +34,9 @@ def test_discover_plugins_overrides_each_name_at_most_once(caplog):
     more means a plugin got registered from more than the two files that
     legitimately declare that name.
     """
-    with caplog.at_level(logging.WARNING, logger="midi_drums.plugins.base"):
+    with caplog.at_level(
+        logging.WARNING, logger="midi_drums.plugins.registry.plugin_registry"
+    ):
         manager = PluginManager()
         manager.discover_plugins()
 

@@ -14,7 +14,7 @@ from pathlib import Path
 from loguru import logger
 
 from midi_drums.api.python_api import DrumGeneratorAPI
-from midi_drums.plugins.drummers.composite_doom_blues import (
+from midi_drums.plugins.drummers.composite.doom_blues import (
     CompositeDoomBluesPlugin,
 )
 

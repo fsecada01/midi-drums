@@ -10,7 +10,7 @@ from midi_drums.modifications import (
     SpeedPrecision,
     TwistedAccents,
 )
-from midi_drums.plugins.base import DrummerPlugin
+from midi_drums.plugins.interfaces.drummer_plugin import DrummerPlugin
 
 
 class DeePlugin(DrummerPlugin):

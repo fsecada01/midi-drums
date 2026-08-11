@@ -11,7 +11,7 @@ import random
 from midi_drums.core.models.pattern import Beat, Pattern
 from midi_drums.core.models.song import Fill
 from midi_drums.core.value_objects.drum_instrument import DrumInstrument
-from midi_drums.plugins.base import DrummerPlugin
+from midi_drums.plugins.interfaces.drummer_plugin import DrummerPlugin
 
 # Type annotations use built-in list for Python 3.9+
 
