@@ -6,11 +6,12 @@ midi_drums.models.{pattern,song,kit} modules are gone, the core domain has
 no dependency on other domains, and the top-level public API is unchanged.
 """
 
-import ast
 import importlib
 from pathlib import Path
 
 import pytest
+
+from tests.unit._domain_migration_helpers import imported_modules
 
 CORE_PACKAGE_ROOT = Path(__file__).resolve().parents[2] / "midi_drums" / "core"
 
@@ -23,6 +24,7 @@ FORBIDDEN_DOMAIN_PREFIXES = (
     "midi_drums.validation",
     "midi_drums.exporters",
     "midi_drums.export",
+    "midi_drums.generation",
     "midi_drums.ai",
     "midi_drums.modifications",
     "midi_drums.parsers",
@@ -31,28 +33,16 @@ FORBIDDEN_DOMAIN_PREFIXES = (
     "midi_drums.models",
 )
 
-# Scoped to the new subpackages added in this phase - core/engine.py predates
-# this migration, still depends on midi_drums.plugins, and is out of scope
-# here (its move is tracked separately as the Generation Domain phase, #12).
-NEW_CORE_SUBPACKAGES = ["models", "value_objects", "builders"]
+# Scoped to the new subpackages added in this phase - models and
+# value_objects. builders/ (PatternBuilder) has since moved on to the
+# Generation Domain phase (#12) and core/builders/ no longer exists; see
+# test_generation_domain_migration.py for its current-state assertions.
+NEW_CORE_SUBPACKAGES = ["models", "value_objects"]
 
 
 def _iter_new_core_files():
     for subpackage in NEW_CORE_SUBPACKAGES:
         yield from (CORE_PACKAGE_ROOT / subpackage).glob("*.py")
-
-
-def _imported_modules(file_path: Path) -> list[str]:
-    tree = ast.parse(
-        file_path.read_text(encoding="utf-8"), filename=str(file_path)
-    )
-    modules = []
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Import):
-            modules.extend(alias.name for alias in node.names)
-        elif isinstance(node, ast.ImportFrom) and node.module:
-            modules.append(node.module)
-    return modules
 
 
 class TestNewImportPaths:
@@ -103,11 +93,11 @@ class TestNewImportPaths:
         params = GenerationParameters(genre="metal")
         assert params.ride_threshold == 0.9
 
-    def test_pattern_builder_importable_from_builders(self):
-        from midi_drums.core.builders.pattern_builder import PatternBuilder
-
-        pattern = PatternBuilder("test").kick(0.0).build()
-        assert len(pattern.beats) == 1
+    # PatternBuilder stayed in midi_drums.core.builders when this phase (#9)
+    # ran. #12 (Generation Domain) has since moved it and retired
+    # midi_drums/core/builders/ entirely - see
+    # test_generation_domain_migration.py's TestOldGenerationModulesRemoved
+    # for the current-state assertions.
 
 
 class TestOldModelModulesRemoved:
@@ -128,21 +118,22 @@ class TestOldModelModulesRemoved:
 
 class TestCoreDomainHasNoOtherDomainDependency:
     """Success criterion: core domain has zero dependencies on other
-    domains. Scoped to models/value_objects/builders - core/engine.py
-    predates this phase and is out of scope (see module docstring)."""
+    domains. Scoped to models/value_objects - core/engine.py and
+    core/builders/ have since moved to the Generation Domain phase (#12)
+    and are out of scope here (see module docstring)."""
 
     def test_new_core_files_exist(self):
         files = list(_iter_new_core_files())
-        assert len(files) >= 7, (
-            "expected at least 7 files across core/models, "
-            "core/value_objects, core/builders"
+        assert len(files) >= 6, (
+            "expected at least 6 files across core/models, "
+            "core/value_objects"
         )
 
     @pytest.mark.parametrize(
         "file_path", list(_iter_new_core_files()), ids=lambda p: p.name
     )
     def test_file_has_no_cross_domain_import(self, file_path):
-        modules = _imported_modules(file_path)
+        modules = imported_modules(file_path)
         violations = [
             m
             for m in modules

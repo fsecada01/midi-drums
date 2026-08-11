@@ -1,5 +1,1 @@
-"""Core engine and composition system."""
-
-from midi_drums.core.engine import DrumGenerator
-
-__all__ = ["DrumGenerator"]
+"""Core domain - models, value objects, and shared value types."""

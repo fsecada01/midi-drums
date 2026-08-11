@@ -13,8 +13,8 @@ from midi_drums.ai.schemas import (
     PatternGenerationRequest,
     PatternGenerationResponse,
 )
-from midi_drums.core.engine import DrumGenerator
 from midi_drums.core.models.pattern import Pattern
+from midi_drums.generation.engines.drum_generator import DrumGenerator
 
 
 class PydanticPatternGenerator:

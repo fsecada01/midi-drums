@@ -9,7 +9,7 @@ This reproduces the original error from epic_complex_death_metal_song:
 import logging
 import sys
 
-from midi_drums.core.engine import DrumGenerator
+from midi_drums.generation.engines.drum_generator import DrumGenerator
 
 # Fix encoding for Windows console
 if sys.platform == "win32":

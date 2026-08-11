@@ -7,7 +7,7 @@ From project_metadata.json:
 
 import sys
 
-from midi_drums.core.engine import DrumGenerator
+from midi_drums.generation.engines.drum_generator import DrumGenerator
 
 # Fix encoding for Windows console
 if sys.platform == "win32":

@@ -7,9 +7,9 @@ import os
 import sys
 from pathlib import Path
 
-from midi_drums.core.engine import DrumGenerator
 from midi_drums.core.models.kit import DrumKit
 from midi_drums.export.reaper.exporter import ReaperExporter
+from midi_drums.generation.engines.drum_generator import DrumGenerator
 
 
 def create_parser() -> argparse.ArgumentParser:

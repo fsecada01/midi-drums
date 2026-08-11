@@ -9,11 +9,12 @@ has no dependency on the plugins/application layers (it may depend on
 midi_drums.core, the shared kernel).
 """
 
-import ast
 import importlib
 from pathlib import Path
 
 import pytest
+
+from tests.unit._domain_migration_helpers import imported_modules
 
 PACKAGE_ROOT = Path(__file__).resolve().parents[2] / "midi_drums"
 EXPORT_PACKAGE_ROOT = PACKAGE_ROOT / "export"
@@ -24,6 +25,7 @@ FORBIDDEN_DOMAIN_PREFIXES = (
     "midi_drums.plugins",
     "midi_drums.humanization",
     "midi_drums.validation",
+    "midi_drums.generation",
     "midi_drums.ai",
     "midi_drums.modifications",
     "midi_drums.parsers",
@@ -40,19 +42,6 @@ EXPORT_SUBPACKAGES = ["midi", "reaper"]
 def _iter_export_files():
     for subpackage in EXPORT_SUBPACKAGES:
         yield from (EXPORT_PACKAGE_ROOT / subpackage).glob("*.py")
-
-
-def _imported_modules(file_path: Path) -> list[str]:
-    tree = ast.parse(
-        file_path.read_text(encoding="utf-8"), filename=str(file_path)
-    )
-    modules = []
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Import):
-            modules.extend(alias.name for alias in node.names)
-        elif isinstance(node, ast.ImportFrom) and node.module:
-            modules.append(node.module)
-    return modules
 
 
 class TestNewImportPaths:
@@ -161,7 +150,7 @@ class TestExportDomainHasNoForbiddenDependency:
         "file_path", list(_iter_export_files()), ids=lambda p: p.name
     )
     def test_file_has_no_forbidden_import(self, file_path):
-        modules = _imported_modules(file_path)
+        modules = imported_modules(file_path)
         violations = [
             m
             for m in modules
