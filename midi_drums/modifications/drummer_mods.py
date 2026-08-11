@@ -19,6 +19,20 @@ from midi_drums.config import TIMING, VELOCITY
 from midi_drums.core.models.pattern import Beat, Pattern
 from midi_drums.core.value_objects.drum_instrument import DrumInstrument
 
+# Instruments that can carry the "timekeeping cymbal" role: hi-hat by
+# default, or whatever GenrePlugin._high_energy_timekeeper promoted it to
+# for a high-energy section (issue #18) - ride, crash, or china. Several
+# modifications below target "the timekeeping cymbal" conceptually, not
+# literally the hi-hat, and need to match all of these.
+_TIMEKEEPING_CYMBALS = frozenset(
+    {
+        DrumInstrument.CLOSED_HH,
+        DrumInstrument.RIDE,
+        DrumInstrument.CRASH,
+        DrumInstrument.CHINA,
+    }
+)
+
 
 class DrummerModification(ABC):
     """Base class for drummer style modifications.
@@ -272,6 +286,7 @@ class LinearCoordination(DrummerModification):
             DrumInstrument.KICK: 4,
             DrumInstrument.CRASH: 3,
             DrumInstrument.RIDE: 3,
+            DrumInstrument.CHINA: 3,
             DrumInstrument.MID_TOM: 2,
             DrumInstrument.FLOOR_TOM: 2,
             DrumInstrument.CLOSED_HH: 1,
@@ -498,8 +513,9 @@ class PocketStretching(DrummerModification):
         variation = (self.variation_ms / 1000.0) * 2.0 * intensity
 
         for beat in pattern.beats:
-            # Apply random pocket variation to hi-hats and ghost notes
-            if beat.instrument == DrumInstrument.CLOSED_HH or beat.ghost_note:
+            # Apply random pocket variation to the timekeeping cymbal and
+            # ghost notes
+            if beat.instrument in _TIMEKEEPING_CYMBALS or beat.ghost_note:
                 offset = random.uniform(-variation, variation)
                 new_position = max(
                     0.0, beat.position + offset
@@ -554,6 +570,8 @@ class MinimalCreativity(DrummerModification):
                 DrumInstrument.CLOSED_HH,
                 DrumInstrument.OPEN_HH,
                 DrumInstrument.RIDE,
+                DrumInstrument.CRASH,
+                DrumInstrument.CHINA,
             ]
 
             if is_cymbal:
@@ -600,6 +618,9 @@ class SpeedPrecision(DrummerModification):
                 DrumInstrument.KICK: VELOCITY.KICK_HEAVY,
                 DrumInstrument.SNARE: VELOCITY.SNARE_HEAVY,
                 DrumInstrument.CLOSED_HH: VELOCITY.HIHAT_NORMAL,
+                DrumInstrument.RIDE: VELOCITY.RIDE_NORMAL,
+                DrumInstrument.CRASH: VELOCITY.CRASH_NORMAL,
+                DrumInstrument.CHINA: VELOCITY.CHINA_NORMAL,
             }.get(beat.instrument, beat.velocity)
 
             # Blend current velocity with target

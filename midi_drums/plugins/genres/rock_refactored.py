@@ -8,6 +8,7 @@ full functional equivalence with the original rock.py plugin.
 from midi_drums.config import TIMING
 from midi_drums.core.models.pattern import Pattern
 from midi_drums.core.models.song import Fill
+from midi_drums.core.value_objects.drum_instrument import DrumInstrument
 from midi_drums.core.value_objects.generation_parameters import (
     GenerationParameters,
 )
@@ -19,6 +20,12 @@ from midi_drums.patterns import (
     TomFill,
 )
 from midi_drums.plugins.interfaces.genre_plugin import GenrePlugin
+
+# Styles that crash-ride through high-energy sections instead of using
+# ride cymbal, per issue #18's research: hard rock/punk drummers (e.g.
+# Phil Rudd) favor a big, washy crash over a controlled ride for this
+# role.
+_CRASH_TIMEKEEPER_STYLES = frozenset({"hard", "punk"})
 
 
 class RockGenrePlugin(GenrePlugin):
@@ -145,6 +152,17 @@ class RockGenrePlugin(GenrePlugin):
         )
 
         return fills
+
+    def _high_energy_timekeeper(
+        self, section: str, parameters: GenerationParameters
+    ) -> DrumInstrument:
+        """Crash-ride for hard/punk styles, ride cymbal otherwise.
+
+        See _CRASH_TIMEKEEPER_STYLES.
+        """
+        if parameters.style in _CRASH_TIMEKEEPER_STYLES:
+            return DrumInstrument.CRASH
+        return super()._high_energy_timekeeper(section, parameters)
 
     # -------------------------------------------------------------------------
     # Section generators
