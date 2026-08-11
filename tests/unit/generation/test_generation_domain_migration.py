@@ -18,7 +18,7 @@ import pytest
 
 from tests.unit._domain_migration_helpers import imported_modules
 
-PACKAGE_ROOT = Path(__file__).resolve().parents[2] / "midi_drums"
+PACKAGE_ROOT = Path(__file__).resolve().parents[3] / "midi_drums"
 GENERATION_PACKAGE_ROOT = PACKAGE_ROOT / "generation"
 CORE_PACKAGE_ROOT = PACKAGE_ROOT / "core"
 

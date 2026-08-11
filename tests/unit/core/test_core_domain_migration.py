@@ -13,7 +13,7 @@ import pytest
 
 from tests.unit._domain_migration_helpers import imported_modules
 
-CORE_PACKAGE_ROOT = Path(__file__).resolve().parents[2] / "midi_drums" / "core"
+CORE_PACKAGE_ROOT = Path(__file__).resolve().parents[3] / "midi_drums" / "core"
 
 # Domains the core package must not depend on. "midi_drums.core" itself and
 # "midi_drums.config" (shared kernel constants) are allowed.
