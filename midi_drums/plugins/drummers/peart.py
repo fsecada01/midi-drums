@@ -100,10 +100,16 @@ class PeartPlugin(DrummerPlugin):
         return builder.build()
 
     def _create_linear_precision_fill(self) -> Pattern:
-        """Alternating kick/snare sixteenths - no overlap, linear coordination."""
+        """Alternating kick/snare 32nds - no overlap, linear coordination.
+
+        Fills render only the portion of their pattern before beat 1.0
+        (see midi_drums/export/midi/engine.py's fill-rendering gate), so
+        all 8 hits are packed into a single beat via 32nd-note subdivision
+        rather than spanning two beats of 16ths.
+        """
         builder = PatternBuilder("peart_linear_precision")
         for i in range(8):
-            position = i * TIMING.SIXTEENTH
+            position = i * TIMING.THIRTY_SECOND
             if i % 2 == 0:
                 builder.kick(position, VELOCITY.KICK_HEAVY)
             else:
@@ -111,16 +117,21 @@ class PeartPlugin(DrummerPlugin):
         return builder.build()
 
     def _create_china_punctuation_fill(self) -> Pattern:
-        """Descending toms into a dramatic china cymbal punctuation."""
+        """Descending toms into a dramatic china cymbal punctuation.
+
+        Kept entirely within beat 1.0 (see midi_drums/export/midi/engine.py's
+        fill-rendering gate) - the climactic hit sits at 0.75, not exactly at
+        1.0, so it isn't silently dropped by the rendering boundary check.
+        """
         builder = PatternBuilder("peart_china_punctuation")
         builder.pattern.add_beat(
             0.0, DrumInstrument.MID_TOM, VELOCITY.TOM_HEAVY
         )
         builder.pattern.add_beat(
-            TIMING.EIGHTH, DrumInstrument.FLOOR_TOM, VELOCITY.TOM_ACCENT
+            TIMING.SIXTEENTH, DrumInstrument.FLOOR_TOM, VELOCITY.TOM_ACCENT
         )
-        builder.kick(TIMING.QUARTER, VELOCITY.KICK_ACCENT)
+        builder.kick(TIMING.DOTTED_EIGHTH, VELOCITY.KICK_ACCENT)
         builder.pattern.add_beat(
-            TIMING.QUARTER, DrumInstrument.CHINA, VELOCITY.CHINA_ACCENT
+            TIMING.DOTTED_EIGHTH, DrumInstrument.CHINA, VELOCITY.CHINA_ACCENT
         )
         return builder.build()

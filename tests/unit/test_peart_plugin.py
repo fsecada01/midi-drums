@@ -58,6 +58,19 @@ class TestPeartPlugin:
             assert 0.0 <= fill.trigger_probability <= 1.0
             assert fill.section_position in ("start", "middle", "end")
 
+    def test_signature_fill_beats_fit_within_render_window(self):
+        # midi_drums/export/midi/engine.py's fill-rendering step only emits
+        # beats with position < 1.0 (a fill occupies exactly one beat at the
+        # end of a bar) - a beat at or past that boundary is silently
+        # dropped rather than rendered.
+        for fill in PeartPlugin().get_signature_fills():
+            for beat in fill.pattern.beats:
+                assert beat.position < 1.0, (
+                    f"beat at position {beat.position} in "
+                    f"'{fill.pattern.name}' falls outside the fill-render "
+                    "window and would be silently dropped"
+                )
+
     @pytest.mark.parametrize("genre", ["rock", "progressive", "metal"])
     def test_compatible_with_declared_genres(self, genre):
         plugin = PeartPlugin()
