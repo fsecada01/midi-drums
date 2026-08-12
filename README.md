@@ -613,6 +613,9 @@ The system follows a layered, plugin-based architecture:
 - **Jason Roeder**: Atmospheric sludge, minimal creativity
 - **Mikkey Dee**: Speed/precision, versatile power
 - **Gene Hoglan**: Mechanical precision, blast beats
+- **Neil Peart**: Extreme timing precision, linear limb independence, polyrhythmic fills
+- **Buddy Rich**: Virtuosic single-stroke speed, dramatic dynamic contrast
+- **Stewart Copeland**: Reggae/ska-influenced off-beat hi-hat, cross-stick snare
 
 #### 🔮 Future Expansions
 - **World**: Latin, Reggae, Afrobeat
@@ -1039,15 +1042,15 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [x] Rock genre plugin with 7 styles
 - [x] Jazz genre plugin with 7 styles (swing, bebop, fusion, latin, etc.)
 - [x] Funk genre plugin with 7 styles
-- [x] 7 drummer plugins (Bonham, Porcaro, Weckl, Chambers, Roeder, Dee, Hoglan)
+- [x] 10 drummer plugins (Bonham, Porcaro, Weckl, Chambers, Roeder, Dee, Hoglan, Peart, Rich, Copeland)
 - [x] Comprehensive testing and validation system
 - [x] Reaper DAW integration with automatic markers
 - [x] CLI tool installation (`uv tool install`)
 - [x] GitHub Actions CI/CD pipeline
 
 ### Phase 2: Advanced Features 🚧
-- [ ] Electronic genre plugin (House, Techno, Drum'n'Bass)
-- [ ] More drummer plugins (Neil Peart, Buddy Rich, Stewart Copeland)
+- [x] Electronic genre plugin (House, Techno, Drum & Bass, Dubstep)
+- [x] More drummer plugins (Neil Peart, Buddy Rich, Stewart Copeland)
 - [x] Reaper marker import (generate drums from existing markers) - via
       the `create_song_sections.lua` REAPER-mode bridge (regions -> `drums.mid`)
 - [ ] Real-time audio synthesis
