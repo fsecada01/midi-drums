@@ -335,6 +335,7 @@ class AdvancedHumanizer:
                     duration=beat.duration,
                     ghost_note=beat.ghost_note,
                     accent=beat.accent,
+                    instrument_promoted=beat.instrument_promoted,
                 )
             ]
 
@@ -379,6 +380,7 @@ class AdvancedHumanizer:
                     duration=beat.duration,
                     ghost_note=beat.ghost_note,
                     accent=beat.accent,
+                    instrument_promoted=beat.instrument_promoted,
                 )
             )
 
@@ -460,6 +462,7 @@ class AdvancedHumanizer:
                     duration=beat.duration,
                     ghost_note=beat.ghost_note,
                     accent=beat.accent,
+                    instrument_promoted=beat.instrument_promoted,
                 )
             )
 
@@ -501,6 +504,7 @@ class AdvancedHumanizer:
                     duration=beat.duration,
                     ghost_note=beat.ghost_note,
                     accent=beat.accent,
+                    instrument_promoted=beat.instrument_promoted,
                 )
             )
 

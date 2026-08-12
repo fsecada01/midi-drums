@@ -13,7 +13,28 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class Beat:
-    """Individual drum hit within a pattern."""
+    """Individual drum hit within a pattern.
+
+    ``instrument_promoted`` is provenance, not a playing instruction: it is
+    True only when this beat's ``instrument`` was changed in place by
+    ``GenrePlugin._apply_ride_hihat_logic`` promoting an existing hi-hat
+    beat to a higher-energy cymbal for a high-energy section (issue #18).
+    A cymbal beat placed directly by a pattern template/genre style (e.g.
+    ``CrashAccents``) is never promoted and always carries the default
+    False, even though its ``instrument`` may be the exact same cymbal a
+    promotion would have chosen. This lets drummer modifications that only
+    care about "the timekeeping cymbal" - PocketStretching,
+    MinimalCreativity, SpeedPrecision in
+    ``midi_drums.modifications.drummer_mods`` - tell a promoted timekeeping
+    beat apart from a genuinely-placed accent of the same instrument
+    (issue #36 item 1), instead of matching on instrument type alone.
+
+    Every call site that reconstructs a Beat from an existing one (
+    ``Pattern.copy()``, ``Pattern.humanize()``, and the drummer
+    modification/humanization pipelines) must carry this field forward
+    explicitly - dataclass field-by-field reconstruction does not do this
+    automatically, and a dropped flag silently falls back to False.
+    """
 
     position: float  # Beat position (0.0-4.0 for 4/4)
     instrument: DrumInstrument
@@ -21,6 +42,7 @@ class Beat:
     duration: float = 0.25  # Note duration in beats
     ghost_note: bool = False  # Quiet accent note
     accent: bool = False  # Emphasized note
+    instrument_promoted: bool = False  # True if instrument was promoted
 
     def __post_init__(self):
         """Validate beat parameters."""
@@ -106,6 +128,7 @@ class Pattern:
                 duration=beat.duration,
                 ghost_note=beat.ghost_note,
                 accent=beat.accent,
+                instrument_promoted=beat.instrument_promoted,
             )
             humanized_beats.append(humanized_beat)
 
@@ -139,6 +162,7 @@ class Pattern:
                     duration=beat.duration,
                     ghost_note=beat.ghost_note,
                     accent=beat.accent,
+                    instrument_promoted=beat.instrument_promoted,
                 )
                 for beat in self.beats
             ],

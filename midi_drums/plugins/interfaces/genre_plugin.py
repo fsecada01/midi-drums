@@ -10,6 +10,9 @@ from midi_drums.core.value_objects.drum_instrument import DrumInstrument
 from midi_drums.core.value_objects.generation_parameters import (
     GenerationParameters,
 )
+from midi_drums.core.value_objects.timekeeping import (
+    PROMOTABLE_TIMEKEEPING_CYMBALS,
+)
 
 # Sections that always count as "high energy" for ride/hi-hat switching,
 # regardless of complexity.
@@ -196,6 +199,12 @@ class GenrePlugin(ABC):
         role). Genre-aware selection logic is deliberately deferred to
         a follow-up issue; this hook only exists so that follow-up
         doesn't have to touch _apply_ride_hihat_logic itself.
+
+        Any override's return value must be a member of
+        ``core.value_objects.timekeeping.PROMOTABLE_TIMEKEEPING_CYMBALS`` -
+        ``_apply_ride_hihat_logic`` enforces this at promotion time (issue
+        #36 item 2), so a new cymbal choice must be added to that shared
+        set, not just returned here.
         """
         return DrumInstrument.RIDE
 
@@ -215,6 +224,11 @@ class GenrePlugin(ABC):
         Only ever promotes hi-hat away from hi-hat, never the reverse - a
         pattern that already rides on its own (e.g. jazz's swing verse via
         JazzRidePattern) is left untouched rather than downgraded.
+
+        Every beat actually promoted here has its ``instrument_promoted``
+        flag set, so downstream drummer modifications can distinguish it
+        from a genuinely-placed beat of the same instrument (issue #36
+        item 1).
         """
         is_high_energy = (
             section in _RIDE_SECTIONS
@@ -229,11 +243,20 @@ class GenrePlugin(ABC):
             return pattern
 
         timekeeper = self._high_energy_timekeeper(section, parameters)
+        if timekeeper not in PROMOTABLE_TIMEKEEPING_CYMBALS:
+            raise ValueError(
+                f"{type(self).__name__}._high_energy_timekeeper returned "
+                f"{timekeeper!r}, which is not in "
+                "core.value_objects.timekeeping."
+                "PROMOTABLE_TIMEKEEPING_CYMBALS - add it there so drummer "
+                "modifications recognize beats promoted to it."
+            )
 
         switched = pattern.copy()
         for beat in switched.beats:
             if beat.instrument in _HIHAT_INSTRUMENTS:
                 beat.instrument = timekeeper
+                beat.instrument_promoted = True
 
         existing_pedal_positions = {
             beat.position

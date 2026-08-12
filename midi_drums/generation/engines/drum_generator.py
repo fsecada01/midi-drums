@@ -361,6 +361,7 @@ class DrumGenerator:
                     duration=beat.duration,
                     ghost_note=beat.ghost_note,
                     accent=beat.accent,
+                    instrument_promoted=beat.instrument_promoted,
                 )
                 extended_pattern.beats.append(new_beat)
 

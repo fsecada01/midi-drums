@@ -129,6 +129,7 @@ class WecklPlugin(DrummerPlugin):
                         instrument=beat.instrument,
                         velocity=beat.velocity,
                         duration=beat.duration,
+                        instrument_promoted=beat.instrument_promoted,
                     )
                     new_beats.append(linear_beat)
             else:

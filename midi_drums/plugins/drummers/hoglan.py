@@ -124,6 +124,7 @@ class HoglanPlugin(DrummerPlugin):
                 instrument=beat.instrument,
                 velocity=beat.velocity,
                 duration=beat.duration,
+                instrument_promoted=beat.instrument_promoted,
             )
             precise_beats.append(precise_beat)
 
