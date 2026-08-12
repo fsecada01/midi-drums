@@ -306,30 +306,32 @@ class DrumGenerator:
         return variations
 
     def _generate_fills(self, genre: str, params: GenerationParameters) -> list:
-        """Generate fill patterns for the genre, merged with the drummer's
-        signature fills (if a drummer is set).
+        """Generate fill patterns for the section.
 
-        Merge, not replace: a drummer's signature fills (see
-        DrummerPlugin.get_signature_fills()) become additional candidates
-        alongside the genre's common fills in the same
-        trigger_probability-weighted selection Section.should_add_fill()
-        already performs - they don't override or displace the genre's
-        fills. See issue #32.
+        When a drummer is set and has signature fills (see
+        DrummerPlugin.get_signature_fills()), the request is a
+        drummer-inspired performance: fills are drawn exclusively from
+        that drummer's candidates so the performance actually sounds
+        like them, rather than being diluted by the genre's stock fills.
+
+        Otherwise - no drummer set, or the drummer has no signature
+        fills of its own (true for every drummer plugin except Peart at
+        the time of writing) - fills fall back to the genre's common
+        fill pool. See issue #32.
         """
-        fills = []
-
-        genre_plugin = self.plugin_manager.registry.get_genre_plugin(genre)
-        if genre_plugin:
-            fills.extend(genre_plugin.get_common_fills())
-
         if params.drummer:
             drummer_plugin = self.plugin_manager.registry.get_drummer_plugin(
                 params.drummer
             )
             if drummer_plugin:
-                fills.extend(drummer_plugin.get_signature_fills())
+                signature_fills = drummer_plugin.get_signature_fills()
+                if signature_fills:
+                    return signature_fills
 
-        return fills
+        genre_plugin = self.plugin_manager.registry.get_genre_plugin(genre)
+        if genre_plugin:
+            return genre_plugin.get_common_fills()
+        return []
 
     def _extend_pattern_to_bars(self, pattern: Pattern, bars: int) -> Pattern:
         """Extend a pattern to span multiple bars."""

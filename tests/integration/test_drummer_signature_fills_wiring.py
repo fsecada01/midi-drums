@@ -7,12 +7,15 @@ called it: ``DrumGenerator._generate_fills()`` only consulted
 code from the perspective of actual song generation.
 
 These tests prove:
-  1. A drummer's signature fills are merged into ``section.fills`` as
-     *additional* candidates alongside the genre's common fills (merge,
-     not replace - the decision made in issue #32's "Scope for a fix").
-  2. Drummers with no signature fills (the pre-Peart default) leave
-     ``section.fills`` unaffected.
-  3. A drummer's signature fill can actually be selected and rendered into
+  1. When a drummer with signature fills is requested, that request is
+     treated as a drummer-inspired performance: fills are drawn
+     exclusively from the drummer's candidates, not diluted by the
+     genre's stock fills.
+  2. Drummers with no signature fills (the pre-Peart default) fall back
+     to the genre's common fill pool unchanged.
+  3. With no drummer set at all, fills come from the genre pool only
+     (unchanged baseline behavior).
+  4. A drummer's signature fill can actually be selected and rendered into
      the generated MIDI output for a full song generation call - not just
      that ``get_signature_fills()`` returns data in isolation.
 """
@@ -30,9 +33,10 @@ PEART_FILL_PATTERN_NAMES = {
 
 
 class TestDrummerSignatureFillsWiredIntoGeneration:
-    def test_peart_signature_fills_merged_into_section_fill_candidates(self):
-        """Drummer signature fills must appear alongside genre common
-        fills as additional candidates - not replace them."""
+    def test_drummer_with_signature_fills_uses_only_drummer_fills(self):
+        """A drummer-inspired performance draws fills exclusively from
+        that drummer's candidates - genre common fills are not diluting
+        the performance's identity."""
         generator = DrumGenerator()
         song = generator.create_song(
             genre="rock",
@@ -44,17 +48,9 @@ class TestDrummerSignatureFillsWiredIntoGeneration:
         section = song.sections[0]
         fill_pattern_names = {fill.pattern.name for fill in section.fills}
 
-        # Peart's signature fills are present as candidates...
-        assert fill_pattern_names & PEART_FILL_PATTERN_NAMES, (
-            "expected at least one Peart signature fill in "
-            f"section.fills, got {fill_pattern_names}"
-        )
-        # ...merged alongside (not instead of) rock's genre common fills.
-        assert any(
-            name not in PEART_FILL_PATTERN_NAMES for name in fill_pattern_names
-        ), (
-            "expected rock's genre common fills to still be present "
-            f"alongside the drummer's, got {fill_pattern_names}"
+        assert fill_pattern_names == PEART_FILL_PATTERN_NAMES, (
+            "expected section.fills to contain exactly Peart's signature "
+            f"fills, got {fill_pattern_names}"
         )
 
     def test_no_drummer_only_uses_genre_common_fills(self):
@@ -71,9 +67,10 @@ class TestDrummerSignatureFillsWiredIntoGeneration:
         assert not (fill_pattern_names & PEART_FILL_PATTERN_NAMES)
         assert len(fill_pattern_names) == 3
 
-    def test_drummer_with_no_signature_fills_leaves_fills_unaffected(self):
+    def test_drummer_with_no_signature_fills_falls_back_to_genre_pool(self):
         """A drummer whose get_signature_fills() returns [] (e.g. Bonham,
-        the currently-registered default) must not change section.fills."""
+        the currently-registered default) falls back to the genre's
+        common fills rather than leaving section.fills empty."""
         generator = DrumGenerator()
         song = generator.create_song(
             genre="rock",
@@ -97,8 +94,8 @@ class TestDrummerSignatureFillsWiredIntoGeneration:
         # fill_frequency) and once for the trigger_probability-weighted
         # pick among section.fills. Returning a value just below 1.0 for
         # both, with fill_frequency=1.0, deterministically selects the
-        # *last* fill in the merged candidate list -
-        # peart_china_punctuation, appended after rock's genre fills.
+        # *last* fill in Peart's exclusive candidate list -
+        # peart_china_punctuation.
         with patch("random.random", return_value=0.999999):
             song = generator.create_song(
                 genre="rock",
