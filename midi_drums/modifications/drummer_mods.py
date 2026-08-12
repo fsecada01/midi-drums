@@ -22,26 +22,6 @@ from midi_drums.core.value_objects.timekeeping import (
     PROMOTABLE_TIMEKEEPING_CYMBALS,
 )
 
-# Instruments that can carry the "timekeeping cymbal" role: hi-hat by
-# default, or whatever GenrePlugin._high_energy_timekeeper promoted it to
-# for a high-energy section (issue #18) - ride, crash, or china, imported
-# from the shared registry in core.value_objects.timekeeping so this list
-# can't drift from what GenrePlugin._apply_ride_hihat_logic actually
-# promotes to (issue #36 item 2). Several modifications below target "the
-# timekeeping cymbal" conceptually, not literally the hi-hat, and need to
-# match all of these - but only when the beat actually got there via
-# promotion (see ``_is_timekeeping_beat`` below); a genuinely-placed accent
-# of the same instrument (e.g. a CrashAccents hit) is not the timekeeper
-# (issue #36 item 1).
-_TIMEKEEPING_CYMBALS = (
-    frozenset({DrumInstrument.CLOSED_HH}) | PROMOTABLE_TIMEKEEPING_CYMBALS
-)
-
-# Cymbals MinimalCreativity is willing to thin for a sparse feel: every
-# timekeeping cymbal plus OPEN_HH, which isn't a timekeeper-promotion
-# target but is still ambient cymbal texture, not an essential hit.
-_THINNABLE_CYMBALS = _TIMEKEEPING_CYMBALS | {DrumInstrument.OPEN_HH}
-
 
 def _is_timekeeping_beat(beat: Beat) -> bool:
     """True if this beat is currently playing the timekeeping role.
@@ -64,10 +44,14 @@ def _is_timekeeping_beat(beat: Beat) -> bool:
 def _is_thinnable_cymbal(beat: Beat) -> bool:
     """True if MinimalCreativity may probabilistically thin this beat.
 
-    OPEN_HH is always thinnable (ambient texture, not a promotion target).
-    Otherwise defers to ``_is_timekeeping_beat`` so a genuinely-placed
-    crash/china accent is left alone rather than treated as disposable
-    ambient cymbal fill (issue #36 item 1).
+    OPEN_HH is always thinnable. Like CLOSED_HH it can be a promotion
+    source (see ``genre_plugin._HIHAT_INSTRUMENTS``), but promotion changes
+    a beat's ``instrument`` to ride/crash/china, so a beat that reaches
+    this check still tagged OPEN_HH was never promoted - it's always
+    genuine ambient hi-hat texture. Otherwise defers to
+    ``_is_timekeeping_beat`` so a genuinely-placed crash/china accent is
+    left alone rather than treated as disposable ambient cymbal fill
+    (issue #36 item 1).
     """
     if beat.instrument == DrumInstrument.OPEN_HH:
         return True
