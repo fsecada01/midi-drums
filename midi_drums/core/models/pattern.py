@@ -42,7 +42,7 @@ class Beat:
     duration: float = 0.25  # Note duration in beats
     ghost_note: bool = False  # Quiet accent note
     accent: bool = False  # Emphasized note
-    instrument_promoted: bool = False  # True iff instrument was promoted
+    instrument_promoted: bool = False  # True if instrument was promoted
 
     def __post_init__(self):
         """Validate beat parameters."""
