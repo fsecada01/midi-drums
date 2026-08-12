@@ -18,25 +18,61 @@ from dataclasses import dataclass
 from midi_drums.config import TIMING, VELOCITY
 from midi_drums.core.models.pattern import Beat, Pattern
 from midi_drums.core.value_objects.drum_instrument import DrumInstrument
+from midi_drums.core.value_objects.timekeeping import (
+    PROMOTABLE_TIMEKEEPING_CYMBALS,
+)
 
 # Instruments that can carry the "timekeeping cymbal" role: hi-hat by
 # default, or whatever GenrePlugin._high_energy_timekeeper promoted it to
-# for a high-energy section (issue #18) - ride, crash, or china. Several
-# modifications below target "the timekeeping cymbal" conceptually, not
-# literally the hi-hat, and need to match all of these.
-_TIMEKEEPING_CYMBALS = frozenset(
-    {
-        DrumInstrument.CLOSED_HH,
-        DrumInstrument.RIDE,
-        DrumInstrument.CRASH,
-        DrumInstrument.CHINA,
-    }
+# for a high-energy section (issue #18) - ride, crash, or china, imported
+# from the shared registry in core.value_objects.timekeeping so this list
+# can't drift from what GenrePlugin._apply_ride_hihat_logic actually
+# promotes to (issue #36 item 2). Several modifications below target "the
+# timekeeping cymbal" conceptually, not literally the hi-hat, and need to
+# match all of these - but only when the beat actually got there via
+# promotion (see ``_is_timekeeping_beat`` below); a genuinely-placed accent
+# of the same instrument (e.g. a CrashAccents hit) is not the timekeeper
+# (issue #36 item 1).
+_TIMEKEEPING_CYMBALS = (
+    frozenset({DrumInstrument.CLOSED_HH}) | PROMOTABLE_TIMEKEEPING_CYMBALS
 )
 
 # Cymbals MinimalCreativity is willing to thin for a sparse feel: every
 # timekeeping cymbal plus OPEN_HH, which isn't a timekeeper-promotion
 # target but is still ambient cymbal texture, not an essential hit.
 _THINNABLE_CYMBALS = _TIMEKEEPING_CYMBALS | {DrumInstrument.OPEN_HH}
+
+
+def _is_timekeeping_beat(beat: Beat) -> bool:
+    """True if this beat is currently playing the timekeeping role.
+
+    The hi-hat is always the default timekeeper. Ride/crash/china only
+    count when this specific beat got there via
+    ``GenrePlugin._apply_ride_hihat_logic`` promoting an existing hi-hat
+    beat (``beat.instrument_promoted``) - a genuinely-placed accent of the
+    same instrument (e.g. a ``CrashAccents`` hit) is not the timekeeper and
+    must not be matched (issue #36 item 1).
+    """
+    if beat.instrument == DrumInstrument.CLOSED_HH:
+        return True
+    return (
+        beat.instrument in PROMOTABLE_TIMEKEEPING_CYMBALS
+        and beat.instrument_promoted
+    )
+
+
+def _is_thinnable_cymbal(beat: Beat) -> bool:
+    """True if MinimalCreativity may probabilistically thin this beat.
+
+    OPEN_HH is always thinnable (ambient texture, not a promotion target).
+    Otherwise defers to ``_is_timekeeping_beat`` so a genuinely-placed
+    crash/china accent is left alone rather than treated as disposable
+    ambient cymbal fill (issue #36 item 1).
+    """
+    if beat.instrument == DrumInstrument.OPEN_HH:
+        return True
+    return _is_timekeeping_beat(beat)
+
 
 # SpeedPrecision's per-instrument velocity-consistency target. Each
 # timekeeping cymbal normalizes toward its own genre-correct velocity
@@ -116,6 +152,7 @@ class BehindBeatTiming(DrummerModification):
                     duration=beat.duration,
                     ghost_note=beat.ghost_note,
                     accent=beat.accent,
+                    instrument_promoted=beat.instrument_promoted,
                 )
                 modified_beats.append(new_beat)
             else:
@@ -379,6 +416,7 @@ class HeavyAccents(DrummerModification):
                     duration=beat.duration,
                     ghost_note=beat.ghost_note,
                     accent=beat.accent,
+                    instrument_promoted=beat.instrument_promoted,
                 )
             )
 
@@ -433,6 +471,7 @@ class ShuffleFeelApplication(DrummerModification):
                         duration=beat.duration,
                         ghost_note=beat.ghost_note,
                         accent=beat.accent,
+                        instrument_promoted=beat.instrument_promoted,
                     )
                 )
             else:
@@ -514,12 +553,11 @@ class PocketStretching(DrummerModification):
 
     Subtle timing variations that create groove tension and release.
 
-    Matches beats by ``beat.instrument in _TIMEKEEPING_CYMBALS``, not by
-    provenance - it cannot distinguish a genre-promoted timekeeping beat
-    from a genuinely-placed accent of the same instrument (e.g. a
-    CrashAccents hit). Beat carries no provenance field; this is accepted,
-    permanent behavior, not a bug - see the note on
-    ``midi_drums.core.models.pattern.Beat`` and issue #36 item 1.
+    Matches beats via ``_is_timekeeping_beat()``: the hi-hat, or a
+    ride/crash/china that was actually promoted from hi-hat by
+    ``GenrePlugin._apply_ride_hihat_logic`` (``beat.instrument_promoted``).
+    A genuinely-placed accent of the same instrument (e.g. a CrashAccents
+    hit) is not the timekeeper and is left untouched (issue #36 item 1).
 
     Example:
         PocketStretching(variation_ms=5.0).apply(pattern, 0.7)
@@ -540,7 +578,7 @@ class PocketStretching(DrummerModification):
         for beat in pattern.beats:
             # Apply random pocket variation to the timekeeping cymbal and
             # ghost notes
-            if beat.instrument in _TIMEKEEPING_CYMBALS or beat.ghost_note:
+            if _is_timekeeping_beat(beat) or beat.ghost_note:
                 offset = random.uniform(-variation, variation)
                 new_position = max(
                     0.0, beat.position + offset
@@ -554,6 +592,7 @@ class PocketStretching(DrummerModification):
                         duration=beat.duration,
                         ghost_note=beat.ghost_note,
                         accent=beat.accent,
+                        instrument_promoted=beat.instrument_promoted,
                     )
                 )
             else:
@@ -575,12 +614,11 @@ class MinimalCreativity(DrummerModification):
 
     Removes non-essential hits for atmospheric, minimal feel.
 
-    Matches beats by ``beat.instrument in _THINNABLE_CYMBALS``
-    (``_TIMEKEEPING_CYMBALS`` plus OPEN_HH), not by provenance - it cannot
-    distinguish a genre-promoted timekeeping beat from a genuinely-placed
-    accent of the same instrument. Beat carries no provenance field; this
-    is accepted, permanent behavior, not a bug - see the note on
-    ``midi_drums.core.models.pattern.Beat`` and issue #36 item 1.
+    Matches beats via ``_is_thinnable_cymbal()``: OPEN_HH always, plus the
+    hi-hat or a ride/crash/china actually promoted from hi-hat
+    (``beat.instrument_promoted``). A genuinely-placed accent of the same
+    instrument (e.g. a CrashAccents hit) is a deliberate hit, not ambient
+    cymbal texture, and is left untouched (issue #36 item 1).
 
     Example:
         MinimalCreativity(sparseness=0.7).apply(pattern, 0.8)
@@ -598,7 +636,7 @@ class MinimalCreativity(DrummerModification):
 
         # Keep kick and snare, thin out cymbals
         for beat in pattern.beats:
-            is_cymbal = beat.instrument in _THINNABLE_CYMBALS
+            is_cymbal = _is_thinnable_cymbal(beat)
 
             if is_cymbal:
                 # Probabilistically remove cymbal hits
@@ -624,14 +662,13 @@ class SpeedPrecision(DrummerModification):
 
     Ensures consistent velocities and tight timing for precision feel.
 
-    Looks up each beat's velocity target by ``beat.instrument`` in
-    ``_SPEED_PRECISION_TARGETS`` (which covers every
-    ``_TIMEKEEPING_CYMBALS`` member plus kick/snare), not by provenance -
-    it cannot distinguish a genre-promoted timekeeping beat from a
-    genuinely-placed accent of the same instrument. Beat carries no
-    provenance field; this is accepted, permanent behavior, not a bug -
-    see the note on ``midi_drums.core.models.pattern.Beat`` and issue #36
-    item 1.
+    Kick/snare/hi-hat beats always normalize toward
+    ``_SPEED_PRECISION_TARGETS``. A ride/crash/china beat only normalizes
+    when it was actually promoted from hi-hat
+    (``beat.instrument_promoted``) - a genuinely-placed accent of the same
+    instrument (e.g. a CrashAccents hit) keeps its own velocity rather than
+    being flattened toward the timekeeping cymbal's target (issue #36
+    item 1).
 
     Example:
         SpeedPrecision(consistency=0.9).apply(pattern, 1.0)
@@ -648,10 +685,19 @@ class SpeedPrecision(DrummerModification):
         modified_beats = []
 
         for beat in pattern.beats:
-            # Reduce velocity variation
-            target_velocity = _SPEED_PRECISION_TARGETS.get(
-                beat.instrument, beat.velocity
-            )
+            # Reduce velocity variation. Ride/crash/china only normalize
+            # when actually promoted from hi-hat - a genuinely-placed
+            # accent of the same instrument keeps its own velocity
+            # (issue #36 item 1).
+            if (
+                beat.instrument in PROMOTABLE_TIMEKEEPING_CYMBALS
+                and not beat.instrument_promoted
+            ):
+                target_velocity = beat.velocity
+            else:
+                target_velocity = _SPEED_PRECISION_TARGETS.get(
+                    beat.instrument, beat.velocity
+                )
 
             # Blend current velocity with target
             blend = self.consistency * intensity
@@ -667,6 +713,7 @@ class SpeedPrecision(DrummerModification):
                     duration=beat.duration,
                     ghost_note=beat.ghost_note,
                     accent=beat.accent,
+                    instrument_promoted=beat.instrument_promoted,
                 )
             )
 
@@ -726,6 +773,7 @@ class TwistedAccents(DrummerModification):
                     duration=beat.duration,
                     ghost_note=beat.ghost_note,
                     accent=new_accent,
+                    instrument_promoted=beat.instrument_promoted,
                 )
             )
 
@@ -787,6 +835,7 @@ class MechanicalPrecision(DrummerModification):
                     duration=beat.duration,
                     ghost_note=beat.ghost_note,
                     accent=beat.accent,
+                    instrument_promoted=beat.instrument_promoted,
                 )
             )
 

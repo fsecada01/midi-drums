@@ -1,26 +1,28 @@
 """Regression guard for issue #36 item 2.
 
-`drummer_mods._TIMEKEEPING_CYMBALS` is a fixed frozenset of instruments the
-modifications layer (PocketStretching, MinimalCreativity, SpeedPrecision)
-treats as "the timekeeping cymbal". Genre plugins independently choose
-which instrument `GenrePlugin._high_energy_timekeeper()` promotes hi-hat to
-for high-energy sections (issue #18), and nothing links the two lists: a
-future genre plugin promoting to a new instrument (e.g. a splash or bell)
-would need someone to remember to also add it to `_TIMEKEEPING_CYMBALS` by
-hand, with no compile-time or test-time signal if they forget.
+`GenrePlugin._high_energy_timekeeper()` overrides choose which instrument
+hi-hat timekeeping gets promoted to for high-energy sections (issue #18).
+`midi_drums.modifications.drummer_mods` (PocketStretching,
+MinimalCreativity, SpeedPrecision) needs to recognize any such promoted
+instrument as "the timekeeping cymbal". Both sides now read from a single
+shared registry - `core.value_objects.timekeeping
+.PROMOTABLE_TIMEKEEPING_CYMBALS` - instead of drummer_mods maintaining its
+own independent copy, so a genre plugin promoting to a new cymbal can't
+silently drift out of sync with what the modifications layer recognizes.
 
-This module is that signal. It discovers genre plugin classes by walking
+`GenrePlugin._apply_ride_hihat_logic` also enforces this at runtime: it
+raises ValueError if a `_high_energy_timekeeper()` override returns
+anything outside the shared registry. This test is a second, cheaper
+signal that fires at collection time rather than only when a specific
+style/section combination actually triggers promotion, and it doubles as
+a regression guard on the registry import wiring itself (both consumers
+importing the *same* frozenset, not just equal-by-value copies).
+
+This module discovers genre plugin classes by walking
 `midi_drums/plugins/genres/` directly (the same approach
 `PluginDiscovery._load_plugins_from_directory` uses) rather than
 hand-listing plugin classes or styles, so it can't silently drift from
-what's actually in the package - a new genre plugin, or a new style branch
-inside an existing `_high_energy_timekeeper` override, is picked up
-automatically without editing this file.
-
-Per issue #36's own scope, this is the "no" (document, don't restructure)
-resolution's minimum bar: a cheap guard against silent drift, without
-introducing a shared registry/constant that would restructure the
-plugin/modifications dependency direction.
+what's actually in the package.
 """
 
 import importlib
@@ -32,7 +34,12 @@ import midi_drums.plugins.genres as genres_package
 from midi_drums.core.value_objects.generation_parameters import (
     GenerationParameters,
 )
-from midi_drums.modifications.drummer_mods import _TIMEKEEPING_CYMBALS
+from midi_drums.core.value_objects.timekeeping import (
+    PROMOTABLE_TIMEKEEPING_CYMBALS,
+)
+from midi_drums.modifications.drummer_mods import (
+    PROMOTABLE_TIMEKEEPING_CYMBALS as DRUMMER_MODS_REGISTRY,
+)
 from midi_drums.plugins.interfaces.genre_plugin import GenrePlugin
 
 # One section from GenrePlugin._RIDE_SECTIONS and one plain non-high-energy
@@ -84,15 +91,24 @@ def test_discovery_finds_the_known_genre_plugins():
 
 
 @pytest.mark.unit
-def test_high_energy_timekeeper_overrides_stay_within_timekeeping_cymbals():
+def test_drummer_mods_imports_the_same_registry_object():
+    """drummer_mods must import the shared registry, not maintain its own
+    independent copy - otherwise this file's other test would pass while
+    the two still silently drift (issue #36 item 2's actual failure mode).
+    """
+    assert DRUMMER_MODS_REGISTRY is PROMOTABLE_TIMEKEEPING_CYMBALS
+
+
+@pytest.mark.unit
+def test_high_energy_timekeeper_overrides_stay_within_shared_registry():
     """Every instrument any `_high_energy_timekeeper()` override can
     return - across every genre plugin and every style it supports - must
-    be a member of `drummer_mods._TIMEKEEPING_CYMBALS`.
+    be a member of the shared `PROMOTABLE_TIMEKEEPING_CYMBALS` registry.
 
-    If it isn't, PocketStretching/MinimalCreativity/SpeedPrecision
-    silently stop recognizing that promoted cymbal as "the timekeeping
-    cymbal" for high-energy sections, because those modifications match
-    on instrument membership in that frozenset (issue #36 item 2).
+    `_apply_ride_hihat_logic` enforces this with a runtime ValueError too;
+    this test catches the same drift earlier, independent of whether any
+    particular style/section combination is exercised elsewhere in the
+    suite.
     """
     offenders = []
     for plugin_cls in _discover_genre_plugin_classes():
@@ -103,12 +119,12 @@ def test_high_energy_timekeeper_overrides_stay_within_timekeeping_cymbals():
                     genre=plugin.genre_name, style=style, complexity=0.5
                 )
                 instrument = plugin._high_energy_timekeeper(section, params)
-                if instrument not in _TIMEKEEPING_CYMBALS:
+                if instrument not in PROMOTABLE_TIMEKEEPING_CYMBALS:
                     offenders.append(
                         (plugin_cls.__name__, style, section, instrument)
                     )
 
     assert not offenders, (
         "_high_energy_timekeeper override(s) return an instrument not in "
-        f"drummer_mods._TIMEKEEPING_CYMBALS: {offenders}"
+        f"PROMOTABLE_TIMEKEEPING_CYMBALS: {offenders}"
     )

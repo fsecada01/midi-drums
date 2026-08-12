@@ -318,6 +318,12 @@ def test_pocket_stretching_applies_to_promoted_timekeeping_cymbals():
     instrument is carrying the timekeeping role, not literally the
     hi-hat - after genre-aware timekeeper promotion (issue #18), that
     can be RIDE, CRASH, or CHINA instead of CLOSED_HH.
+
+    Beats are built with instrument_promoted=True to simulate what
+    GenrePlugin._apply_ride_hihat_logic actually leaves behind - since
+    issue #36 item 1, matching is by provenance, not instrument type
+    alone, so an un-promoted beat of the same instrument would not
+    qualify.
     """
     print("Testing PocketStretching on promoted timekeeping cymbals...")
 
@@ -329,7 +335,10 @@ def test_pocket_stretching_applies_to_promoted_timekeeping_cymbals():
         builder = PatternBuilder(f"promoted_{instrument.name}_test")
         for i in range(8):
             builder.pattern.add_beat(
-                i * TIMING.EIGHTH, instrument, VELOCITY.HIHAT_NORMAL
+                i * TIMING.EIGHTH,
+                instrument,
+                VELOCITY.HIHAT_NORMAL,
+                instrument_promoted=True,
             )
         pattern = builder.build()
         original_positions = sorted(b.position for b in pattern.beats)
@@ -384,6 +393,11 @@ def test_minimal_creativity_thins_crash_and_china_promoted_cymbals():
     CHINA as cymbals to thin (issue #18) - it already treated RIDE this
     way since RIDE was already a valid pre-#18 timekeeper-promotion
     target; CRASH/CHINA are now equally valid promotion targets.
+
+    Beats are built with instrument_promoted=True to simulate what
+    GenrePlugin._apply_ride_hihat_logic actually leaves behind - since
+    issue #36 item 1, matching is by provenance, not instrument type
+    alone.
     """
     print("Testing MinimalCreativity on promoted CRASH/CHINA cymbals...")
 
@@ -391,7 +405,10 @@ def test_minimal_creativity_thins_crash_and_china_promoted_cymbals():
         builder = PatternBuilder(f"promoted_{instrument.name}_test")
         for i in range(8):
             builder.pattern.add_beat(
-                i * TIMING.EIGHTH, instrument, VELOCITY.CRASH_NORMAL
+                i * TIMING.EIGHTH,
+                instrument,
+                VELOCITY.CRASH_NORMAL,
+                instrument_promoted=True,
             )
         pattern = builder.build()
 
@@ -414,6 +431,11 @@ def test_speed_precision_normalizes_promoted_cymbals_to_their_own_velocity():
     normalizing a promoted CRASH/CHINA/RIDE beat toward HIHAT_NORMAL (or
     not normalizing it at all, the pre-fix behavior) would be musically
     wrong; each cymbal has its own velocity constant.
+
+    Beats are built with instrument_promoted=True to simulate what
+    GenrePlugin._apply_ride_hihat_logic actually leaves behind - since
+    issue #36 item 1, an un-promoted beat of the same instrument keeps
+    its own velocity instead of normalizing.
     """
     print("Testing SpeedPrecision on promoted timekeeping cymbals...")
 
@@ -425,7 +447,7 @@ def test_speed_precision_normalizes_promoted_cymbals_to_their_own_velocity():
 
     for instrument, expected_velocity in expectations.items():
         builder = PatternBuilder(f"promoted_{instrument.name}_test")
-        builder.pattern.add_beat(0.0, instrument, 40)
+        builder.pattern.add_beat(0.0, instrument, 40, instrument_promoted=True)
         pattern = builder.build()
 
         # consistency=1.0 * intensity=1.0 -> blend=1.0 -> velocity becomes
