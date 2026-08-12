@@ -31,7 +31,8 @@ MIDI Drums Generator is a powerful Python system that creates professional-quali
 - **Rock**: Classic, Blues, Alternative, Progressive, Punk, Hard, Pop
 - **Jazz**: Swing, Bebop, Fusion, Latin, Ballad, Hard Bop, Contemporary
 - **Funk**: Classic, P-Funk, Shuffle, New Orleans, Fusion, Minimal, Heavy
-- **Expandable**: Plugin architecture for Electronic and more
+- **Electronic**: House, Techno, Drum & Bass, Dubstep
+- **Expandable**: Plugin architecture for more genres
 
 🥁 **Drummer Imitation**
 - **7 Famous Drummers**: Bonham, Porcaro, Weckl, Chambers, Roeder, Dee, Hoglan
@@ -598,6 +599,12 @@ The system follows a layered, plugin-based architecture:
 - **Minimal**: Stripped-down pocket grooves
 - **Heavy**: Heavy funk with rock influence
 
+#### 🎧 Electronic Genre
+- **House**: Four-on-the-floor kick, off-beat hi-hat, steady groove
+- **Techno**: Driving, minimal, mechanical precision
+- **Drum & Bass**: Fast breakbeats, syncopated snare placement
+- **Dubstep**: Half-time feel, sparse/heavy snare
+
 #### 🥁 Available Drummers
 - **John Bonham**: Triplet vocabulary, behind-the-beat timing
 - **Jeff Porcaro**: Half-time shuffle, studio precision
@@ -608,9 +615,7 @@ The system follows a layered, plugin-based architecture:
 - **Gene Hoglan**: Mechanical precision, blast beats
 
 #### 🔮 Future Expansions
-- **Electronic**: House, Techno, Drum'n'Bass, Dubstep
 - **World**: Latin, Reggae, Afrobeat
-- **More Drummers**: Neil Peart, Buddy Rich, Stewart Copeland
 
 ## 🎵 Examples
 
