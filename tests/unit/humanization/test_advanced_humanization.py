@@ -296,11 +296,24 @@ class TestMicroTiming:
         # guard), which is what caused the flake in CI (issue #27). Seed
         # value 42 was empirically verified (see script used in PR #27 fix)
         # to deterministically produce distinct positions for this pattern.
-        random.seed(42)
-        np.random.seed(42)
+        #
+        # Both global RNGs are seeded here rather than via an injected
+        # Random instance (the humanizer doesn't support one), so the prior
+        # state is saved and restored in `finally` - this repo's pytest.ini
+        # defaults to `-n auto` (pytest-xdist), and leaking a fixed seed
+        # into whatever runs next on the same worker would silently make
+        # other randomness-dependent tests non-random too.
+        random_state = random.getstate()
+        np_random_state = np.random.get_state()
+        try:
+            random.seed(42)
+            np.random.seed(42)
 
-        humanizer = AdvancedHumanizer(humanization_amount=0.5)
-        humanized = humanizer.humanize_pattern(simultaneous_pattern)
+            humanizer = AdvancedHumanizer(humanization_amount=0.5)
+            humanized = humanizer.humanize_pattern(simultaneous_pattern)
+        finally:
+            random.setstate(random_state)
+            np.random.set_state(np_random_state)
 
         # Get beats that were originally at position 0.0
         beats_at_zero = [
