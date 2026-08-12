@@ -242,9 +242,10 @@ ai_groq = DrumGeneratorAI(backend_config=groq_config)
 | **Anthropic** | Claude Sonnet 5 | High-quality, nuanced generation |
 | **OpenAI** | GPT-4o, GPT-4 Turbo | Versatile, well-tested |
 | **Groq** | Llama 3.3 70B | Fast inference, cost-effective |
-| **Cohere** | Command R+ | Enterprise use cases |
 
-**Environment Variables:** `AI_PROVIDER`, `AI_MODEL`, `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `GROQ_API_KEY` / `COHERE_API_KEY`, `AI_TEMPERATURE` (0.0-2.0, default 0.7), `AI_MAX_TOKENS` (default 4096)
+> Cohere is defined in the provider config (`AIProvider.COHERE`) but not yet wired into the Pydantic AI / Langchain backends — `AIBackendFactory` raises for it today. Support is tracked as a future item.
+
+**Environment Variables:** `AI_PROVIDER`, `AI_MODEL`, `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `GROQ_API_KEY`, `AI_TEMPERATURE` (0.0-2.0, default 0.7), `AI_MAX_TOKENS` (default 4096)
 
 See [claudedocs/AI_BACKEND_MIGRATION.md](claudedocs/AI_BACKEND_MIGRATION.md) for complete documentation.
 
@@ -317,7 +318,31 @@ song = api.create_song_from_sections_json(
 api.save_as_midi(song, "drums.mid")
 ```
 
-AI agent mode requires `uv sync --group ai` and an API key in `.env`. Full sidecar format, CLI flags (`--sidecar`, `--write-sidecar`), and API reference: see [docs/REAPER_INTEGRATION.md](docs/REAPER_INTEGRATION.md).
+AI agent mode requires `uv sync --group ai` and an API key in `.env`.
+
+**Sidecar JSON format** (`midi_drums_sections.json`), written by Lua (`"source": "reaper"`) or by `export_sections_json` (`"source": "python"`):
+```json
+{
+  "source": "reaper",
+  "tempo": 70,
+  "time_signature": [4, 4],
+  "sections": [
+    {"name": "Intro", "bars": 8},
+    {"name": "Verse", "bars": 16}
+  ]
+}
+```
+
+**CLI flags:**
+```bash
+# generate: use sidecar for section structure (REAPER-driven workflow)
+midi-drums generate --genre metal --style doom --sidecar midi_drums_sections.json --output drums.mid
+
+# prompt: write sidecar after AI generation (AI-driven workflow)
+midi-drums prompt "heavy doom metal, slow and crushing" --song --write-sidecar midi_drums_sections.json
+```
+
+**API reference:** `DrumGeneratorAPI.export_sections_json(song, path)`, `.create_song_from_sections_json(path, genre, style, **kw)`, `.save_as_midi_with_sidecar(song, filename)`.
 
 ## 📖 Documentation
 
@@ -430,9 +455,8 @@ specs = [
 ]
 files = api.batch_generate(specs, "output/")
 
-# Individual patterns with drummer styles
-verse = api.generate_pattern("rock", "verse", "classic")
-bonham_verse = api.apply_drummer_style(verse, "bonham")
+# Individual patterns, applying a drummer style during generation
+bonham_verse = api.generate_pattern("rock", "verse", "classic", drummer="bonham")
 ```
 
 ### Direct Module Usage
@@ -485,6 +509,7 @@ The plugin architecture makes it easy to extend the system with new genres and d
 ```python
 from midi_drums.plugins.interfaces.genre_plugin import GenrePlugin
 from midi_drums.patterns import TemplateComposer, DoubleBassPedal, BlastBeat
+from midi_drums.config import TIMING
 
 class MetalGenrePlugin(GenrePlugin):
     @property
@@ -500,7 +525,7 @@ class MetalGenrePlugin(GenrePlugin):
             # Declarative composition - just a few lines
             return (
                 TemplateComposer(f"death_metal_{section}")
-                .add(DoubleBassPedal(pattern="continuous", speed=16))
+                .add(DoubleBassPedal(subdivision=TIMING.SIXTEENTH, pattern_type="continuous"))
                 .add(BlastBeat(style="traditional", intensity=0.9))
                 .build(bars=2, complexity=parameters.complexity)
             )
@@ -593,8 +618,8 @@ midi_drums/
 │   ├── registry/               # PluginRegistry, PluginManager, auto-discovery
 │   ├── genres/                 # metal, rock, jazz, funk, electronic — 7/7/7/7/4 styles
 │   └── drummers/                # bonham, porcaro, weckl, chambers, roeder, dee,
-│       ├── composite/            # hoglan, peart, rich, copeland
-│       └── ...                   # Layered drummer styles (e.g. doom_blues)
+│       ├── hoglan, peart, rich, copeland  # (flat sibling files)
+│       └── composite/            # Layered drummer styles (e.g. doom_blues)
 ├── api/
 │   ├── python_api.py       # High-level Python API
 │   └── cli.py               # Command-line interface

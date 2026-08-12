@@ -803,7 +803,7 @@ Added to `midi_drums/api/python_api.py`:
 At the top of the Lua script — the only values users need to edit:
 
 ```lua
-local PYTHON_EXE     = "C:/dev/python/projects/midi_drums/.venv/Scripts/pythonw.exe"
+local PYTHON_EXE     = "C:/path/to/midi_drums/.venv/Scripts/pythonw.exe"
 local SIDECAR_PATH   = nil            -- nil = <project dir>/midi_drums_sections.json
 local DEFAULT_GENRE  = "metal"
 local DEFAULT_STYLE  = "doom"
