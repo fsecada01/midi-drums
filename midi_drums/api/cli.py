@@ -108,6 +108,15 @@ Examples:
             "metal, jazz)"
         ),
     )
+    gen_parser.add_argument(
+        "--mapping-file",
+        metavar="PATH",
+        help=(
+            "Path to a custom MIDI mapping JSON file (see "
+            "DrumKit.from_json). Takes precedence over --mapping/--vst "
+            "when supplied."
+        ),
+    )
 
     # Generate pattern command
     pattern_parser = subparsers.add_parser(
@@ -145,6 +154,15 @@ Examples:
             "MIDI mapping preset (ezdrummer3, studio_drummer3, "
             "addictive_drums, bfd3, gm_drums, modo_drums, ml_drums, "
             "metal, jazz)"
+        ),
+    )
+    pattern_parser.add_argument(
+        "--mapping-file",
+        metavar="PATH",
+        help=(
+            "Path to a custom MIDI mapping JSON file (see "
+            "DrumKit.from_json). Takes precedence over --mapping/--vst "
+            "when supplied."
         ),
     )
 
@@ -364,7 +382,10 @@ def handle_generate_command(args, generator: DrumGenerator) -> None:
     try:
         from midi_drums.api.python_api import DrumGeneratorAPI
 
-        drum_kit = DrumKit.from_preset(args.mapping)
+        if getattr(args, "mapping_file", None):
+            drum_kit = DrumKit.from_json(args.mapping_file)
+        else:
+            drum_kit = DrumKit.from_preset(args.mapping)
         api = DrumGeneratorAPI()
 
         if getattr(args, "sidecar", None):
@@ -425,8 +446,11 @@ def handle_generate_command(args, generator: DrumGenerator) -> None:
 def handle_pattern_command(args, generator: DrumGenerator) -> None:
     """Handle pattern generation command."""
     try:
-        # Create drum kit from mapping preset
-        drum_kit = DrumKit.from_preset(args.mapping)
+        # Create drum kit from mapping preset or custom mapping file
+        if getattr(args, "mapping_file", None):
+            drum_kit = DrumKit.from_json(args.mapping_file)
+        else:
+            drum_kit = DrumKit.from_preset(args.mapping)
 
         pattern = generator.generate_pattern(
             genre=args.genre,

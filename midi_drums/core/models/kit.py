@@ -1,6 +1,8 @@
 """Drum kit configuration and instrument mapping."""
 
+import json
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from midi_drums.core.value_objects.drum_instrument import DrumInstrument
 
@@ -97,8 +99,9 @@ class DrumKit:
         return cls(
             name="EZDrummer 3 Kit",
             channel=9,
-            # EZDrummer 3 uses standard GM mappings, so no custom mappings
-            # needed
+            # DrumInstrument's own note values already target EZDrummer 3's
+            # extended hi-hat articulations (see drum_instrument.py), so no
+            # overrides are needed here - this preset is the enum baseline.
             custom_mappings={},
         )
 
@@ -170,8 +173,21 @@ class DrumKit:
         return cls(
             name="General MIDI Drums",
             channel=9,
-            # GM standard mappings (matches DrumInstrument enum values)
-            custom_mappings={},
+            # DrumInstrument's baseline values are EZDrummer-3-specific for
+            # the extended hi-hat articulations below (notes 22, 24-26,
+            # 60-63), which aren't real GM Level 1 percussion notes.
+            # Collapse each to its nearest true GM equivalent so this
+            # preset is actually GM-compliant.
+            custom_mappings={
+                DrumInstrument.CLOSED_HH_EDGE: DrumInstrument.CLOSED_HH.value,
+                DrumInstrument.CLOSED_HH_TIP: DrumInstrument.CLOSED_HH.value,
+                DrumInstrument.TIGHT_HH_EDGE: DrumInstrument.CLOSED_HH.value,
+                DrumInstrument.TIGHT_HH_TIP: DrumInstrument.CLOSED_HH.value,
+                DrumInstrument.OPEN_HH_1: DrumInstrument.OPEN_HH.value,
+                DrumInstrument.OPEN_HH_2: DrumInstrument.OPEN_HH.value,
+                DrumInstrument.OPEN_HH_3: DrumInstrument.OPEN_HH.value,
+                DrumInstrument.OPEN_HH_MAX: DrumInstrument.OPEN_HH.value,
+            },
         )
 
     @classmethod
@@ -235,6 +251,62 @@ class DrumKit:
             )
 
         return preset_map[preset_name_lower]()
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "DrumKit":
+        """Create a drum kit from a plain dict, e.g. loaded from JSON.
+
+        Expected shape::
+
+            {
+                "name": "My Custom Kit",              # optional
+                "channel": 9,                          # optional, default 9
+                "mappings": {"KICK": 36, "SNARE": 38}  # DrumInstrument
+                                                        # names -> MIDI note
+            }
+
+        Instruments not present in "mappings" fall back to their
+        `DrumInstrument` enum value via `get_midi_note()`.
+
+        Args:
+            data: Mapping dict as described above.
+
+        Returns:
+            DrumKit configured with the supplied custom mappings.
+
+        Raises:
+            ValueError: If a mapping key isn't a known DrumInstrument name.
+        """
+        custom_mappings: dict[DrumInstrument, int] = {}
+        for instrument_name, note in data.get("mappings", {}).items():
+            try:
+                instrument = DrumInstrument[instrument_name.upper()]
+            except KeyError as exc:
+                raise ValueError(
+                    f"Unknown drum instrument in mapping file: "
+                    f"'{instrument_name}'"
+                ) from exc
+            custom_mappings[instrument] = int(note)
+
+        return cls(
+            name=data.get("name", "Custom Kit"),
+            channel=data.get("channel", 9),
+            custom_mappings=custom_mappings,
+        )
+
+    @classmethod
+    def from_json(cls, path: str | Path) -> "DrumKit":
+        """Create a drum kit from a JSON mapping file.
+
+        Args:
+            path: Path to a JSON file matching the `from_dict()` shape.
+
+        Returns:
+            DrumKit configured with the supplied custom mappings.
+        """
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+        return cls.from_dict(data)
 
     @classmethod
     def list_presets(cls) -> dict[str, str]:
