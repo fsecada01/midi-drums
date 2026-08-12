@@ -306,10 +306,31 @@ class DrumGenerator:
         return variations
 
     def _generate_fills(self, genre: str, params: GenerationParameters) -> list:
-        """Generate fill patterns for the genre."""
-        plugin = self.plugin_manager.registry.get_genre_plugin(genre)
-        if plugin:
-            return plugin.get_common_fills()
+        """Generate fill patterns for the section.
+
+        When a drummer is set and has signature fills (see
+        DrummerPlugin.get_signature_fills()), the request is a
+        drummer-inspired performance: fills are drawn exclusively from
+        that drummer's candidates so the performance actually sounds
+        like them, rather than being diluted by the genre's stock fills.
+
+        Otherwise - no drummer set, or the drummer has no signature
+        fills of its own (true for every drummer plugin except Peart at
+        the time of writing) - fills fall back to the genre's common
+        fill pool. See issue #32.
+        """
+        if params.drummer:
+            drummer_plugin = self.plugin_manager.registry.get_drummer_plugin(
+                params.drummer
+            )
+            if drummer_plugin:
+                signature_fills = drummer_plugin.get_signature_fills()
+                if signature_fills:
+                    return signature_fills
+
+        genre_plugin = self.plugin_manager.registry.get_genre_plugin(genre)
+        if genre_plugin:
+            return genre_plugin.get_common_fills()
         return []
 
     def _extend_pattern_to_bars(self, pattern: Pattern, bars: int) -> Pattern:
