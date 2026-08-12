@@ -83,6 +83,47 @@ class TestPresetsDivergeOnNoteMapping:
             )
 
 
+class TestGmBaselinePresetsAreActuallyGmCompliant:
+    """Regression coverage: presets whose own docstrings claim GM-standard
+    compatibility (studio_drummer3, addictive_drums, bfd3, modo_drums,
+    ml_drums) previously shipped an empty custom_mappings dict, silently
+    inheriting EZDrummer 3's non-GM extended hi-hat notes instead. They
+    must resolve identically to the gm_drums preset."""
+
+    @pytest.mark.parametrize(
+        "factory",
+        [
+            DrumKit.create_studio_drummer3_kit,
+            DrumKit.create_addictive_drums_kit,
+            DrumKit.create_bfd3_kit,
+            DrumKit.create_modo_drums_kit,
+            DrumKit.create_ml_drums_kit,
+        ],
+    )
+    def test_matches_gm_drums_note_table(self, factory):
+        kit = factory()
+        gm_kit = DrumKit.create_gm_drums_kit()
+
+        for instrument in DrumInstrument:
+            assert kit.get_midi_note(instrument) == gm_kit.get_midi_note(
+                instrument
+            )
+
+    def test_presets_do_not_share_a_mutable_mappings_dict(self):
+        """Each factory call must get its own custom_mappings dict - a
+        shared mutable default would let mutating one preset's mappings
+        leak into every other GM-baseline preset."""
+        kit_a = DrumKit.create_bfd3_kit()
+        kit_a.custom_mappings[DrumInstrument.KICK] = 1
+
+        kit_b = DrumKit.create_modo_drums_kit()
+
+        assert (
+            kit_b.get_midi_note(DrumInstrument.KICK)
+            == DrumInstrument.KICK.value
+        )
+
+
 class TestDrumKitFromDict:
     """DrumKit.from_dict() lets users supply a fully custom mapping."""
 
@@ -121,6 +162,18 @@ class TestDrumKitFromDict:
         kit = DrumKit.from_dict({"mappings": {"kick": 35}})
 
         assert kit.get_midi_note(DrumInstrument.KICK) == 35
+
+    def test_non_numeric_note_value_raises_value_error(self):
+        """Regression: int(note) used to be called unguarded, so a
+        non-numeric string raised Python's raw int() ValueError and a
+        list/dict value raised an undocumented TypeError instead of the
+        class's own uniformly-typed ValueError."""
+        with pytest.raises(ValueError):
+            DrumKit.from_dict({"mappings": {"KICK": "thirty-six"}})
+
+    def test_non_scalar_note_value_raises_value_error_not_type_error(self):
+        with pytest.raises(ValueError):
+            DrumKit.from_dict({"mappings": {"KICK": [36]}})
 
 
 class TestDrumKitFromJson:

@@ -52,8 +52,8 @@ engines and is intentionally left out of this directory.
 
 ## Keeping both sides in sync
 
-Per `CLAUDE.md`'s sub-agent policy, sidecar-contract changes (anything
-touching the `midi_drums_sections.json` shape, or the Python
+Per `.claude/system-prompt.md`'s sub-agent policy, sidecar-contract changes
+(anything touching the `midi_drums_sections.json` shape, or the Python
 `export_sections_json` / `create_song_from_sections_json` /
 `save_as_midi_with_sidecar` methods) must be made to this directory and the
 Python side **in the same PR**, sequentially rather than in parallel — the

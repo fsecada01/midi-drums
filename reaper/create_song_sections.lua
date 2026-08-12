@@ -149,10 +149,15 @@ local function run_python(cmd)
   return ok, out
 end
 
--- Sanitise a string for use as a CMD double-quoted argument.
--- Replaces " with ' (sufficient for natural-language descriptions).
+-- Sanitise a string for use inside a double-quoted cmd.exe argument.
+-- cmd.exe treats &|^<>% as special even inside double quotes, so strip
+-- them along with embedded quotes/newlines rather than trying to replicate
+-- cmd.exe's notoriously inconsistent escaping rules.
 local function shell_escape(s)
-  return s:gsub('"', "'"):gsub("[\r\n]", " ")
+  s = s:gsub("[\r\n]", " ")
+  s = s:gsub('"', "'")
+  s = s:gsub("[&|^<>%%]", "")
+  return s
 end
 
 -- ---------------------------------------------------------------------------
@@ -316,7 +321,10 @@ end
 -- ---------------------------------------------------------------------------
 -- Create REAPER regions
 -- ---------------------------------------------------------------------------
-local measure_length = (60.0 / bpm) * ts_num
+-- REAPER's tempo (bpm) is always quarter-note-based regardless of time
+-- signature, so a measure's length in quarter notes is ts_num * (4/ts_denom)
+-- - e.g. a 6/8 bar is 3 quarter notes long, not 6.
+local measure_length = (60.0 / bpm) * ts_num * (4.0 / ts_denom)
 
 reaper.Undo_BeginBlock()
 local current_time = 0.0
@@ -351,9 +359,9 @@ if MODE == "reaper" then
   if not ok_inp then return end
 
   local genre, style, mapping = csv:match("^([^,]+),([^,]+),([^,]+)$")
-  genre   = (genre   or DEFAULT_GENRE):match("^%s*(.-)%s*$")
-  style   = (style   or DEFAULT_STYLE):match("^%s*(.-)%s*$")
-  mapping = (mapping or DEFAULT_MAPPING):match("^%s*(.-)%s*$")
+  genre   = shell_escape((genre   or DEFAULT_GENRE):match("^%s*(.-)%s*$"))
+  style   = shell_escape((style   or DEFAULT_STYLE):match("^%s*(.-)%s*$"))
+  mapping = shell_escape((mapping or DEFAULT_MAPPING):match("^%s*(.-)%s*$"))
 
   local cmd = string.format(
     '"%s" -m midi_drums generate --genre "%s" --style "%s" --mapping "%s"'

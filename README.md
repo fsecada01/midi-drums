@@ -979,10 +979,11 @@ all identical:
   their nearest real GM note (closed-hat family → note 42, open-hat family
   → note 46) so output stays GM-compliant.
 - **`studio_drummer3`**, **`addictive_drums`**, **`bfd3`**, **`modo_drums`**,
-  **`ml_drums`** — currently GM-equivalent placeholders (no
-  vendor-specific note research has been done for these yet); safe to use
+  **`ml_drums`** — use the same GM-collapsed note table as `gm_drums`
+  (no vendor-specific note research has been done for these yet — see
+  `claudedocs/research_vendor_drum_midi_maps_20260812.md`); safe to use
   with any GM-compatible sampler today, but not yet verified against each
-  vendor's own default map.
+  vendor's own default map, which may differ from strict GM.
 - **Custom mapping** — pass `--mapping-file path/to/mapping.json` (CLI) or
   `mapping_file="path/to/mapping.json"` (`DrumGeneratorAPI.create_song()`)
   to supply your own note table without editing the library. See
