@@ -313,6 +313,137 @@ def test_pocket_stretching():
     )
 
 
+def test_pocket_stretching_applies_to_promoted_timekeeping_cymbals():
+    """PocketStretching's timing variation is meant for whichever
+    instrument is carrying the timekeeping role, not literally the
+    hi-hat - after genre-aware timekeeper promotion (issue #18), that
+    can be RIDE, CRASH, or CHINA instead of CLOSED_HH.
+    """
+    print("Testing PocketStretching on promoted timekeeping cymbals...")
+
+    for instrument in (
+        DrumInstrument.RIDE,
+        DrumInstrument.CRASH,
+        DrumInstrument.CHINA,
+    ):
+        builder = PatternBuilder(f"promoted_{instrument.name}_test")
+        for i in range(8):
+            builder.pattern.add_beat(
+                i * TIMING.EIGHTH, instrument, VELOCITY.HIHAT_NORMAL
+            )
+        pattern = builder.build()
+        original_positions = sorted(b.position for b in pattern.beats)
+
+        mod = PocketStretching(variation_ms=15.0)
+        modified = mod.apply(pattern, intensity=1.0)
+        modified_positions = sorted(b.position for b in modified.beats)
+
+        stretched_count = sum(
+            1
+            for o, m in zip(
+                original_positions, modified_positions, strict=False
+            )
+            if abs(o - m) > 0.001
+        )
+
+        assert stretched_count > 0, (
+            f"{instrument} beats not stretched - PocketStretching still "
+            "only matches CLOSED_HH"
+        )
+
+    print("  [OK] PocketStretching: RIDE/CRASH/CHINA beats all stretched")
+
+
+def test_linear_coordination_china_matches_crash_and_ride_priority():
+    """LinearCoordination's priority table must treat CHINA as the same
+    'timekeeping cymbal' tier as CRASH/RIDE (issue #18) - otherwise a
+    china-promoted beat colliding with a tom loses out to the tom, which
+    a ride- or crash-promoted beat at the same position would not.
+    """
+    print("Testing LinearCoordination CHINA priority...")
+
+    builder = PatternBuilder("china_collision_test")
+    builder.pattern.add_beat(0.0, DrumInstrument.CHINA, VELOCITY.CRASH_NORMAL)
+    builder.pattern.add_beat(0.0, DrumInstrument.MID_TOM, VELOCITY.TOM_NORMAL)
+    pattern = builder.build()
+
+    mod = LinearCoordination()
+    modified = mod.apply(pattern, intensity=1.0)
+
+    kept_instruments = {b.instrument for b in modified.beats}
+    assert DrumInstrument.CHINA in kept_instruments, (
+        "CHINA lost to MID_TOM - not weighted at the same priority as "
+        "CRASH/RIDE"
+    )
+
+    print("  [OK] LinearCoordination: CHINA outranks MID_TOM like CRASH/RIDE")
+
+
+def test_minimal_creativity_thins_crash_and_china_promoted_cymbals():
+    """MinimalCreativity's cymbal-thinning must also recognize CRASH and
+    CHINA as cymbals to thin (issue #18) - it already treated RIDE this
+    way since RIDE was already a valid pre-#18 timekeeper-promotion
+    target; CRASH/CHINA are now equally valid promotion targets.
+    """
+    print("Testing MinimalCreativity on promoted CRASH/CHINA cymbals...")
+
+    for instrument in (DrumInstrument.CRASH, DrumInstrument.CHINA):
+        builder = PatternBuilder(f"promoted_{instrument.name}_test")
+        for i in range(8):
+            builder.pattern.add_beat(
+                i * TIMING.EIGHTH, instrument, VELOCITY.CRASH_NORMAL
+            )
+        pattern = builder.build()
+
+        # sparseness=1.0 * intensity=1.0 makes removal deterministic:
+        # random.random() is always < 1.0, so every cymbal beat is cut.
+        mod = MinimalCreativity(sparseness=1.0)
+        modified = mod.apply(pattern, intensity=1.0)
+
+        assert len(modified.beats) == 0, (
+            f"{instrument} beats survived sparseness=1.0 - "
+            "MinimalCreativity still doesn't treat it as a cymbal"
+        )
+
+    print("  [OK] MinimalCreativity: CRASH/CHINA thinned like RIDE/CLOSED_HH")
+
+
+def test_speed_precision_normalizes_promoted_cymbals_to_their_own_velocity():
+    """SpeedPrecision's velocity-consistency target must be genre-correct
+    for whichever cymbal is carrying the timekeeping role (issue #18) -
+    normalizing a promoted CRASH/CHINA/RIDE beat toward HIHAT_NORMAL (or
+    not normalizing it at all, the pre-fix behavior) would be musically
+    wrong; each cymbal has its own velocity constant.
+    """
+    print("Testing SpeedPrecision on promoted timekeeping cymbals...")
+
+    expectations = {
+        DrumInstrument.RIDE: VELOCITY.RIDE_NORMAL,
+        DrumInstrument.CRASH: VELOCITY.CRASH_NORMAL,
+        DrumInstrument.CHINA: VELOCITY.CHINA_NORMAL,
+    }
+
+    for instrument, expected_velocity in expectations.items():
+        builder = PatternBuilder(f"promoted_{instrument.name}_test")
+        builder.pattern.add_beat(0.0, instrument, 40)
+        pattern = builder.build()
+
+        # consistency=1.0 * intensity=1.0 -> blend=1.0 -> velocity becomes
+        # exactly the target, deterministically.
+        mod = SpeedPrecision(consistency=1.0)
+        modified = mod.apply(pattern, intensity=1.0)
+
+        assert modified.beats[0].velocity == expected_velocity, (
+            f"{instrument} not normalized to {expected_velocity}: "
+            f"got {modified.beats[0].velocity}"
+        )
+
+    print(
+        "  [OK] SpeedPrecision: RIDE/CRASH/CHINA each normalize to their "
+        "own velocity constant"
+    )
+
+
 def test_minimal_creativity():
     """Test MinimalCreativity modification."""
     print("Testing MinimalCreativity...")

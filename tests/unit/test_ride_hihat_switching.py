@@ -243,3 +243,84 @@ class TestApplyRideHihatLogicEdgeCases:
             plugin._high_energy_timekeeper("chorus", params)
             == DrumInstrument.RIDE
         )
+
+
+@pytest.mark.unit
+class TestGenreSpecificHighEnergyTimekeeper:
+    """Genre-aware timekeeper selection (issue #18): rock's hard/punk
+    styles and metal's thrash/death styles override the RIDE default,
+    per crash-riding (rock) and china-as-ride-substitute (metal)
+    conventions documented in issue #18's research comment.
+    """
+
+    @pytest.mark.parametrize("style", ["hard", "punk"])
+    def test_rock_high_energy_styles_use_crash(self, style):
+        plugin = RockGenrePlugin()
+        params = GenerationParameters(genre="rock", style=style, complexity=0.5)
+        assert (
+            plugin._high_energy_timekeeper("chorus", params)
+            == DrumInstrument.CRASH
+        )
+
+    @pytest.mark.parametrize(
+        "style", ["classic", "blues", "alternative", "progressive", "pop"]
+    )
+    def test_rock_other_styles_default_to_ride(self, style):
+        plugin = RockGenrePlugin()
+        params = GenerationParameters(genre="rock", style=style, complexity=0.5)
+        assert (
+            plugin._high_energy_timekeeper("chorus", params)
+            == DrumInstrument.RIDE
+        )
+
+    @pytest.mark.parametrize("style", ["thrash", "death"])
+    def test_metal_high_energy_styles_use_china(self, style):
+        plugin = MetalGenrePlugin()
+        params = GenerationParameters(
+            genre="metal", style=style, complexity=0.5
+        )
+        assert (
+            plugin._high_energy_timekeeper("chorus", params)
+            == DrumInstrument.CHINA
+        )
+
+    @pytest.mark.parametrize(
+        "style", ["heavy", "power", "progressive", "doom", "breakdown"]
+    )
+    def test_metal_other_styles_default_to_ride(self, style):
+        plugin = MetalGenrePlugin()
+        params = GenerationParameters(
+            genre="metal", style=style, complexity=0.5
+        )
+        assert (
+            plugin._high_energy_timekeeper("chorus", params)
+            == DrumInstrument.RIDE
+        )
+
+    def test_rock_hard_style_promotes_hihat_to_crash_via_full_pipeline(self):
+        plugin = RockGenrePlugin()
+        params = GenerationParameters(
+            genre="rock", style="hard", complexity=0.5
+        )
+        pattern = Pattern(name="test")
+        pattern.add_beat(0.0, DrumInstrument.CLOSED_HH)
+
+        result = plugin._apply_ride_hihat_logic(pattern, "chorus", params)
+
+        instruments = _instruments(result)
+        assert DrumInstrument.CRASH in instruments
+        assert DrumInstrument.RIDE not in instruments
+
+    def test_metal_death_style_promotes_hihat_to_china_via_full_pipeline(self):
+        plugin = MetalGenrePlugin()
+        params = GenerationParameters(
+            genre="metal", style="death", complexity=0.5
+        )
+        pattern = Pattern(name="test")
+        pattern.add_beat(0.0, DrumInstrument.CLOSED_HH)
+
+        result = plugin._apply_ride_hihat_logic(pattern, "chorus", params)
+
+        instruments = _instruments(result)
+        assert DrumInstrument.CHINA in instruments
+        assert DrumInstrument.RIDE not in instruments

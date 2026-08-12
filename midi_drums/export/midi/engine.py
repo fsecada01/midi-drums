@@ -11,8 +11,26 @@ except ImportError:
     ) from None
 
 from midi_drums.core.models.kit import DrumKit
-from midi_drums.core.models.pattern import Pattern
+from midi_drums.core.models.pattern import Beat, Pattern
 from midi_drums.core.models.song import Song
+
+
+def _dedupe_by_instrument_position(beats: list[Beat]) -> list[Beat]:
+    """If two beats share (instrument, position), keep only the loudest.
+
+    midiutil silently collapses same-pitch, same-tick NoteOn events (see
+    _add_section_to_midi's docstring) - without this, whichever beat
+    happens to sort first wins arbitrarily, which can silently drop a
+    louder, musically-intended beat (e.g. a CrashAccents hit colliding
+    with a genre-promoted timekeeping cymbal beat at the same position -
+    issue #18).
+    """
+    deduped: dict[tuple, Beat] = {}
+    for beat in beats:
+        key = (beat.instrument, round(beat.position, 6))
+        if key not in deduped or beat.velocity > deduped[key].velocity:
+            deduped[key] = beat
+    return list(deduped.values())
 
 
 class MIDIEngine:
@@ -36,7 +54,8 @@ class MIDIEngine:
 
         # Sort beats by position, then by instrument for consistent ordering
         sorted_beats = sorted(
-            pattern.beats, key=lambda b: (b.position, b.instrument.value)
+            _dedupe_by_instrument_position(pattern.beats),
+            key=lambda b: (b.position, b.instrument.value),
         )
 
         # Add pattern beats with overlap prevention
@@ -160,13 +179,9 @@ class MIDIEngine:
 
             # Per-bar dedup: if drummer modifications created two beats at the
             # same (instrument, position) within a bar, keep the loudest.
-            deduped: dict[tuple, object] = {}
-            for beat in beats_to_render:
-                key = (beat.instrument, round(beat.position, 6))
-                if key not in deduped or beat.velocity > deduped[key].velocity:
-                    deduped[key] = beat
+            deduped_beats = _dedupe_by_instrument_position(beats_to_render)
 
-            for beat in sorted(deduped.values(), key=lambda b: b.position):
+            for beat in sorted(deduped_beats, key=lambda b: b.position):
                 midi_note = self.drum_kit.get_midi_note(beat.instrument)
                 absolute_time = bar_start_time + beat.position
                 safe_duration = min(beat.duration, 0.2)

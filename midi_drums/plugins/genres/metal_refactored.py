@@ -8,6 +8,7 @@ full functional equivalence with the original metal.py plugin.
 from midi_drums.config import TIMING
 from midi_drums.core.models.pattern import Pattern
 from midi_drums.core.models.song import Fill
+from midi_drums.core.value_objects.drum_instrument import DrumInstrument
 from midi_drums.core.value_objects.generation_parameters import (
     GenerationParameters,
 )
@@ -20,6 +21,12 @@ from midi_drums.patterns import (
     TomFill,
 )
 from midi_drums.plugins.interfaces.genre_plugin import GenrePlugin
+
+# Styles that use china cymbal (rather than ride) as the high-energy
+# timekeeper, per issue #18's research: china-as-ride-substitute is a
+# documented convention in extreme/thrash metal, distinct from rock's
+# crash-riding convention.
+_CHINA_TIMEKEEPER_STYLES = frozenset({"thrash", "death"})
 
 
 class MetalGenrePlugin(GenrePlugin):
@@ -109,6 +116,17 @@ class MetalGenrePlugin(GenrePlugin):
         fills.append(Fill(blast_pattern, 0.6))
 
         return fills
+
+    def _high_energy_timekeeper(
+        self, section: str, parameters: GenerationParameters
+    ) -> DrumInstrument:
+        """China cymbal for thrash/death styles, ride cymbal otherwise.
+
+        See _CHINA_TIMEKEEPER_STYLES.
+        """
+        if parameters.style in _CHINA_TIMEKEEPER_STYLES:
+            return DrumInstrument.CHINA
+        return super()._high_energy_timekeeper(section, parameters)
 
     # -------------------------------------------------------------------------
     # Section generators

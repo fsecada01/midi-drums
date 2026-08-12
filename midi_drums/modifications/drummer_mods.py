@@ -19,6 +19,38 @@ from midi_drums.config import TIMING, VELOCITY
 from midi_drums.core.models.pattern import Beat, Pattern
 from midi_drums.core.value_objects.drum_instrument import DrumInstrument
 
+# Instruments that can carry the "timekeeping cymbal" role: hi-hat by
+# default, or whatever GenrePlugin._high_energy_timekeeper promoted it to
+# for a high-energy section (issue #18) - ride, crash, or china. Several
+# modifications below target "the timekeeping cymbal" conceptually, not
+# literally the hi-hat, and need to match all of these.
+_TIMEKEEPING_CYMBALS = frozenset(
+    {
+        DrumInstrument.CLOSED_HH,
+        DrumInstrument.RIDE,
+        DrumInstrument.CRASH,
+        DrumInstrument.CHINA,
+    }
+)
+
+# Cymbals MinimalCreativity is willing to thin for a sparse feel: every
+# timekeeping cymbal plus OPEN_HH, which isn't a timekeeper-promotion
+# target but is still ambient cymbal texture, not an essential hit.
+_THINNABLE_CYMBALS = _TIMEKEEPING_CYMBALS | {DrumInstrument.OPEN_HH}
+
+# SpeedPrecision's per-instrument velocity-consistency target. Each
+# timekeeping cymbal normalizes toward its own genre-correct velocity
+# constant rather than a shared one - CRASH/CHINA/RIDE each read as very
+# different volumes at the same MIDI velocity value.
+_SPEED_PRECISION_TARGETS = {
+    DrumInstrument.KICK: VELOCITY.KICK_HEAVY,
+    DrumInstrument.SNARE: VELOCITY.SNARE_HEAVY,
+    DrumInstrument.CLOSED_HH: VELOCITY.HIHAT_NORMAL,
+    DrumInstrument.RIDE: VELOCITY.RIDE_NORMAL,
+    DrumInstrument.CRASH: VELOCITY.CRASH_NORMAL,
+    DrumInstrument.CHINA: VELOCITY.CHINA_NORMAL,
+}
+
 
 class DrummerModification(ABC):
     """Base class for drummer style modifications.
@@ -272,6 +304,7 @@ class LinearCoordination(DrummerModification):
             DrumInstrument.KICK: 4,
             DrumInstrument.CRASH: 3,
             DrumInstrument.RIDE: 3,
+            DrumInstrument.CHINA: 3,
             DrumInstrument.MID_TOM: 2,
             DrumInstrument.FLOOR_TOM: 2,
             DrumInstrument.CLOSED_HH: 1,
@@ -498,8 +531,9 @@ class PocketStretching(DrummerModification):
         variation = (self.variation_ms / 1000.0) * 2.0 * intensity
 
         for beat in pattern.beats:
-            # Apply random pocket variation to hi-hats and ghost notes
-            if beat.instrument == DrumInstrument.CLOSED_HH or beat.ghost_note:
+            # Apply random pocket variation to the timekeeping cymbal and
+            # ghost notes
+            if beat.instrument in _TIMEKEEPING_CYMBALS or beat.ghost_note:
                 offset = random.uniform(-variation, variation)
                 new_position = max(
                     0.0, beat.position + offset
@@ -550,11 +584,7 @@ class MinimalCreativity(DrummerModification):
 
         # Keep kick and snare, thin out cymbals
         for beat in pattern.beats:
-            is_cymbal = beat.instrument in [
-                DrumInstrument.CLOSED_HH,
-                DrumInstrument.OPEN_HH,
-                DrumInstrument.RIDE,
-            ]
+            is_cymbal = beat.instrument in _THINNABLE_CYMBALS
 
             if is_cymbal:
                 # Probabilistically remove cymbal hits
@@ -596,11 +626,9 @@ class SpeedPrecision(DrummerModification):
 
         for beat in pattern.beats:
             # Reduce velocity variation
-            target_velocity = {
-                DrumInstrument.KICK: VELOCITY.KICK_HEAVY,
-                DrumInstrument.SNARE: VELOCITY.SNARE_HEAVY,
-                DrumInstrument.CLOSED_HH: VELOCITY.HIHAT_NORMAL,
-            }.get(beat.instrument, beat.velocity)
+            target_velocity = _SPEED_PRECISION_TARGETS.get(
+                beat.instrument, beat.velocity
+            )
 
             # Blend current velocity with target
             blend = self.consistency * intensity
