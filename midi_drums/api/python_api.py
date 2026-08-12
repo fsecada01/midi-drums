@@ -34,16 +34,20 @@ class DrumGeneratorAPI:
             tempo: Beats per minute
             name: Song name (auto-generated if None)
             mapping: MIDI mapping preset ('ezdrummer3', 'gm_drums', etc.).
-                Ignored if drum_kit is also passed via kwargs - an
-                explicit drum_kit always takes precedence over mapping.
+                Ignored if a truthy drum_kit is also passed via kwargs -
+                an explicit drum_kit takes precedence over mapping, but
+                drum_kit=None falls back to mapping instead of being
+                treated as an explicit choice.
             **kwargs: Additional parameters (complexity, humanization,
                 drum_kit, etc.)
 
         Returns:
             Generated Song object
         """
-        # An explicit drum_kit kwarg always takes precedence over mapping.
-        if "drum_kit" not in kwargs:
+        # An explicit, truthy drum_kit kwarg always takes precedence over
+        # mapping. A caller passing drum_kit=None falls back to mapping
+        # rather than leaving None to skip DrumGenerator's own kit swap.
+        if not kwargs.get("drum_kit"):
             kwargs["drum_kit"] = DrumKit.from_preset(mapping)
 
         song = self.generator.create_song(genre, style, tempo, **kwargs)

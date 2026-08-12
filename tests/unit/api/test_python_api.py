@@ -44,6 +44,30 @@ class TestCreateSongDrumKitPrecedence:
 
         assert api.generator.drum_kit.name == "EZDrummer 3 Kit"
 
+    def test_explicit_none_drum_kit_falls_back_to_mapping(self):
+        """A caller-supplied drum_kit=None must not be treated as an
+        explicit choice - it should fall back to mapping instead of
+        leaving the generator's previous drum_kit in place."""
+        api = DrumGeneratorAPI()
+        api.create_song(
+            "metal",
+            "heavy",
+            tempo=140,
+            mapping="ezdrummer3",
+            drum_kit=DrumKit.create_jazz_kit(),
+        )
+        assert api.generator.drum_kit.name == "Jazz Kit"
+
+        api.create_song(
+            "metal",
+            "heavy",
+            tempo=140,
+            mapping="ezdrummer3",
+            drum_kit=None,
+        )
+
+        assert api.generator.drum_kit.name == "EZDrummer 3 Kit"
+
     def test_batch_generate_forwards_explicit_drum_kit(self, tmp_path):
         api = DrumGeneratorAPI()
         specs = [
