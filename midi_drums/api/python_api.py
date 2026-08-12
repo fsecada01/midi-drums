@@ -33,15 +33,18 @@ class DrumGeneratorAPI:
             style: Style within genre ('death', 'power', etc.)
             tempo: Beats per minute
             name: Song name (auto-generated if None)
-            mapping: MIDI mapping preset ('ezdrummer3', 'gm_drums', etc.)
-            **kwargs: Additional parameters (complexity, humanization, etc.)
+            mapping: MIDI mapping preset ('ezdrummer3', 'gm_drums', etc.).
+                Ignored if drum_kit is also passed via kwargs - an
+                explicit drum_kit always takes precedence over mapping.
+            **kwargs: Additional parameters (complexity, humanization,
+                drum_kit, etc.)
 
         Returns:
             Generated Song object
         """
-        # Create drum kit from mapping preset
-        drum_kit = DrumKit.from_preset(mapping)
-        kwargs["drum_kit"] = drum_kit
+        # An explicit drum_kit kwarg always takes precedence over mapping.
+        if "drum_kit" not in kwargs:
+            kwargs["drum_kit"] = DrumKit.from_preset(mapping)
 
         song = self.generator.create_song(genre, style, tempo, **kwargs)
         if name:
