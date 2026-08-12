@@ -224,6 +224,21 @@ class TestDubstepStyle:
         kicks = _kick_positions(verse)
         assert kicks != {0.0, 1.0, 2.0, 3.0}
 
+    def test_bridge_keeps_half_time_feel(self):
+        # Every other dubstep section branches away from the house/techno
+        # four-on-the-floor groove; the bridge generator must too.
+        plugin = ElectronicGenrePlugin()
+        params = GenerationParameters(
+            genre="electronic",
+            style="dubstep",
+            complexity=0.6,
+            humanization=0.2,
+        )
+        bridge = plugin.generate_pattern("bridge", params)
+
+        kicks = _kick_positions(bridge)
+        assert kicks != {0.0, 1.0, 2.0, 3.0}
+
 
 @pytest.mark.unit
 class TestElectronicFills:

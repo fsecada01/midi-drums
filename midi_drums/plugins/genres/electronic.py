@@ -351,7 +351,23 @@ class ElectronicGenrePlugin(GenrePlugin):
                     .add(TomFill(pattern="around", start_position=3.0))
                     .build(bars=1, complexity=bridge_complexity)
                 )
-            case _:
+            case "dubstep":
+                # Half-time feel: sparse kick, single heavy snare on beat 3,
+                # matching every other dubstep section (intro/verse/chorus/
+                # breakdown/outro) instead of house/techno's four-on-the-floor.
+                return (
+                    TemplateComposer(name)
+                    .add(
+                        BasicGroove(
+                            kick_positions=_HALF_TIME_KICK,
+                            snare_positions=_HALF_TIME_SNARE,
+                            hihat_subdivision=TIMING.EIGHTH,
+                        )
+                    )
+                    .add(TomFill(pattern="ascending", start_position=3.0))
+                    .build(bars=1, complexity=bridge_complexity)
+                )
+            case _:  # house, techno
                 return (
                     TemplateComposer(name)
                     .add(
