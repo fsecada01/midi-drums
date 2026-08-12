@@ -13,7 +13,24 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class Beat:
-    """Individual drum hit within a pattern."""
+    """Individual drum hit within a pattern.
+
+    Beat carries no provenance field: there is no way to tell, from a
+    Beat alone, whether it was placed directly by a pattern
+    template/genre style (e.g. CrashAccents) or produced by promoting an
+    existing hi-hat beat to a different cymbal
+    (GenrePlugin._apply_ride_hihat_logic /
+    ``_high_energy_timekeeper``, issue #18). Drummer modifications that
+    match "the timekeeping cymbal" by instrument type - PocketStretching,
+    MinimalCreativity, SpeedPrecision in
+    ``midi_drums.modifications.drummer_mods`` - therefore treat both
+    origins identically: a genuinely-placed crash accent of the same
+    instrument as the section's promoted timekeeper is modified exactly
+    like the promoted beat itself. This is an accepted, permanent design
+    decision (see issue #36 item 1), not a bug - adding provenance
+    tracking would touch this model, PatternBuilder, and every pattern
+    template, and has been deliberately deferred pending a concrete need.
+    """
 
     position: float  # Beat position (0.0-4.0 for 4/4)
     instrument: DrumInstrument

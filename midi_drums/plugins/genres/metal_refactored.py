@@ -123,6 +123,13 @@ class MetalGenrePlugin(GenrePlugin):
         """China cymbal for thrash/death styles, ride cymbal otherwise.
 
         See _CHINA_TIMEKEEPER_STYLES.
+
+        Near-identical in shape to RockGenrePlugin's override of this
+        method (fixed style set -> fixed DrumInstrument, else defer to
+        super()). This is a deliberate rule-of-three call, not an
+        oversight: with only 2 instances, a shared declarative
+        abstraction on the base GenrePlugin isn't yet justified - see
+        issue #36 item 3.
         """
         if parameters.style in _CHINA_TIMEKEEPER_STYLES:
             return DrumInstrument.CHINA

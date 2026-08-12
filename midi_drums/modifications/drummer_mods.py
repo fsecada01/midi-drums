@@ -514,6 +514,13 @@ class PocketStretching(DrummerModification):
 
     Subtle timing variations that create groove tension and release.
 
+    Matches beats by ``beat.instrument in _TIMEKEEPING_CYMBALS``, not by
+    provenance - it cannot distinguish a genre-promoted timekeeping beat
+    from a genuinely-placed accent of the same instrument (e.g. a
+    CrashAccents hit). Beat carries no provenance field; this is accepted,
+    permanent behavior, not a bug - see the note on
+    ``midi_drums.core.models.pattern.Beat`` and issue #36 item 1.
+
     Example:
         PocketStretching(variation_ms=5.0).apply(pattern, 0.7)
     """
@@ -568,6 +575,13 @@ class MinimalCreativity(DrummerModification):
 
     Removes non-essential hits for atmospheric, minimal feel.
 
+    Matches beats by ``beat.instrument in _THINNABLE_CYMBALS``
+    (``_TIMEKEEPING_CYMBALS`` plus OPEN_HH), not by provenance - it cannot
+    distinguish a genre-promoted timekeeping beat from a genuinely-placed
+    accent of the same instrument. Beat carries no provenance field; this
+    is accepted, permanent behavior, not a bug - see the note on
+    ``midi_drums.core.models.pattern.Beat`` and issue #36 item 1.
+
     Example:
         MinimalCreativity(sparseness=0.7).apply(pattern, 0.8)
     """
@@ -609,6 +623,15 @@ class SpeedPrecision(DrummerModification):
     """Apply speed and precision (Dee style).
 
     Ensures consistent velocities and tight timing for precision feel.
+
+    Looks up each beat's velocity target by ``beat.instrument`` in
+    ``_SPEED_PRECISION_TARGETS`` (which covers every
+    ``_TIMEKEEPING_CYMBALS`` member plus kick/snare), not by provenance -
+    it cannot distinguish a genre-promoted timekeeping beat from a
+    genuinely-placed accent of the same instrument. Beat carries no
+    provenance field; this is accepted, permanent behavior, not a bug -
+    see the note on ``midi_drums.core.models.pattern.Beat`` and issue #36
+    item 1.
 
     Example:
         SpeedPrecision(consistency=0.9).apply(pattern, 1.0)
