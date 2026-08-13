@@ -100,6 +100,26 @@ it through either framework's ceremony.
 | Cheap session start / repo orientation | `sc:load` / `sc:index-repo` |
 | No SuperClaude equivalent (e.g. systematic root-cause debugging loop) | fall back to the matching `superpowers:*` skill |
 
+## UX/UI Redesign Workflow
+
+This repo's only UI surface is the docs site (`docs/site-pages/*.html`, built by
+`docs/make.py`). Which agent/skill/command fits depends on whether the work is
+*originating* a visual identity or *operating on* one that already exists — those are
+different jobs with different tools.
+
+| Situation | Use |
+|---|---|
+| Requirements/scope unclear (what should this page accomplish, for whom) | `sc:brainstorm` or `sc:design` first, or plain Socratic dialogue with the user — pin down subject/audience/constraints before any visual work starts (see feedback memory on Socratic design clarity) |
+| **Net-new** visual identity — new page, rebrand, "make this not look like every other AI-generated site" | `frontend-design:frontend-design` skill (Anthropic official plugin, enabled in this repo's global settings). Its brainstorm → plan → critique → build → critique loop is built for exactly this: opinionated palette/type/layout/signature-element choices grounded in the subject. Invoke it directly (`Skill` tool) so its process guidance loads into the *acting* context — don't just summarize it into a subagent prompt secondhand. |
+| **Consolidation / technical-debt / accessibility pass** on an *already-shipped* identity (e.g. issue #44 AC Group 4: dedupe the 5 pages' duplicated `<style>` blocks, fix contrast, add landmarks) | `frontend-architect` agent, dispatched directly with a tight objective/scope/boundaries prompt. Skip the frontend-design skill's creative-brainstorm framework here — it doesn't apply when the brief is explicitly "preserve the existing identity, don't rebrand." |
+| Want several independent visual directions to compare before committing (e.g. a genuine redesign, not a consolidation) | `Workflow` tool, judge-panel pattern (N independent design attempts, scored synthesis) — **opt-in only**, per this repo's standing multi-agent policy above. Never default to this; the user has to ask for parallel exploration explicitly. |
+| Post-implementation check | `just docs-serve` + a manual look (Chrome browser tools if available) is sufficient at this repo's scale. Escalate to `quality-engineer` only if the redesign grows real interactive/JS behavior worth a dedicated test pass — not needed for the current static-HTML docs site. |
+
+None of this needs `--auto-merge` or Workflow's full ceremony by default — a docs-site
+pass is exactly the "single cohesive shared-file task" case the general sub-agent
+policy above already covers (all 5 site pages + `docs/make.py`'s build wiring are one
+unit of work, dispatched to one agent, not split per-page).
+
 ## Token Reduction Strategies for Subagent Work
 
 Condensed from `claudedocs/research_subagent_token_reduction_20260810.md`:

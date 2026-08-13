@@ -8,53 +8,17 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,600;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="site.css">
 <style>
-/* ── Tokens ─────────────────────────────────────────────────────────────── */
-:root {
-  --bg:          #0a0f17;
-  --bg-raised:   #0e1520;
-  --panel:       #141d2b;
-  --panel-lit:   #1a2438;
-  --code-bg:     #080d14;
-  --border:      #1c2840;
-  --border-lit:  #263650;
-  --border-glow: #2e4270;
+/* Page-specific to index.html: the landing-page hero, terminal code block,
+   stats strip, feature cards, genres/drummers sections, install strip,
+   buttons, nav and footer. These are used by this page only, so they stay
+   inline rather than living in site.css (tokens, reset, doc-page nav,
+   layout, typography, and skip-link/focus-visible accessibility rules are
+   shared there). body{line-height:1.7} below intentionally overrides
+   site.css's 1.75 default — index.html always used the tighter value. */
 
-  --violet:      #a78bfa;
-  --violet-d:    #7c5fdb;
-  --violet-dim:  rgba(167,139,250,0.08);
-  --violet-glow: rgba(167,139,250,0.15);
-  --amber:       #fbbf24;
-  --amber-dim:   rgba(251,191,36,0.08);
-  --sky:         #38bdf8;
-  --sky-dim:     rgba(56,189,248,0.08);
-  --green:       #4ade80;
-  --green-dim:   rgba(74,222,128,0.08);
-  --rose:        #fb7185;
-
-  --text:        #c8d3e0;
-  --muted:       #5a6f8a;
-  --dim:         #2d3f57;
-  --white:       #eef2f8;
-
-  --mono: 'IBM Plex Mono', 'Courier New', monospace;
-  --sans: 'Inter', system-ui, -apple-system, sans-serif;
-  --bar-h: 44px;
-  --radius: 6px;
-}
-
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; }
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--sans);
-  padding-top: var(--bar-h);
-  line-height: 1.7;
-  -webkit-font-smoothing: antialiased;
-}
-::-webkit-scrollbar { width: 5px; }
-::-webkit-scrollbar-thumb { background: var(--border-lit); border-radius: 3px; }
+body { line-height: 1.7; }
 
 /* ── NAV ─────────────────────────────────────────────────────────────────── */
 #nav {
@@ -246,7 +210,7 @@ body {
 .term-dot-g { background: #28c840; box-shadow: 0 0 4px rgba(40,200,64,0.4); }
 .term-title {
   margin-left: auto; font-family: var(--mono); font-size: 10px;
-  color: var(--dim); letter-spacing: 0.05em;
+  color: var(--text); letter-spacing: 0.05em;
 }
 .term-pre {
   background: var(--code-bg);
@@ -258,7 +222,7 @@ body {
   line-height: 1.7; color: var(--text);
   box-shadow: 0 8px 32px rgba(0,0,0,0.4);
 }
-.c  { color: var(--dim); font-style: italic; }
+.c  { color: var(--muted); font-style: italic; }
 .k  { color: var(--violet); }
 .f  { color: var(--sky); }
 .s  { color: var(--green); }
@@ -482,7 +446,7 @@ body {
   color: var(--text); display: flex; gap: 0.75rem; align-items: center;
   flex-wrap: wrap;
 }
-.install-cmd .prompt { color: var(--dim); user-select: none; }
+.install-cmd .prompt { color: var(--muted); user-select: none; }
 .install-cmd .cmd    { color: var(--green); }
 .install-cmd .arg    { color: var(--sky); }
 
@@ -490,7 +454,7 @@ body {
 footer {
   border-top: 1px solid var(--border);
   padding: 2.5rem 1.75rem;
-  font-family: var(--mono); font-size: 0.78rem; color: var(--dim);
+  font-family: var(--mono); font-size: 0.78rem; color: var(--muted);
 }
 .footer-inner {
   max-width: 960px; margin: 0 auto;
@@ -500,9 +464,9 @@ footer {
 .footer-brand { color: var(--muted); }
 .footer-brand strong { color: var(--violet); }
 .footer-links { display: flex; gap: 1.25rem; }
-.footer-links a { color: var(--dim); text-decoration: none; transition: color 0.15s; }
+.footer-links a { color: var(--muted); text-decoration: none; transition: color 0.15s; }
 .footer-links a:hover { color: var(--violet); }
-.footer-right { color: var(--dim); text-align: right; }
+.footer-right { color: var(--muted); text-align: right; }
 
 @media (max-width: 640px) {
   .nav-links { display: none; }
@@ -516,8 +480,10 @@ footer {
 </head>
 <body>
 
+<a class="skip-link" href="#main-content">Skip to content</a>
+
 <!-- NAV -->
-<nav id="nav">
+<nav id="nav" aria-label="Primary">
   <a class="nav-logo" href="index.html">
     <span class="nav-logo-prompt">&gt;</span> midi-drums
   </a>
@@ -532,6 +498,8 @@ footer {
     <a href="midi_drums.html" class="nav-api">API ref →</a>
   </div>
 </nav>
+
+<main id="main-content">
 
 <!-- HERO -->
 <section class="hero">
@@ -854,6 +822,8 @@ api<span class="p">.</span><span class="f">save_pattern_as_midi</span><span clas
     </div>
   </div>
 </div>
+
+</main>
 
 <!-- FOOTER -->
 <footer>
