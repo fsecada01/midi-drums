@@ -158,6 +158,10 @@ footer a:hover{color:var(--violet);}
     <a href="#prog-rock">Progressive Rock</a>
     <a href="#pr-code" class="sub">Python code</a>
     <a href="#pr-custom" class="sub">Custom structure</a>
+    <a href="#funk-groove">Funk Groove</a>
+    <a href="#fg-code" class="sub">Python code</a>
+    <a href="#electronic-track">Electronic Track</a>
+    <a href="#et-code" class="sub">Python code</a>
     <h3>Extras</h3>
     <a href="#batch">Batch generation</a>
     <a href="#ai">AI recipes</a>
@@ -419,6 +423,133 @@ api.save_as_midi(porcaro_prog, "prog_rock_porcaro.mid")</code></pre>
       <div class="callout tip">
         <div class="callout-title">Bonham's behind-the-beat feel</div>
         <p><strong>BehindBeatTiming</strong> delays hits by 15–25 ms — subtle enough to be musical, noticeable enough to create that signature weight. Combined with <strong>TripletVocabulary</strong> for fills and <strong>HeavyAccents</strong> for power, it produces the Led Zeppelin signature.</p>
+      </div>
+    </div>
+
+    <!-- ═══ FUNK GROOVE ════════════════════════════════════════════════════════ -->
+    <div class="recipe-card rc-funk" id="funk-groove">
+      <span class="recipe-tag tag-funk">funk</span>
+      <h2>Funk Groove</h2>
+      <div class="recipe-meta">
+        <span><span class="label">BPM</span> 100</span>
+        <span><span class="label">Style</span> classic</span>
+        <span><span class="label">Drummer</span> Dennis Chambers</span>
+        <span><span class="label">Complexity</span> 0.7</span>
+      </div>
+      <p>Classic James Brown-style funk built around "the one" — a hard downbeat accent that everything else locks around. Dennis Chambers' pocket-stretching and funk mastery push the groove without ever losing the deep pocket.</p>
+
+      <div class="structure-list">
+        <div class="section-pill">intro <span>4 bars</span></div>
+        <div class="section-pill">verse <span>8 bars</span></div>
+        <div class="section-pill">chorus <span>8 bars</span></div>
+        <div class="section-pill">verse <span>8 bars</span></div>
+        <div class="section-pill">outro <span>4 bars</span></div>
+      </div>
+
+      <h3 id="fg-code">Python</h3>
+      <pre><code class="language-python">from midi_drums.api.python_api import DrumGeneratorAPI
+
+api = DrumGeneratorAPI()
+
+# Classic "the one" funk with Chambers' pocket
+classic = api.create_song(
+    genre="funk",
+    style="classic",
+    tempo=100,
+    complexity=0.7,
+    humanization=0.4,
+    drummer="chambers",
+)
+api.save_as_midi(classic, "funk_classic_chambers.mid")
+
+# P-Funk for a looser, more layered feel
+pfunk = api.create_song(
+    genre="funk",
+    style="pfunk",
+    tempo=104,
+    complexity=0.65,
+    drummer="chambers",
+)
+api.save_as_midi(pfunk, "funk_pfunk_chambers.mid")
+
+# Purdie-style shuffle for comparison
+shuffle = api.create_song(
+    genre="funk",
+    style="shuffle",
+    tempo=96,
+    drummer="porcaro",  # half-time shuffle mastery
+)
+api.save_as_midi(shuffle, "funk_shuffle_porcaro.mid")</code></pre>
+
+      <div class="callout tip">
+        <div class="callout-title">What makes it authentic</div>
+        <p>The <strong>FunkGhostNotes</strong> template layers barely-audible ghost notes between the backbeat hits — the difference between a stiff drum-machine groove and a real pocket. <strong>classic</strong> emphasizes beat one hard (James Brown), <strong>pfunk</strong> spreads emphasis across a looser, more syncopated layer (Parliament-Funkadelic), and <strong>shuffle</strong> applies a triplet-based swing feel (Bernard Purdie).</p>
+      </div>
+    </div>
+
+    <!-- ═══ ELECTRONIC TRACK ═══════════════════════════════════════════════════ -->
+    <div class="recipe-card rc-electronic" id="electronic-track">
+      <span class="recipe-tag tag-electronic">electronic</span>
+      <h2>Electronic Track</h2>
+      <div class="recipe-meta">
+        <span><span class="label">BPM</span> 174</span>
+        <span><span class="label">Style</span> drum_and_bass</span>
+        <span><span class="label">Complexity</span> 0.6</span>
+      </div>
+      <p>Drum &amp; bass drums built on a syncopated breakbeat kick and snare, off the plain quarter-note grid house and techno use. No drummer personality is applied here — electronic patterns are programmed grooves, not imitations of a live player.</p>
+
+      <div class="structure-list">
+        <div class="section-pill">intro <span>4 bars</span></div>
+        <div class="section-pill">verse <span>8 bars</span></div>
+        <div class="section-pill">breakdown <span>4 bars</span></div>
+        <div class="section-pill">chorus <span>8 bars</span></div>
+        <div class="section-pill">outro <span>4 bars</span></div>
+      </div>
+
+      <h3 id="et-code">Python</h3>
+      <pre><code class="language-python">from midi_drums.api.python_api import DrumGeneratorAPI
+
+api = DrumGeneratorAPI()
+
+# Drum & bass — syncopated breakbeat kick/snare
+dnb = api.create_song(
+    genre="electronic",
+    style="drum_and_bass",
+    tempo=174,
+    complexity=0.6,
+)
+api.save_as_midi(dnb, "electronic_dnb.mid")
+
+# Four-on-the-floor house for comparison
+house = api.create_song(
+    genre="electronic",
+    style="house",
+    tempo=124,
+    complexity=0.45,
+)
+api.save_as_midi(house, "electronic_house.mid")
+
+# Techno — same four-on-the-floor kick, driving verse/chorus energy
+techno = api.create_song(
+    genre="electronic",
+    style="techno",
+    tempo=130,
+    complexity=0.5,
+)
+api.save_as_midi(techno, "electronic_techno.mid")
+
+# Dubstep — sparse half-time kick/snare
+dubstep = api.create_song(
+    genre="electronic",
+    style="dubstep",
+    tempo=140,
+    complexity=0.5,
+)
+api.save_as_midi(dubstep, "electronic_dubstep.mid")</code></pre>
+
+      <div class="callout info">
+        <div class="callout-title">Four styles, four kick/snare grids</div>
+        <p><strong>house</strong> and <strong>techno</strong> share a four-on-the-floor kick (every quarter note). <strong>drum_and_bass</strong> moves the kick off-grid for a syncopated breakbeat feel. <strong>dubstep</strong> goes half-time — a sparse kick/snare grid at half the perceived tempo, letting the groove sit heavier per hit.</p>
       </div>
     </div>
 
