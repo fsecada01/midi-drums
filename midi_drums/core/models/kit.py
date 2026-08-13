@@ -1,8 +1,28 @@
 """Drum kit configuration and instrument mapping."""
 
+import json
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from midi_drums.core.value_objects.drum_instrument import DrumInstrument
+
+# DrumInstrument's baseline values are EZDrummer-3-specific for these 8
+# extended hi-hat articulations (notes 22, 24-26, 60-63), which aren't real
+# GM Level 1 percussion notes. Presets that claim GM-standard/GM-baseline
+# compatibility need to collapse each to its nearest true GM equivalent -
+# closed-hat family to CLOSED_HH, open-hat family to OPEN_HH - otherwise a
+# strict GM-compliant sampler would receive wrong notes (e.g. 60 = GM "Hi
+# Bongo", not an open hi-hat).
+_GM_HIHAT_COLLAPSE: dict[DrumInstrument, int] = {
+    DrumInstrument.CLOSED_HH_EDGE: DrumInstrument.CLOSED_HH.value,
+    DrumInstrument.CLOSED_HH_TIP: DrumInstrument.CLOSED_HH.value,
+    DrumInstrument.TIGHT_HH_EDGE: DrumInstrument.CLOSED_HH.value,
+    DrumInstrument.TIGHT_HH_TIP: DrumInstrument.CLOSED_HH.value,
+    DrumInstrument.OPEN_HH_1: DrumInstrument.OPEN_HH.value,
+    DrumInstrument.OPEN_HH_2: DrumInstrument.OPEN_HH.value,
+    DrumInstrument.OPEN_HH_3: DrumInstrument.OPEN_HH.value,
+    DrumInstrument.OPEN_HH_MAX: DrumInstrument.OPEN_HH.value,
+}
 
 
 @dataclass
@@ -97,8 +117,9 @@ class DrumKit:
         return cls(
             name="EZDrummer 3 Kit",
             channel=9,
-            # EZDrummer 3 uses standard GM mappings, so no custom mappings
-            # needed
+            # DrumInstrument's own note values already target EZDrummer 3's
+            # extended hi-hat articulations (see drum_instrument.py), so no
+            # overrides are needed here - this preset is the enum baseline.
             custom_mappings={},
         )
 
@@ -136,32 +157,47 @@ class DrumKit:
 
     @classmethod
     def create_studio_drummer3_kit(cls) -> "DrumKit":
-        """Create a Studio Drummer 3 (Native Instruments) compatible kit."""
+        """Create a Studio Drummer 3 (Native Instruments) compatible kit.
+
+        No Studio Drummer 3-specific note research has been done yet (see
+        claudedocs/research_vendor_drum_midi_maps_20260812.md) - this uses
+        the GM-collapsed baseline so it's at least GM-compliant rather than
+        silently inheriting EZDrummer 3's non-GM extended hi-hat notes.
+        """
         return cls(
             name="Studio Drummer 3 Kit",
             channel=9,
-            # Studio Drummer 3 follows GM standard with some variations
-            custom_mappings={},
+            custom_mappings=dict(_GM_HIHAT_COLLAPSE),
         )
 
     @classmethod
     def create_addictive_drums_kit(cls) -> "DrumKit":
-        """Create an Addictive Drums 2 (XLN Audio) compatible kit."""
+        """Create an Addictive Drums 2 (XLN Audio) compatible kit.
+
+        No Addictive Drums 2-specific note research has been done yet (see
+        claudedocs/research_vendor_drum_midi_maps_20260812.md) - this uses
+        the GM-collapsed baseline so it's at least GM-compliant rather than
+        silently inheriting EZDrummer 3's non-GM extended hi-hat notes.
+        """
         return cls(
             name="Addictive Drums 2 Kit",
             channel=9,
-            # Addictive Drums follows GM standard
-            custom_mappings={},
+            custom_mappings=dict(_GM_HIHAT_COLLAPSE),
         )
 
     @classmethod
     def create_bfd3_kit(cls) -> "DrumKit":
-        """Create a BFD3 (FXpansion) compatible kit using common mappings."""
+        """Create a BFD3 (FXpansion) compatible kit using common mappings.
+
+        No BFD3-specific note research has been done yet (see
+        claudedocs/research_vendor_drum_midi_maps_20260812.md) - this uses
+        the GM-collapsed baseline so it's at least GM-compliant rather than
+        silently inheriting EZDrummer 3's non-GM extended hi-hat notes.
+        """
         return cls(
             name="BFD3 Kit",
             channel=9,
-            # BFD3 uses flexible mapping, using GM as baseline
-            custom_mappings={},
+            custom_mappings=dict(_GM_HIHAT_COLLAPSE),
         )
 
     @classmethod
@@ -170,28 +206,37 @@ class DrumKit:
         return cls(
             name="General MIDI Drums",
             channel=9,
-            # GM standard mappings (matches DrumInstrument enum values)
-            custom_mappings={},
+            custom_mappings=dict(_GM_HIHAT_COLLAPSE),
         )
 
     @classmethod
     def create_modo_drums_kit(cls) -> "DrumKit":
-        """Create a MODO Drums (IK Multimedia) compatible kit."""
+        """Create a MODO Drums (IK Multimedia) compatible kit.
+
+        No MODO Drums-specific note research has been done yet (see
+        claudedocs/research_vendor_drum_midi_maps_20260812.md) - this uses
+        the GM-collapsed baseline so it's at least GM-compliant rather than
+        silently inheriting EZDrummer 3's non-GM extended hi-hat notes.
+        """
         return cls(
             name="MODO Drums Kit",
             channel=9,
-            # MODO Drums follows GM standard
-            custom_mappings={},
+            custom_mappings=dict(_GM_HIHAT_COLLAPSE),
         )
 
     @classmethod
     def create_ml_drums_kit(cls) -> "DrumKit":
-        """Create an ML Drums (ML Sound Lab) compatible kit."""
+        """Create an ML Drums (ML Sound Lab) compatible kit.
+
+        No ML Drums-specific note research has been done yet (see
+        claudedocs/research_vendor_drum_midi_maps_20260812.md) - this uses
+        the GM-collapsed baseline so it's at least GM-compliant rather than
+        silently inheriting EZDrummer 3's non-GM extended hi-hat notes.
+        """
         return cls(
             name="ML Drums Kit",
             channel=9,
-            # ML Drums follows GM standard
-            custom_mappings={},
+            custom_mappings=dict(_GM_HIHAT_COLLAPSE),
         )
 
     @classmethod
@@ -235,6 +280,68 @@ class DrumKit:
             )
 
         return preset_map[preset_name_lower]()
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "DrumKit":
+        """Create a drum kit from a plain dict, e.g. loaded from JSON.
+
+        Expected shape::
+
+            {
+                "name": "My Custom Kit",              # optional
+                "channel": 9,                          # optional, default 9
+                "mappings": {"KICK": 36, "SNARE": 38}  # DrumInstrument
+                                                        # names -> MIDI note
+            }
+
+        Instruments not present in "mappings" fall back to their
+        `DrumInstrument` enum value via `get_midi_note()`.
+
+        Args:
+            data: Mapping dict as described above.
+
+        Returns:
+            DrumKit configured with the supplied custom mappings.
+
+        Raises:
+            ValueError: If a mapping key isn't a known DrumInstrument name,
+                or a mapping value isn't a valid MIDI note number.
+        """
+        custom_mappings: dict[DrumInstrument, int] = {}
+        for instrument_name, note in data.get("mappings", {}).items():
+            try:
+                instrument = DrumInstrument[instrument_name.upper()]
+            except KeyError as exc:
+                raise ValueError(
+                    f"Unknown drum instrument in mapping file: "
+                    f"'{instrument_name}'"
+                ) from exc
+            try:
+                custom_mappings[instrument] = int(note)
+            except (TypeError, ValueError) as exc:
+                raise ValueError(
+                    f"Invalid MIDI note for '{instrument_name}': {note!r}"
+                ) from exc
+
+        return cls(
+            name=data.get("name", "Custom Kit"),
+            channel=data.get("channel", 9),
+            custom_mappings=custom_mappings,
+        )
+
+    @classmethod
+    def from_json(cls, path: str | Path) -> "DrumKit":
+        """Create a drum kit from a JSON mapping file.
+
+        Args:
+            path: Path to a JSON file matching the `from_dict()` shape.
+
+        Returns:
+            DrumKit configured with the supplied custom mappings.
+        """
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+        return cls.from_dict(data)
 
     @classmethod
     def list_presets(cls) -> dict[str, str]:

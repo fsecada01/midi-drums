@@ -746,12 +746,13 @@ For complete refactoring documentation, see `claudedocs/REFACTORING_PROGRESS.md`
 
 ### Overview
 
-`C:/REAPER/Scripts/create_song_sections.lua` is the bi-directional bridge between
-REAPER and the midi_drums Python module. It has three modes and calls Python via
-`io.popen` (blocking subprocess, ~1-2 s for templates, ~20-45 s for AI).
+`reaper/create_song_sections.lua` (vendored in this repo — see `reaper/README.md`
+for the install step) is the bi-directional bridge between REAPER and the
+midi_drums Python module. It has three modes and calls Python via `io.popen`
+(blocking subprocess, ~1-2 s for templates, ~20-45 s for AI).
 
-A standalone help script `C:/REAPER/Scripts/midi_drums_help.lua` can be run as a
-REAPER action to display usage instructions inside REAPER at any time.
+A standalone help script `reaper/midi_drums_help.lua` can be run as a REAPER
+action to display usage instructions inside REAPER at any time.
 
 ### Modes
 
@@ -803,13 +804,17 @@ Added to `midi_drums/api/python_api.py`:
 At the top of the Lua script — the only values users need to edit:
 
 ```lua
-local PYTHON_EXE     = "C:/dev/python/projects/midi_drums/.venv/Scripts/pythonw.exe"
+local PYTHON_EXE     = "C:/path/to/midi_drums/.venv/Scripts/pythonw.exe"
 local SIDECAR_PATH   = nil            -- nil = <project dir>/midi_drums_sections.json
 local DEFAULT_GENRE  = "metal"
 local DEFAULT_STYLE  = "doom"
 local DEFAULT_MAPPING = "ezdrummer3"
 local DEFAULT_AI_TEMPO = "120"
 ```
+
+See `reaper/README.md` for how to load this script into REAPER (symlink or
+copy into REAPER's `Scripts/` directory — the repo copy is the source of
+truth).
 
 ### IPC Pattern
 
