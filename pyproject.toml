@@ -43,6 +43,10 @@ dev = [
     "loguru>=0.7.0",
 ]
 
+[project.urls]
+Documentation = "https://fsecada01.github.io/midi-drums/"
+Repository = "https://github.com/fsecada01/midi-drums"
+
 [project.scripts]
 midi-drums = "midi_drums.api.cli:main"
 
