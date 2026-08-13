@@ -29,6 +29,7 @@ REPO_ROOT = DOCS_DIR.parent
 PACKAGE = "midi_drums"
 TEMPLATES_DIR = DOCS_DIR / "pdoc_templates"
 DEFAULT_OUT = DOCS_DIR / "site"
+STATIC_ASSET_SUFFIXES = {".css", ".js", ".png", ".jpg", ".jpeg", ".svg", ".ico"}
 
 
 # ── Environment bootstrap ─────────────────────────────────────────────────────
@@ -59,13 +60,26 @@ def build(output_dir: Path) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     pdoc.pdoc(PACKAGE, output_directory=output_dir)
 
-    # Copy custom site pages (home, quickstart, recipes, reaper) to output root.
+    # Copy custom site pages (home, quickstart, recipes, reaper, use-cases)
+    # and their static assets (site.css, ...) to output root.
     site_pages_dir = DOCS_DIR / "site-pages"
     if site_pages_dir.is_dir():
         pages = list(site_pages_dir.glob("*.html"))
         for page in pages:
             shutil.copy2(page, output_dir / page.name)
         print(f"  Copied {len(pages)} site page(s) from {site_pages_dir.name}/")
+
+        assets = [
+            p
+            for p in site_pages_dir.iterdir()
+            if p.is_file() and p.suffix in STATIC_ASSET_SUFFIXES
+        ]
+        for asset in assets:
+            shutil.copy2(asset, output_dir / asset.name)
+        if assets:
+            print(
+                f"  Copied {len(assets)} static asset(s) from {site_pages_dir.name}/"
+            )
 
 
 # ── Dev server ────────────────────────────────────────────────────────────────

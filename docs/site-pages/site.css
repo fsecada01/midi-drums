@@ -1,0 +1,216 @@
+/* ────────────────────────────────────────────────────────────────────────
+   site.css — MIDI Drums Generator docs: shared design tokens + site chrome
+   ────────────────────────────────────────────────────────────────────────
+   Extracted from the per-page <style> blocks in docs/site-pages/*.html
+   (issue #44, AC group 4) to remove duplication. This file holds only CSS
+   that is genuinely shared across multiple pages: design tokens, the base
+   reset, the doc-page nav/layout/typography/callout/table/footer "chrome"
+   used identically by quickstart.html, recipes.html, reaper.html and
+   use-cases.html, plus the accessibility primitives (skip link,
+   focus-visible) needed on every page.
+
+   index.html's landing-page-only sections (hero, terminal, stats strip,
+   feature cards, genres, drummers, install strip, buttons) and its own
+   nav/footer markup are NOT here — they are used by exactly one page, so
+   they remain in that page's inline <style> block, same as recipes.html's
+   recipe-card CSS and reaper.html's workflow/file-tree CSS stay inline.
+
+   NOTE on --muted: this file changes --muted from the original #5a6f8a to
+   #778ca6 to satisfy WCAG 2.1 AA (4.5:1) for body text against --bg — see
+   docs/site-pages/ (issue #44 AC group 4) for the audit. No other token
+   values changed from what the pages previously agreed on, except
+   --sky-dim/--green-dim which are unified to the 0.06 alpha used by 4 of
+   the 5 pages (index.html previously used 0.08 for a single hover-state
+   tint — the difference is not perceptible).
+   ──────────────────────────────────────────────────────────────────────── */
+
+/* ── Design tokens (superset of every value used by any page) ────────── */
+:root {
+  --bg:          #0a0f17;
+  --bg-raised:   #0e1520;
+  --panel:       #141d2b;
+  --panel-lit:   #1a2438;
+  --code-bg:     #080d14;
+  --border:      #1c2840;
+  --border-lit:  #263650;
+  --border-glow: #2e4270;
+
+  --violet:      #a78bfa;
+  --violet-d:    #7c5fdb;
+  --violet-dim:  rgba(167,139,250,0.08);
+  --amber:       #fbbf24;
+  --sky:         #38bdf8;
+  --sky-dim:     rgba(56,189,248,0.06);
+  --green:       #4ade80;
+  --green-dim:   rgba(74,222,128,0.06);
+  --rose:        #fb7185;
+
+  --text:        #c8d3e0;
+  --muted:       #778ca6;
+  --dim:         #2d3f57;
+  --white:       #eef2f8;
+
+  --mono: 'IBM Plex Mono', 'Courier New', monospace;
+  --sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --bar-h: 44px;
+  --radius: 6px;
+}
+
+/* ── Base reset ────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  padding-top: var(--bar-h);
+  line-height: 1.75;
+  -webkit-font-smoothing: antialiased;
+}
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-thumb { background: var(--border-lit); border-radius: 3px; }
+
+/* ── Accessibility: skip link ────────────────────────────────────────────
+   Visually hidden until keyboard-focused; jumps past the nav straight to
+   the page's main content landmark. */
+.skip-link {
+  position: absolute;
+  top: 0; left: 0;
+  transform: translateY(-120%);
+  z-index: 2000;
+  background: var(--panel-lit);
+  color: var(--white);
+  border: 1px solid var(--violet);
+  border-radius: 0 0 var(--radius) 0;
+  padding: 0.6rem 1.1rem;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  text-decoration: none;
+  transition: transform 0.15s;
+}
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+/* ── Accessibility: visible focus indicator ──────────────────────────────
+   Applies to every interactive element site-wide so no control ever loses
+   its focus outline. */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--violet);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* ── NAV (doc pages: quickstart / recipes / reaper / use-cases) ─────────── */
+#dm-bar {
+  position: fixed; top: 0; left: 0; right: 0; height: var(--bar-h); z-index: 1000;
+  display: flex; align-items: center; padding: 0 1.75rem;
+  background: rgba(10,15,23,0.92);
+  backdrop-filter: blur(12px) saturate(1.4);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+  border-bottom: 1px solid var(--border);
+  font-family: var(--mono); font-size: 11px; color: var(--muted); white-space: nowrap;
+}
+#dm-bar::after {
+  content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(167,139,250,0.3), transparent);
+}
+.dm-logo { color: var(--violet); font-weight: 600; font-size: 13px; text-decoration: none; margin-right: .85rem; transition: color .15s; }
+.dm-logo::before { content: "> "; color: var(--amber); }
+.dm-logo:hover { color: var(--white); }
+.dm-badge { font-size: 9px; letter-spacing: .12em; padding: 2px 7px; border-radius: 2px; margin-right: .85rem; color: var(--green); border: 1px solid rgba(74,222,128,.35); background: rgba(74,222,128,.05); }
+.dm-sep { color: var(--muted); margin: 0 .85rem; }
+.dm-links { margin-left: auto; display: flex; align-items: center; gap: 1.25rem; }
+.dm-links a { color: var(--muted); text-decoration: none; font-size: 11px; padding-bottom: 2px; border-bottom: 1px solid transparent; transition: color .15s, border-color .15s; }
+.dm-links a:hover, .dm-links a.active { color: var(--violet); border-bottom-color: rgba(167,139,250,.5); }
+.dm-links .api-link { color: var(--sky); }
+.dm-links .api-link:hover { color: var(--violet); }
+
+/* ── LAYOUT (doc pages) ──────────────────────────────────────────────────── */
+.layout { display: grid; grid-template-columns: 228px 1fr; max-width: 1120px; margin: 0 auto; min-height: calc(100vh - var(--bar-h)); }
+.toc {
+  position: sticky; top: var(--bar-h); height: calc(100vh - var(--bar-h)); overflow-y: auto;
+  padding: 2rem 1.25rem; border-right: 1px solid var(--border);
+  font-family: var(--mono); font-size: .8rem;
+  background: linear-gradient(to bottom, rgba(14,21,32,0.5), transparent);
+}
+/* Not a heading: these are TOC section labels inside a <nav>, so using
+   <h3>/<h4> here would put page-navigation labels ahead of the article's
+   own <h1> in the page's one heading outline. Styled to look identical. */
+.toc-heading { font-size: .68rem; color: var(--muted); letter-spacing: .18em; text-transform: uppercase; margin-bottom: .75rem; margin-top: 1.5rem; }
+.toc-heading:first-child { margin-top: 0; }
+.toc a { display: block; color: var(--muted); text-decoration: none; padding: .22rem 0 .22rem .6rem; margin-left: -.6rem; border-left: 2px solid transparent; transition: color .15s, border-color .15s; }
+.toc a:hover, .toc a.active { color: var(--violet); border-left-color: rgba(167,139,250,.5); }
+.toc a.sub { padding-left: 1.2rem; font-size: .75rem; }
+.toc a.sub:hover, .toc a.sub.active { border-left: none; }
+
+article { padding: 2.75rem 3.25rem; max-width: 840px; }
+
+/* ── TYPOGRAPHY (doc pages) ──────────────────────────────────────────────── */
+h1 { font-family: var(--mono); font-size: 1.7rem; font-weight: 600; color: var(--white); margin-bottom: .5rem; }
+h1::before { content: "# "; color: var(--amber); opacity: .6; }
+.subtitle { color: var(--muted); margin-bottom: 2.75rem; font-size: 1rem; }
+h2 { font-family: var(--mono); font-size: 1.1rem; font-weight: 600; color: var(--sky); margin: 2.75rem 0 .85rem; padding-top: .5rem; border-top: 1px solid var(--border); }
+h2::before { content: "## "; color: var(--amber); opacity: .45; font-size: .9em; }
+h3 { font-family: var(--mono); font-size: .95rem; font-weight: 600; color: var(--white); margin: 1.5rem 0 .6rem; }
+h3::before { content: "### "; color: var(--amber); opacity: .35; font-size: .85em; }
+p { margin: .65rem 0; color: var(--text); }
+a { color: var(--sky); text-decoration: none; transition: color .15s; }
+a:hover { color: var(--violet); }
+code { font-family: var(--mono); font-size: .84em; background: var(--panel-lit); border: 1px solid var(--border); border-radius: 3px; padding: .1em .38em; color: var(--amber); }
+pre { margin: 1.1rem 0; border-radius: var(--radius); overflow-x: auto; border: 1px solid var(--border); background: var(--code-bg); box-shadow: 0 4px 24px rgba(0,0,0,0.35); }
+pre code { font-size: .84rem; line-height: 1.7; background: none; border: none; color: var(--text); padding: 0; }
+ul, ol { margin: .6rem 0 .6rem 1.5rem; color: var(--text); }
+li { margin: .25rem 0; }
+
+/* ── STEP ─────────────────────────────────────────────────────────────────── */
+.step { display: flex; gap: 1.4rem; margin: 2rem 0; }
+.step-num {
+  flex-shrink: 0; width: 2.2rem; height: 2.2rem; border-radius: 50%;
+  background: rgba(167,139,250,.1);
+  border: 1px solid rgba(167,139,250,.4);
+  color: var(--violet); font-family: var(--mono); font-size: .85rem;
+  display: flex; align-items: center; justify-content: center; font-weight: 600;
+  margin-top: .1rem;
+  box-shadow: 0 0 12px rgba(167,139,250,.12);
+}
+.step-body h3 { margin-top: 0; }
+
+/* ── CALLOUT ──────────────────────────────────────────────────────────────── */
+.callout {
+  border-left: 3px solid var(--violet); border-radius: 0 var(--radius) var(--radius) 0;
+  padding: 1rem 1.1rem; margin: 1.4rem 0;
+  background: linear-gradient(90deg, rgba(167,139,250,.06), transparent 80%);
+}
+.callout.info { border-color: var(--sky); background: linear-gradient(90deg, var(--sky-dim), transparent 80%); }
+.callout.tip { border-color: var(--green); background: linear-gradient(90deg, var(--green-dim), transparent 80%); }
+.callout.warn { border-color: var(--amber); background: linear-gradient(90deg, rgba(251,191,36,.06), transparent 80%); }
+.callout-title { font-family: var(--mono); font-size: .73rem; letter-spacing: .12em; text-transform: uppercase; margin-bottom: .45rem; font-weight: 600; }
+.callout.info .callout-title { color: var(--sky); }
+.callout.tip  .callout-title { color: var(--green); }
+.callout.warn .callout-title { color: var(--amber); }
+.callout      .callout-title { color: var(--violet); }
+.callout p { font-size: .9rem; color: var(--muted); margin: .3rem 0; }
+
+/* ── TABLE ────────────────────────────────────────────────────────────────── */
+table { width: 100%; border-collapse: collapse; font-size: .88rem; margin: 1.1rem 0; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+th { font-family: var(--mono); font-size: .72rem; color: var(--text); letter-spacing: .12em; text-transform: uppercase; background: var(--panel-lit); border-bottom: 1px solid var(--border); padding: .55rem .85rem; text-align: left; }
+td { border-bottom: 1px solid rgba(28,40,64,.6); padding: .5rem .85rem; color: var(--text); }
+td:first-child { font-family: var(--mono); font-size: .82rem; color: var(--amber); }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: rgba(167,139,250,.04); }
+
+/* ── FOOTER (doc pages) ──────────────────────────────────────────────────── */
+footer { border-top: 1px solid var(--border); padding: 2rem 1.75rem; font-family: var(--mono); font-size: .78rem; color: var(--muted); }
+footer a { color: var(--muted); text-decoration: none; transition: color .15s; }
+footer a:hover { color: var(--violet); }
+
+@media (max-width: 768px) {
+  .layout { grid-template-columns: 1fr; }
+  .toc { display: none; }
+  article { padding: 2rem 1.25rem; }
+  .dm-links { display: none; }
+}
