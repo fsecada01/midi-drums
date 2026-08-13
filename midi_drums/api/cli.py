@@ -117,6 +117,31 @@ Examples:
             "when supplied."
         ),
     )
+    gen_parser.add_argument(
+        "--song-map",
+        metavar="JSON",
+        help=(
+            "Path to a song_creator-shaped song-map JSON file (regions "
+            "containing segments, each with its own bars/bpm/num/denom - "
+            "see C:/dev/projects/reaper/song_creator/). When provided, "
+            "the section structure AND any per-segment tempo/meter "
+            "overrides come from the song map instead of the genre "
+            "default or --sidecar. Mutually exclusive with --sidecar; "
+            "the song map's own tempo is used unless --tempo is also "
+            "specified."
+        ),
+    )
+    gen_parser.add_argument(
+        "--write-timeline",
+        metavar="JSON",
+        help=(
+            "Write a flat, resolved tempo/region timeline JSON (see "
+            "DrumGeneratorAPI.export_song_timeline_json) after generation "
+            "- consumed by the REAPER create_song_sections.lua script's "
+            "song-map mode to place per-segment tempo/time-signature "
+            "markers. Most useful together with --song-map."
+        ),
+    )
 
     # Generate pattern command
     pattern_parser = subparsers.add_parser(
@@ -388,7 +413,28 @@ def handle_generate_command(args, generator: DrumGenerator) -> None:
             drum_kit = DrumKit.from_preset(args.mapping)
         api = DrumGeneratorAPI()
 
-        if getattr(args, "sidecar", None):
+        if getattr(args, "song_map", None):
+            # Song-map-driven: section structure AND per-segment tempo/meter
+            # overrides come from a song_creator-shaped JSON file.
+            extra = {"drum_kit": drum_kit}
+            if args.complexity is not None:
+                extra["complexity"] = args.complexity
+            if args.humanization is not None:
+                extra["humanization"] = args.humanization
+            if args.drummer:
+                extra["drummer"] = args.drummer
+            # Only pass tempo if the user explicitly set it (not the default).
+            # argparse default is 120; check against it as a proxy.
+            if args.tempo != 120:
+                extra["tempo"] = args.tempo
+
+            song = api.create_song_from_song_map(
+                song_map=args.song_map,
+                genre=args.genre,
+                style=args.style,
+                **extra,
+            )
+        elif getattr(args, "sidecar", None):
             # Sidecar-driven: section structure comes from REAPER JSON file.
             # --tempo overrides the sidecar tempo when explicitly supplied.
             extra = {"drum_kit": drum_kit}
@@ -430,8 +476,14 @@ def handle_generate_command(args, generator: DrumGenerator) -> None:
         print(f"Saved to: {output_path}")
         print(f"Genre: {args.genre} ({args.style})")
         print(f"Tempo: {song.tempo} BPM")
-        if getattr(args, "sidecar", None):
+        if getattr(args, "song_map", None):
+            print(f"Structure from song map: {args.song_map}")
+        elif getattr(args, "sidecar", None):
             print(f"Structure from sidecar: {args.sidecar}")
+
+        if getattr(args, "write_timeline", None):
+            api.export_song_timeline_json(song, args.write_timeline)
+            print(f"Timeline   : {args.write_timeline}")
 
         info = generator.get_song_info(song)
         print(f"Duration: {info['duration_seconds']:.1f}s")

@@ -33,6 +33,25 @@ class PatternVariation:
 
 
 @dataclass
+class SongSegment:
+    """A tempo/time-signature-homogeneous slice within a Section.
+
+    Mirrors the song_creator REAPER tool's region-segment shape
+    (``{bars, bpm, num, denom}``) so a Section can contain a mid-section
+    tempo or meter change (e.g. an 8-bar 4/4 verse with a 2-bar 7/8 insert)
+    instead of being limited to one tempo/meter for its entire span.
+
+    ``tempo``/``time_signature`` of ``None`` means "inherit the parent
+    Song's global value" - a segment only needs to specify what it
+    overrides.
+    """
+
+    bars: int
+    tempo: int | None = None
+    time_signature: TimeSignature | None = None
+
+
+@dataclass
 class Section:
     """Song section (verse, chorus, etc.) with pattern and variations."""
 
@@ -42,6 +61,50 @@ class Section:
     variations: list[PatternVariation] = field(default_factory=list)
     fills: list[Fill] = field(default_factory=list)
     section_parameters: dict[str, Any] = field(default_factory=dict)
+    segments: list[SongSegment] = field(default_factory=list)
+
+    def __post_init__(self):
+        """Validate that segment bars (if any) account for the whole section."""
+        if self.segments:
+            segment_bars = sum(segment.bars for segment in self.segments)
+            if segment_bars != self.bars:
+                raise ValueError(
+                    f"Section '{self.name}' segments sum to {segment_bars} "
+                    f"bars but Section.bars is {self.bars}"
+                )
+
+    def segment_for_bar(self, bar_number: int) -> SongSegment | None:
+        """Return the segment covering local ``bar_number`` (0-indexed).
+
+        Returns None when this section has no segments - callers should
+        treat that as "use the song's global tempo/time signature."
+        """
+        cursor = 0
+        for segment in self.segments:
+            if cursor <= bar_number < cursor + segment.bars:
+                return segment
+            cursor += segment.bars
+        return None
+
+    def effective_tempo(self, bar_number: int, song_tempo: int) -> int:
+        """Resolve the tempo that applies at ``bar_number``, inheriting
+        ``song_tempo`` when this section has no segments or the covering
+        segment doesn't override tempo."""
+        segment = self.segment_for_bar(bar_number)
+        if segment is None or segment.tempo is None:
+            return song_tempo
+        return segment.tempo
+
+    def effective_time_signature(
+        self, bar_number: int, song_time_signature: TimeSignature
+    ) -> TimeSignature:
+        """Resolve the time signature that applies at ``bar_number``,
+        inheriting ``song_time_signature`` when this section has no
+        segments or the covering segment doesn't override it."""
+        segment = self.segment_for_bar(bar_number)
+        if segment is None or segment.time_signature is None:
+            return song_time_signature
+        return segment.time_signature
 
     def get_effective_pattern(self, bar_number: int) -> Pattern:
         """Get the pattern for a specific bar, considering variations."""
@@ -101,10 +164,25 @@ class Song:
         return sum(section.bars for section in self.sections)
 
     def total_duration_seconds(self) -> float:
-        """Calculate total song duration in seconds."""
-        total_beats = self.total_bars() * self.time_signature.beats_per_bar
-        beats_per_second = self.tempo / 60.0
-        return total_beats / beats_per_second
+        """Calculate total song duration in seconds.
+
+        Accounts for per-segment tempo/time-signature overrides (see
+        SongSegment) - a section with no segments contributes
+        ``bars * time_signature.beats_per_bar / (tempo / 60)`` using the
+        song's global values, identical to the pre-segment calculation.
+        """
+        total_seconds = 0.0
+        for section in self.sections:
+            if section.segments:
+                for segment in section.segments:
+                    time_sig = segment.time_signature or self.time_signature
+                    tempo = segment.tempo or self.tempo
+                    beats = segment.bars * time_sig.beats_per_bar
+                    total_seconds += beats / (tempo / 60.0)
+            else:
+                beats = section.bars * self.time_signature.beats_per_bar
+                total_seconds += beats / (self.tempo / 60.0)
+        return total_seconds
 
     def get_section_by_name(self, name: str) -> Section | None:
         """Find first section with the given name."""
