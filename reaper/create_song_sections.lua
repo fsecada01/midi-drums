@@ -218,6 +218,42 @@ local function run_python(cmd)
   return ok, out
 end
 
+-- Shared by the ai/songmap/reaper-template blocks below: run a Python
+-- command and, on failure, show one standard error dialog instead of
+-- each mode hand-rolling its own wording (which had already drifted
+-- between modes before this helper existed). Returns captured
+-- stdout/stderr on success, or nil on failure (caller should `return`).
+local function run_python_or_fail(cmd, extra_hint)
+  local ok, py_out = run_python(cmd)
+  if not ok then
+    reaper.ShowMessageBox(
+      "Python generation failed.\nCheck REAPER console for details.\n\n"
+      .. (extra_hint or ("PYTHON_EXE: " .. PYTHON_EXE)),
+      "Generation Failed", 0
+    )
+    return nil
+  end
+  return py_out
+end
+
+-- Shared read-back-after-generation step: open a file Python was just
+-- asked to write, show one standard "missing" dialog if it isn't
+-- there. Returns the file's content on success, or nil on failure
+-- (caller should `return`).
+local function read_generated_file_or_fail(path, what)
+  local f = io.open(path, "r")
+  if not f then
+    reaper.ShowMessageBox(
+      "Generation succeeded but " .. what .. " not found:\n" .. path,
+      what .. " Not Found", 0
+    )
+    return nil
+  end
+  local content = f:read("*all")
+  f:close()
+  return content
+end
+
 -- Sanitise a string for use inside a double-quoted cmd.exe argument.
 -- cmd.exe treats &|^<>% as special even inside double quotes, so strip
 -- them along with embedded quotes/newlines rather than trying to replicate
@@ -248,13 +284,24 @@ if mode_choice ~= 6 then   -- user chose External
     "sidecar"
   )
   if not ok_ext then return end
-  local ext_mode = ext_input:match("^%s*(.-)%s*$"):lower()
+  -- Normalize away whitespace/hyphens/underscores so "song-map",
+  -- "song map", and "songmap" all resolve the same way, instead of
+  -- silently falling into sidecar mode on any variant we didn't
+  -- special-case.
+  local ext_mode = ext_input:match("^%s*(.-)%s*$"):lower():gsub("[%s%-_]", "")
   if ext_mode == "ai" then
     MODE = "ai"
   elseif ext_mode == "songmap" then
     MODE = "songmap"
-  else
+  elseif ext_mode == "sidecar" or ext_mode == "" then
     MODE = "sidecar"
+  else
+    reaper.ShowMessageBox(
+      "Unrecognized external source: '" .. ext_input .. "'\n\n"
+      .. "Expected one of: sidecar, ai, songmap.",
+      "Invalid Mode", 0
+    )
+    return
   end
 end
 
@@ -355,30 +402,18 @@ elseif MODE == "ai" then
     PYTHON_EXE, shell_escape(description), tempo_arg, midi_out, sp
   )
 
-  local ok, py_out = run_python(cmd)
-
-  if not ok then
-    reaper.ShowMessageBox(
-      "AI generation failed.\nCheck REAPER console for details.\n\n"
-      .. "Common causes:\n"
-      .. "  • AI API key not set (ANTHROPIC_API_KEY / OPENAI_API_KEY)\n"
-      .. "  • AI dependencies not installed (uv sync --group ai)\n"
-      .. "  • PYTHON_EXE path incorrect: " .. PYTHON_EXE,
-      "Generation Failed", 0
-    )
-    return
-  end
+  local py_out = run_python_or_fail(
+    cmd,
+    "Common causes:\n"
+    .. "  • AI API key not set (ANTHROPIC_API_KEY / OPENAI_API_KEY)\n"
+    .. "  • AI dependencies not installed (uv sync --group ai)\n"
+    .. "  • PYTHON_EXE path incorrect: " .. PYTHON_EXE
+  )
+  if not py_out then return end
 
   -- 5. Read back the AI-generated sidecar to build regions
-  local sf = io.open(sp, "r")
-  if not sf then
-    reaper.ShowMessageBox(
-      "AI generation succeeded but sidecar not found:\n" .. sp,
-      "Sidecar Missing", 0
-    )
-    return
-  end
-  local content = sf:read("*all"); sf:close()
+  local content = read_generated_file_or_fail(sp, "sidecar")
+  if not content then return end
 
   local p_tempo, p_num, p_denom, p_sections, err = parse_sidecar(content)
   if not p_sections then
@@ -435,24 +470,10 @@ elseif MODE == "songmap" then
     PYTHON_EXE, genre, style, mapping, map_path, timeline_path, midi_out
   )
 
-  local ok, _ = run_python(cmd)
-  if not ok then
-    reaper.ShowMessageBox(
-      "Python generation failed.\nCheck REAPER console.\n\nPYTHON_EXE: " .. PYTHON_EXE,
-      "Generation Failed", 0
-    )
-    return
-  end
+  if not run_python_or_fail(cmd) then return end
 
-  local tf = io.open(timeline_path, "r")
-  if not tf then
-    reaper.ShowMessageBox(
-      "Generation succeeded but timeline not found:\n" .. timeline_path,
-      "Timeline Not Found", 0
-    )
-    return
-  end
-  local timeline_content = tf:read("*all"); tf:close()
+  local timeline_content = read_generated_file_or_fail(timeline_path, "timeline")
+  if not timeline_content then return end
 
   local tempo_points, regions, color_groups, terr = parse_timeline(timeline_content)
   if not tempo_points then
@@ -536,29 +557,14 @@ if MODE == "reaper" then
     PYTHON_EXE, genre, style, mapping, sp, midi_out
   )
 
-  local ok, _ = run_python(cmd)
-  if not ok then
-    reaper.ShowMessageBox(
-      "Python generation failed.\nCheck REAPER console.\n\nPYTHON_EXE: " .. PYTHON_EXE,
-      "Generation Failed", 0
-    )
-    return
-  end
+  if not run_python_or_fail(cmd) then return end
 end
 
 -- ---------------------------------------------------------------------------
 -- Auto-import MIDI (REAPER, AI, and song-map modes all produce drums.mid)
 -- ---------------------------------------------------------------------------
 if MODE == "reaper" or MODE == "ai" or MODE == "songmap" then
-  local mf = io.open(midi_out, "r")
-  if not mf then
-    reaper.ShowMessageBox(
-      "MIDI file not found after generation:\n" .. midi_out,
-      "File Not Found", 0
-    )
-    return
-  end
-  mf:close()
+  if not read_generated_file_or_fail(midi_out, "MIDI file") then return end
 
   reaper.InsertMedia(midi_out, 0)
   reaper.UpdateArrange()

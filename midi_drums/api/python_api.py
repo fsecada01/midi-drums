@@ -473,9 +473,8 @@ class DrumGeneratorAPI:
     ) -> Song:
         """Generate a song from a song_creator-shaped song-map.
 
-        song_creator (a separate REAPER Lua arrangement tool, see
-        ``C:/dev/projects/reaper/song_creator/``) models a song as
-        *regions* containing *segments*, each with its own
+        song_creator (a separate REAPER Lua arrangement tool) models a
+        song as *regions* containing *segments*, each with its own
         ``bars``/``bpm``/``num``/``denom`` - letting one region contain a
         mid-section tempo or meter change (e.g. an 8-bar 4/4 verse with a
         2-bar 7/8 insert). This reads that shape directly into a Song
@@ -496,8 +495,12 @@ class DrumGeneratorAPI:
 
         Raises:
             FileNotFoundError: If *song_map* is a path that doesn't exist.
-            ValueError: If the song-map has no regions/segments, or a
-                region's name isn't a section the genre plugin recognizes.
+            ValueError: If the song-map has no regions, a region has no
+                segments or no ``name``, or a region's name doesn't
+                produce a matching generated section (shipped genre
+                plugins fall back to a default pattern for unrecognized
+                names rather than failing, so this last case is rare in
+                practice).
         """
         import json
 
@@ -511,9 +514,16 @@ class DrumGeneratorAPI:
         else:
             text = str(song_map)
             candidate_path = Path(text)
-            if candidate_path.exists():
+            try:
+                path_exists = candidate_path.exists()
+            except OSError:
+                # A JSON-content string (not a path) can exceed the OS's
+                # max filename length, which raises ENAMETOOLONG on Linux
+                # instead of returning False as it does on Windows.
+                path_exists = False
+            if path_exists:
                 data = json.loads(candidate_path.read_text())
-            elif Path(text).suffix == ".json":
+            elif candidate_path.suffix == ".json":
                 raise FileNotFoundError(f"Song map not found: {text}")
             else:
                 data = json.loads(text)
@@ -525,6 +535,9 @@ class DrumGeneratorAPI:
         structure: list[tuple[str, int]] = []
         region_segments: list[list[SongSegment]] = []
         for region in regions:
+            region_name = region.get("name")
+            if not region_name:
+                raise ValueError(f"Region has no 'name': {region!r}")
             segments = [
                 SongSegment(
                     bars=segment["bars"],
@@ -538,11 +551,9 @@ class DrumGeneratorAPI:
                 for segment in region.get("segments", [])
             ]
             if not segments:
-                raise ValueError(
-                    f"Region '{region.get('name', '?')}' has no segments"
-                )
+                raise ValueError(f"Region '{region_name}' has no segments")
             structure.append(
-                (region["name"].lower(), sum(s.bars for s in segments))
+                (region_name.lower(), sum(s.bars for s in segments))
             )
             region_segments.append(segments)
 
@@ -617,33 +628,17 @@ class DrumGeneratorAPI:
 
         regions = []
         for section in song.sections:
-            if section.segments:
-                segments_json = [
-                    {
-                        "bars": segment.bars,
-                        "bpm": segment.tempo or song.tempo,
-                        "num": (
-                            segment.time_signature.numerator
-                            if segment.time_signature
-                            else song.time_signature.numerator
-                        ),
-                        "denom": (
-                            segment.time_signature.denominator
-                            if segment.time_signature
-                            else song.time_signature.denominator
-                        ),
-                    }
-                    for segment in section.segments
-                ]
-            else:
-                segments_json = [
-                    {
-                        "bars": section.bars,
-                        "bpm": song.tempo,
-                        "num": song.time_signature.numerator,
-                        "denom": song.time_signature.denominator,
-                    }
-                ]
+            segments_json = [
+                {
+                    "bars": bars,
+                    "bpm": tempo,
+                    "num": time_sig.numerator,
+                    "denom": time_sig.denominator,
+                }
+                for bars, tempo, time_sig in section.resolved_bar_specs(
+                    song.tempo, song.time_signature
+                )
+            ]
 
             color_group = section.section_parameters.get("color_group") or next(
                 iter(color_groups), "default"
@@ -697,17 +692,8 @@ class DrumGeneratorAPI:
             )
             color_group = section.section_parameters.get("color_group", "")
 
-            bar_specs = (
-                [
-                    (
-                        segment.bars,
-                        segment.tempo or song.tempo,
-                        segment.time_signature or song.time_signature,
-                    )
-                    for segment in section.segments
-                ]
-                if section.segments
-                else [(section.bars, song.tempo, song.time_signature)]
+            bar_specs = section.resolved_bar_specs(
+                song.tempo, song.time_signature
             )
 
             for bars, tempo, time_sig in bar_specs:

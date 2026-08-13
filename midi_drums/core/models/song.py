@@ -106,6 +106,30 @@ class Section:
             return song_time_signature
         return segment.time_signature
 
+    def resolved_bar_specs(
+        self, song_tempo: int, song_time_signature: TimeSignature
+    ) -> list[tuple[int, int, TimeSignature]]:
+        """Return (bars, tempo, time_signature) triples for this section.
+
+        One triple per segment when this section has segments, resolving
+        each segment's ``tempo``/``time_signature`` override against the
+        given song-level defaults; otherwise a single triple for the
+        whole section using those defaults directly. Shared by every
+        caller that needs to walk a section's bars accounting for
+        per-segment overrides (duration, timeline export, song-map
+        export) so segment-resolution semantics live in one place.
+        """
+        if self.segments:
+            return [
+                (
+                    segment.bars,
+                    segment.tempo or song_tempo,
+                    segment.time_signature or song_time_signature,
+                )
+                for segment in self.segments
+            ]
+        return [(self.bars, song_tempo, song_time_signature)]
+
     def get_effective_pattern(self, bar_number: int) -> Pattern:
         """Get the pattern for a specific bar, considering variations."""
         # Check if any variations should apply to this bar
@@ -173,16 +197,32 @@ class Song:
         """
         total_seconds = 0.0
         for section in self.sections:
-            if section.segments:
-                for segment in section.segments:
-                    time_sig = segment.time_signature or self.time_signature
-                    tempo = segment.tempo or self.tempo
-                    beats = segment.bars * time_sig.beats_per_bar
-                    total_seconds += beats / (tempo / 60.0)
-            else:
-                beats = section.bars * self.time_signature.beats_per_bar
-                total_seconds += beats / (self.tempo / 60.0)
+            for bars, tempo, time_sig in section.resolved_bar_specs(
+                self.tempo, self.time_signature
+            ):
+                beats = bars * time_sig.beats_per_bar
+                total_seconds += beats / (tempo / 60.0)
         return total_seconds
+
+    def section_start_times(self) -> list[float]:
+        """Return each section's start time in seconds.
+
+        Resolves per-segment tempo/time-signature overrides (see
+        SongSegment) the same way :meth:`total_duration_seconds` does, so
+        callers that need per-section positions (e.g. REAPER markers)
+        stay in sync with segmented songs instead of assuming a single
+        global tempo/time signature for the whole song.
+        """
+        times = []
+        elapsed = 0.0
+        for section in self.sections:
+            times.append(elapsed)
+            for bars, tempo, time_sig in section.resolved_bar_specs(
+                self.tempo, self.time_signature
+            ):
+                beats = bars * time_sig.beats_per_bar
+                elapsed += beats / (tempo / 60.0)
+        return times
 
     def get_section_by_name(self, name: str) -> Section | None:
         """Find first section with the given name."""

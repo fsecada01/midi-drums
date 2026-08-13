@@ -236,10 +236,19 @@ class MIDIEngine:
             # same (instrument, position) within a bar, keep the loudest.
             deduped_beats = _dedupe_by_instrument_position(beats_to_render)
 
+            # Pattern content is authored against the song's global meter
+            # (pattern_slice_beats_per_bar), but this bar's actual span is
+            # beats_per_bar (a segment override may differ, e.g. a 7/8
+            # insert). Scale note positions/durations proportionally so a
+            # beat near the end of the authored pattern still lands inside
+            # this bar's real span instead of bleeding into the next bar's
+            # time_cursor.
+            position_scale = beats_per_bar / pattern_slice_beats_per_bar
+
             for beat in sorted(deduped_beats, key=lambda b: b.position):
                 midi_note = self.drum_kit.get_midi_note(beat.instrument)
-                absolute_time = bar_start_time + beat.position
-                safe_duration = min(beat.duration, 0.2)
+                absolute_time = bar_start_time + beat.position * position_scale
+                safe_duration = min(beat.duration * position_scale, 0.2)
 
                 # Global dedup: skip if this (pitch, on_tick) was already
                 # added.  Multi-bar patterns can place beats at positions

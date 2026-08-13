@@ -1,6 +1,6 @@
 """Tests for the song_creator song-map bridge (issue #53 AC Group 3).
 
-song_creator (C:/dev/projects/reaper/song_creator/) models a song as
+song_creator (a separate REAPER Lua arrangement tool) models a song as
 regions containing segments, each with its own bars/bpm/num/denom. These
 tests cover DrumGeneratorAPI.create_song_from_song_map (ingestion) and
 export_song_map_json (the reverse direction), including a round trip

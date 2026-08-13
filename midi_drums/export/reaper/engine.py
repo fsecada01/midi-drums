@@ -185,6 +185,11 @@ class ReaperEngine:
 
         Each section in the song becomes one marker.  The marker color is
         derived from the section name via :func:`get_section_color`.
+        Positions are resolved via :meth:`Song.section_start_times`, which
+        accounts for per-segment tempo/time-signature overrides (see
+        :class:`~midi_drums.core.models.song.SongSegment`) so segmented
+        songs (e.g. from ``create_song_from_song_map``) don't drift out
+        of sync with the ``.mid`` export, which is segment-aware.
 
         Args:
             song: Song object with sections
@@ -207,14 +212,11 @@ class ReaperEngine:
             2
         """
         markers = []
-        cumulative_bars = 0
-        marker_id = 1
 
-        for section in song.sections:
-            position_seconds = bars_to_seconds(
-                cumulative_bars, song.tempo, song.time_signature
-            )
-
+        for marker_id, (section, position_seconds) in enumerate(
+            zip(song.sections, song.section_start_times(), strict=True),
+            start=1,
+        ):
             markers.append(
                 Marker(
                     position_seconds=position_seconds,
@@ -223,9 +225,6 @@ class ReaperEngine:
                     marker_id=marker_id,
                 )
             )
-
-            cumulative_bars += section.bars
-            marker_id += 1
 
         return markers
 
