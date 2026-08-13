@@ -748,7 +748,7 @@ For complete refactoring documentation, see `claudedocs/REFACTORING_PROGRESS.md`
 
 `reaper/create_song_sections.lua` (vendored in this repo — see `reaper/README.md`
 for the install step) is the bi-directional bridge between REAPER and the
-midi_drums Python module. It has three modes and calls Python via `io.popen`
+midi_drums Python module. It has four modes and calls Python via `io.popen`
 (blocking subprocess, ~1-2 s for templates, ~20-45 s for AI).
 
 A standalone help script `reaper/midi_drums_help.lua` can be run as a REAPER
@@ -759,8 +759,20 @@ action to display usage instructions inside REAPER at any time.
 | Mode | Triggered by | Python command | Regions source |
 |------|-------------|----------------|----------------|
 | **REAPER** (default) | YES on first dialog | `generate --sidecar` | `REAPER_SECTIONS` table |
-| **Python sidecar** | NO → YES | *(none — reads existing sidecar)* | JSON from `save_as_midi_with_sidecar` |
-| **AI agent** | NO → NO | `prompt --song --write-sidecar` | AI-chosen structure |
+| **Python sidecar** | NO → "sidecar" | *(none — reads existing sidecar)* | JSON from `save_as_midi_with_sidecar` |
+| **AI agent** | NO → "ai" | `prompt --song --write-sidecar` | AI-chosen structure |
+| **Song map** (issue #53) | NO → "songmap" | `generate --song-map --write-timeline` | Per-segment tempo/meter timeline JSON |
+
+The external-source follow-up prompt is a `GetUserInputs` text field
+(default `"sidecar"`) rather than a third Yes/No dialog, so it can name all
+three external modes without another round of binary dialogs.
+
+Song-map mode is the only mode that doesn't reuse the shared
+`AddProjectMarker2`-per-section loop driven by a single global
+`measure_length` — a song map can vary tempo/meter per bar, so it instead
+places one `SetTempoTimeSigMarker` per resolved tempo/meter change point and
+one colored region per song-map region, mirroring song_creator's own
+`song_reaper_build.lua:B.apply_to_reaper`.
 
 ### Sidecar Format (`midi_drums_sections.json`)
 
@@ -782,6 +794,47 @@ action to display usage instructions inside REAPER at any time.
 Written by Lua (REAPER mode) or by `DrumGeneratorAPI.export_sections_json()` (Python mode).
 Parsed in Lua using targeted string patterns — no external JSON library required.
 
+### Song Map Format (song_creator-shaped, ingested by `create_song_from_song_map`)
+
+```json
+{
+  "title": "Groove/Technical Metal Song Map",
+  "color_groups": {"groove": [200, 120, 40], "chorus": [180, 40, 40]},
+  "regions": [
+    {
+      "name": "Verse 1",
+      "color_group": "groove",
+      "segments": [
+        {"bars": 8, "bpm": 144, "num": 4, "denom": 4},
+        {"bars": 2, "bpm": 144, "num": 7, "denom": 8}
+      ]
+    }
+  ]
+}
+```
+
+One region maps to one `Section`; each region's segments map to that
+`Section`'s `segments: list[SongSegment]` — see `midi_drums/core/models/song.py`.
+Unlike the flat sidecar, a region's own segments can vary tempo/meter
+mid-section (e.g. `Verse 1` above holds a 7/8 bar inside a 4/4 verse).
+
+### Timeline Format (song-map mode only, `midi_drums_timeline.json`)
+
+```json
+{
+  "tempo_points": [{"time": 0.0, "bpm": 144, "num": 4, "denom": 4}, ...],
+  "regions": [{"name": "Verse 1", "color_group": "groove", "start_time": 8.0, "end_time": 20.0}, ...],
+  "color_groups": [{"name": "groove", "r": 200, "g": 120, "b": 40}, ...],
+  "total_time": 123.4
+}
+```
+
+Written by `DrumGeneratorAPI.export_song_timeline_json()`. Deliberately flat
+(no JSON objects nested inside other objects) so `create_song_sections.lua`'s
+song-map mode can parse it with plain Lua string patterns rather than a full
+JSON library — every object type (`tempo_points[]`, `regions[]`,
+`color_groups[]`) has a fixed, known key set.
+
 ### New Python API Methods
 
 Added to `midi_drums/api/python_api.py`:
@@ -791,12 +844,17 @@ Added to `midi_drums/api/python_api.py`:
 | `export_sections_json(song, path)` | Serialize a `Song`'s sections to sidecar JSON |
 | `create_song_from_sections_json(path, genre, style, **kw)` | Read sidecar → generate matching `Song` |
 | `save_as_midi_with_sidecar(song, filename)` | `save_as_midi` + `export_sections_json` in one call |
+| `create_song_from_song_map(song_map, genre, style, **kw)` | Read song-map JSON (dict/path/string) → generate matching `Song` with per-region `segments` |
+| `export_song_map_json(song, path)` | Serialize a `Song`'s sections/segments back to song-map JSON |
+| `export_song_timeline_json(song, path)` | Resolve a `Song` (segmented or not) to a flat tempo/region timeline JSON |
 
 ### New CLI Flags
 
 | Command | Flag | Effect |
 |---------|------|--------|
 | `generate` | `--sidecar JSON` | Read section structure from sidecar instead of genre default |
+| `generate` | `--song-map JSON` | Read section structure **and per-segment tempo/meter** from a song-map JSON. Takes precedence over `--sidecar` if both are given |
+| `generate` | `--write-timeline JSON` | Write a resolved timeline JSON after generation (most useful with `--song-map`) |
 | `prompt` | `--write-sidecar JSON` | Write sidecar after AI generation |
 
 ### Lua Config Block

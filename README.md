@@ -290,7 +290,7 @@ See [docs/REAPER_INTEGRATION.md](docs/REAPER_INTEGRATION.md) for complete docume
 ### ReaScript Lua Integration (`create_song_sections.lua`)
 
 The script [`reaper/create_song_sections.lua`](reaper/create_song_sections.lua)
-(vendored in this repo) provides a three-mode bi-directional bridge between
+(vendored in this repo) provides a four-mode bi-directional bridge between
 REAPER and the midi_drums Python module. See
 [`reaper/README.md`](reaper/README.md) for the install step (symlink or copy
 into REAPER's `Scripts/` directory).
@@ -308,13 +308,17 @@ into REAPER's `Scripts/` directory).
 4. Bind it to a key shortcut for quick access.
 5. Run **`midi_drums_help.lua`** from the same directory at any time for in-REAPER usage instructions.
 
-#### Three Modes
+#### Four Modes
 
 | Mode | When to use | Wait time |
 |------|-------------|-----------|
 | **REAPER** (default, YES) | You define the structure in the script | ~1–2 s |
-| **Python sidecar** (NO → YES) | Python already generated MIDI + sidecar | instant |
-| **AI agent** (NO → NO) | Natural language description drives everything | ~20–45 s |
+| **Python sidecar** (NO → "sidecar") | Python already generated MIDI + sidecar | instant |
+| **AI agent** (NO → "ai") | Natural language description drives everything | ~20–45 s |
+| **Song map** (NO → "songmap") | A song_creator-shaped JSON drives per-section tempo/meter | ~1–2 s |
+
+The follow-up prompt after choosing "External" is a text field, not another
+Yes/No dialog — type `sidecar`, `ai`, or `songmap`.
 
 ```python
 # Python-drives workflow: generate + write sidecar in one call
@@ -355,6 +359,19 @@ midi-drums prompt "heavy doom metal, slow and crushing" --song --write-sidecar m
 ```
 
 **API reference:** `DrumGeneratorAPI.export_sections_json(song, path)`, `.create_song_from_sections_json(path, genre, style, **kw)`, `.save_as_midi_with_sidecar(song, filename)`.
+
+**Song map mode** drives section structure *and* per-segment tempo/meter
+overrides from a song_creator-shaped JSON file (regions containing segments,
+each with its own `bars`/`bpm`/`num`/`denom`):
+```bash
+midi-drums generate --genre metal --style doom \
+  --song-map song_map.json --write-timeline timeline.json --output drums.mid
+```
+The Lua script reads back `timeline.json` (a flat, resolved tempo/region
+timeline) and places one `SetTempoTimeSigMarker` per tempo/meter change plus
+one colored region per song-map region.
+
+**API reference:** `DrumGeneratorAPI.create_song_from_song_map(song_map, genre, style, **kw)`, `.export_song_map_json(song, path)`, `.export_song_timeline_json(song, path)`.
 
 ## 📖 Documentation
 

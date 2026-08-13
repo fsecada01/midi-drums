@@ -1,6 +1,7 @@
 """MIDI file generation engine."""
 
 import copy
+import math
 from pathlib import Path
 
 try:
@@ -90,18 +91,27 @@ class MIDIEngine:
         # why this must span the entire song rather than be per-section.
         added_note_ticks: set[tuple[int, int]] = set()
 
-        current_bar = 0
+        # Tracks the last tempo/time-signature actually emitted so segment
+        # boundaries only produce an event when something changes (sections
+        # with no segments never diverge from these initial values, so they
+        # emit no extra events at all - see _add_section_to_midi).
+        tempo_state = {
+            "tempo": song.tempo,
+            "time_signature": song.time_signature,
+        }
+
+        time_cursor = 0.0
         for section in song.sections:
-            self._add_section_to_midi(
+            time_cursor = self._add_section_to_midi(
                 midi,
                 track,
                 channel,
                 section,
-                current_bar,
+                time_cursor,
                 song,
                 added_note_ticks,
+                tempo_state,
             )
-            current_bar += section.bars
 
         return midi
 
@@ -111,11 +121,18 @@ class MIDIEngine:
         track: int,
         channel: int,
         section,
-        current_bar: int,
+        section_start_time: float,
         song: Song,
         added_note_ticks: set[tuple[int, int]] | None = None,
-    ) -> None:
-        """Add a song section to the MIDI file."""
+        tempo_state: dict | None = None,
+    ) -> float:
+        """Add a song section to the MIDI file.
+
+        Returns the time cursor (in quarter-note beats) immediately after
+        this section's last bar, so the caller can chain sections whose
+        bars don't all share the same duration (segmented sections can mix
+        time signatures - see SongSegment).
+        """
         # midiutil uses int(time * ticks_per_quarter) to convert beat times to
         # ticks.  When multi-bar patterns or drummer timing modifications cause
         # two beats to map to the same tick for the same pitch, midiutil's
@@ -128,12 +145,45 @@ class MIDIEngine:
 
         if added_note_ticks is None:
             added_note_ticks = set()
+        if tempo_state is None:
+            tempo_state = {
+                "tempo": song.tempo,
+                "time_signature": song.time_signature,
+            }
 
-        beats_per_bar = song.time_signature.beats_per_bar
+        # Pattern content isn't segment-aware yet (per-segment pattern
+        # generation is out of scope - see issue #53 Group 5's follow-up
+        # note), so multi-bar pattern tiling keeps using the song's global
+        # meter; only the tempo/time-signature *markers* below react to
+        # segment overrides.
+        pattern_slice_beats_per_bar = song.time_signature.beats_per_bar
+
+        time_cursor = section_start_time
 
         for bar_num in range(section.bars):
-            absolute_bar = current_bar + bar_num
-            bar_start_time = absolute_bar * beats_per_bar
+            effective_tempo = section.effective_tempo(bar_num, song.tempo)
+            effective_time_signature = section.effective_time_signature(
+                bar_num, song.time_signature
+            )
+            beats_per_bar = effective_time_signature.beats_per_bar
+
+            if effective_tempo != tempo_state["tempo"]:
+                midi.addTempo(track, time_cursor, effective_tempo)
+                tempo_state["tempo"] = effective_tempo
+            if effective_time_signature != tempo_state["time_signature"]:
+                denominator_power = int(
+                    round(math.log2(effective_time_signature.denominator))
+                )
+                midi.addTimeSignature(
+                    track,
+                    time_cursor,
+                    effective_time_signature.numerator,
+                    denominator_power,
+                    24,
+                )
+                tempo_state["time_signature"] = effective_time_signature
+
+            bar_start_time = time_cursor
 
             # Get the effective pattern for this bar (considering variations)
             pattern = section.get_effective_pattern(bar_num)
@@ -152,7 +202,9 @@ class MIDIEngine:
             # otherwise filter them to zero if computed from bar 0's pattern).
             if pattern.beats:
                 _max_pos = max(b.position for b in pattern.beats)
-                _pattern_bars = max(1, round((_max_pos + 1) / beats_per_bar))
+                _pattern_bars = max(
+                    1, round((_max_pos + 1) / pattern_slice_beats_per_bar)
+                )
             else:
                 _pattern_bars = 1
 
@@ -165,13 +217,16 @@ class MIDIEngine:
                 bar_beats = [
                     b
                     for b in pattern.beats
-                    if int(b.position / beats_per_bar) == cycle_bar
+                    if int(b.position / pattern_slice_beats_per_bar)
+                    == cycle_bar
                 ]
                 # Re-express positions relative to this bar
                 adjusted_beats = []
                 for b in bar_beats:
                     nb = copy.copy(b)
-                    nb.position = b.position - cycle_bar * beats_per_bar
+                    nb.position = (
+                        b.position - cycle_bar * pattern_slice_beats_per_bar
+                    )
                     adjusted_beats.append(nb)
                 beats_to_render = adjusted_beats
             else:
@@ -181,10 +236,19 @@ class MIDIEngine:
             # same (instrument, position) within a bar, keep the loudest.
             deduped_beats = _dedupe_by_instrument_position(beats_to_render)
 
+            # Pattern content is authored against the song's global meter
+            # (pattern_slice_beats_per_bar), but this bar's actual span is
+            # beats_per_bar (a segment override may differ, e.g. a 7/8
+            # insert). Scale note positions/durations proportionally so a
+            # beat near the end of the authored pattern still lands inside
+            # this bar's real span instead of bleeding into the next bar's
+            # time_cursor.
+            position_scale = beats_per_bar / pattern_slice_beats_per_bar
+
             for beat in sorted(deduped_beats, key=lambda b: b.position):
                 midi_note = self.drum_kit.get_midi_note(beat.instrument)
-                absolute_time = bar_start_time + beat.position
-                safe_duration = min(beat.duration, 0.2)
+                absolute_time = bar_start_time + beat.position * position_scale
+                safe_duration = min(beat.duration * position_scale, 0.2)
 
                 # Global dedup: skip if this (pitch, on_tick) was already
                 # added.  Multi-bar patterns can place beats at positions
@@ -209,9 +273,7 @@ class MIDIEngine:
             if (
                 fill and bar_num == section.bars - 1
             ):  # Add fill at end of section
-                fill_start_time = bar_start_time + (
-                    song.time_signature.beats_per_bar - 1.0
-                )
+                fill_start_time = bar_start_time + (beats_per_bar - 1.0)
                 for beat in fill.pattern.beats:
                     if beat.position < 1.0:  # Only add beats within 1 bar
                         midi_note = self.drum_kit.get_midi_note(beat.instrument)
@@ -232,6 +294,10 @@ class MIDIEngine:
                             duration=safe_duration,
                             volume=beat.velocity,
                         )
+
+            time_cursor += beats_per_bar
+
+        return time_cursor
 
     def save_pattern_midi(
         self, pattern: Pattern, output_path: Path, tempo: int = 120

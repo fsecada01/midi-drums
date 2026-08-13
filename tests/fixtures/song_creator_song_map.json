@@ -1,0 +1,171 @@
+{
+  "color_groups": {
+    "atmo": [
+      40,
+      120,
+      150
+    ],
+    "chorus": [
+      180,
+      40,
+      40
+    ],
+    "groove": [
+      200,
+      120,
+      40
+    ],
+    "tech": [
+      120,
+      60,
+      170
+    ]
+  },
+  "regions": [
+    {
+      "color_group": "atmo",
+      "name": "Intro",
+      "segments": [
+        {
+          "bars": 8,
+          "bpm": 72,
+          "denom": 4,
+          "num": 4
+        }
+      ]
+    },
+    {
+      "color_group": "groove",
+      "name": "Verse 1",
+      "segments": [
+        {
+          "bars": 8,
+          "bpm": 144,
+          "denom": 4,
+          "num": 4
+        },
+        {
+          "bars": 2,
+          "bpm": 144,
+          "denom": 8,
+          "num": 7
+        },
+        {
+          "bars": 6,
+          "bpm": 144,
+          "denom": 4,
+          "num": 4
+        }
+      ]
+    },
+    {
+      "color_group": "groove",
+      "name": "Pre-Chorus",
+      "segments": [
+        {
+          "bars": 8,
+          "bpm": 144,
+          "denom": 4,
+          "num": 4
+        }
+      ]
+    },
+    {
+      "color_group": "chorus",
+      "name": "Chorus",
+      "segments": [
+        {
+          "bars": 8,
+          "bpm": 108,
+          "denom": 4,
+          "num": 4
+        }
+      ]
+    },
+    {
+      "color_group": "groove",
+      "name": "Verse 2",
+      "segments": [
+        {
+          "bars": 8,
+          "bpm": 144,
+          "denom": 4,
+          "num": 4
+        },
+        {
+          "bars": 2,
+          "bpm": 144,
+          "denom": 8,
+          "num": 7
+        },
+        {
+          "bars": 6,
+          "bpm": 144,
+          "denom": 4,
+          "num": 4
+        }
+      ]
+    },
+    {
+      "color_group": "tech",
+      "name": "Technical Interlude",
+      "segments": [
+        {
+          "bars": 8,
+          "bpm": 160,
+          "denom": 4,
+          "num": 5
+        }
+      ]
+    },
+    {
+      "color_group": "atmo",
+      "name": "Bridge",
+      "segments": [
+        {
+          "bars": 8,
+          "bpm": 80,
+          "denom": 4,
+          "num": 4
+        }
+      ]
+    },
+    {
+      "color_group": "tech",
+      "name": "Guitar Solo",
+      "segments": [
+        {
+          "bars": 16,
+          "bpm": 150,
+          "denom": 4,
+          "num": 4
+        }
+      ]
+    },
+    {
+      "color_group": "chorus",
+      "name": "Final Chorus",
+      "segments": [
+        {
+          "bars": 8,
+          "bpm": 108,
+          "denom": 4,
+          "num": 4
+        }
+      ]
+    },
+    {
+      "color_group": "atmo",
+      "name": "Outro",
+      "segments": [
+        {
+          "bars": 8,
+          "bpm": 70,
+          "denom": 4,
+          "num": 4
+        }
+      ]
+    }
+  ],
+  "title": "Groove/Technical Metal Song Map"
+}

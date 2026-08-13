@@ -460,6 +460,280 @@ class DrumGeneratorAPI:
             **kwargs,
         )
 
+    # ------------------------------------------------------------------
+    # song_creator song-map bridge (issue #53)
+    # ------------------------------------------------------------------
+
+    def create_song_from_song_map(
+        self,
+        song_map: str | Path | dict,
+        genre: str,
+        style: str = "default",
+        **kwargs,
+    ) -> Song:
+        """Generate a song from a song_creator-shaped song-map.
+
+        song_creator (a separate REAPER Lua arrangement tool) models a
+        song as *regions* containing *segments*, each with its own
+        ``bars``/``bpm``/``num``/``denom`` - letting one region contain a
+        mid-section tempo or meter change (e.g. an 8-bar 4/4 verse with a
+        2-bar 7/8 insert). This reads that shape directly into a Song
+        whose Sections carry matching :class:`SongSegment` overrides.
+
+        Args:
+            song_map: Path to a song-map JSON file, an already-parsed
+                dict in that shape, or a raw JSON string.
+            genre: Genre to generate.
+            style: Style within the genre.
+            **kwargs: Extra parameters forwarded to :meth:`create_song`
+                (e.g. ``complexity``, ``humanization``, ``mapping``). If
+                ``tempo`` isn't given, the first segment's ``bpm`` across
+                all regions is used as the song's global tempo.
+
+        Returns:
+            Song with segmented Sections mirroring the song-map's regions.
+
+        Raises:
+            FileNotFoundError: If *song_map* is a path that doesn't exist.
+            ValueError: If the song-map has no regions, a region has no
+                segments or no ``name``, or a region's name doesn't
+                produce a matching generated section (shipped genre
+                plugins fall back to a default pattern for unrecognized
+                names rather than failing, so this last case is rare in
+                practice).
+        """
+        import json
+
+        from midi_drums.core.models.song import SongSegment
+        from midi_drums.core.value_objects.time_signature import (
+            TimeSignature,
+        )
+
+        if isinstance(song_map, dict):
+            data = song_map
+        else:
+            text = str(song_map)
+            candidate_path = Path(text)
+            try:
+                path_exists = candidate_path.exists()
+            except OSError:
+                # A JSON-content string (not a path) can exceed the OS's
+                # max filename length, which raises ENAMETOOLONG on Linux
+                # instead of returning False as it does on Windows.
+                path_exists = False
+            if path_exists:
+                data = json.loads(candidate_path.read_text())
+            elif candidate_path.suffix == ".json":
+                raise FileNotFoundError(f"Song map not found: {text}")
+            else:
+                data = json.loads(text)
+
+        regions = data.get("regions", [])
+        if not regions:
+            raise ValueError("No regions found in song map")
+
+        structure: list[tuple[str, int]] = []
+        region_segments: list[list[SongSegment]] = []
+        for region in regions:
+            region_name = region.get("name")
+            if not region_name:
+                raise ValueError(f"Region has no 'name': {region!r}")
+            segments = [
+                SongSegment(
+                    bars=segment["bars"],
+                    tempo=segment.get("bpm"),
+                    time_signature=(
+                        TimeSignature(segment["num"], segment["denom"])
+                        if "num" in segment and "denom" in segment
+                        else None
+                    ),
+                )
+                for segment in region.get("segments", [])
+            ]
+            if not segments:
+                raise ValueError(f"Region '{region_name}' has no segments")
+            structure.append(
+                (region_name.lower(), sum(s.bars for s in segments))
+            )
+            region_segments.append(segments)
+
+        if kwargs.get("tempo") is None:
+            first_tempo = next(
+                (
+                    seg.tempo
+                    for segs in region_segments
+                    for seg in segs
+                    if seg.tempo
+                ),
+                None,
+            )
+            kwargs["tempo"] = first_tempo or 120
+
+        song = self.create_song(
+            genre=genre, style=style, structure=structure, **kwargs
+        )
+
+        if len(song.sections) != len(structure):
+            generated_names = [s.name for s in song.sections]
+            expected_names = [name for name, _ in structure]
+            missing = [
+                name for name in expected_names if name not in generated_names
+            ] or ["(duplicate/ambiguous region names)"]
+            raise ValueError(
+                f"Could not generate a pattern for every region in "
+                f"'{genre}/{style}': missing {missing}. Every region "
+                "name must be a section name the genre plugin recognizes."
+            )
+
+        for section, segments in zip(
+            song.sections, region_segments, strict=True
+        ):
+            section.segments = segments
+        for section, region in zip(song.sections, regions, strict=True):
+            if region.get("color_group"):
+                section.section_parameters["color_group"] = region[
+                    "color_group"
+                ]
+            section.section_parameters.setdefault(
+                "display_name", region["name"]
+            )
+
+        song.metadata["song_map_title"] = data.get("title")
+        song.metadata["color_groups"] = data.get("color_groups", {})
+
+        return song
+
+    def export_song_map_json(self, song: Song, path: str | Path) -> None:
+        """Write a song_creator-shaped song-map JSON for this song.
+
+        Reverse direction of :meth:`create_song_from_song_map`: serialises
+        each Section (and its :class:`SongSegment` overrides, if any) into
+        a song_creator region, so a segmented Song round-trips back into
+        the format song_creator itself reads.
+
+        Sections without segments are exported as a single implicit
+        segment carrying the song's global tempo/time signature -
+        song_creator has no concept of "no segments," every region has
+        at least one.
+
+        Args:
+            song: Song to serialise.
+            path: Destination ``.json`` file path.
+        """
+        import json
+
+        color_groups = song.metadata.get("color_groups") or {
+            "default": [120, 120, 120]
+        }
+
+        regions = []
+        for section in song.sections:
+            segments_json = [
+                {
+                    "bars": bars,
+                    "bpm": tempo,
+                    "num": time_sig.numerator,
+                    "denom": time_sig.denominator,
+                }
+                for bars, tempo, time_sig in section.resolved_bar_specs(
+                    song.tempo, song.time_signature
+                )
+            ]
+
+            color_group = section.section_parameters.get("color_group") or next(
+                iter(color_groups), "default"
+            )
+            display_name = section.section_parameters.get(
+                "display_name", section.name.title()
+            )
+
+            regions.append(
+                {
+                    "name": display_name,
+                    "color_group": color_group,
+                    "segments": segments_json,
+                }
+            )
+
+        data = {
+            "title": song.metadata.get("song_map_title") or song.name,
+            "color_groups": color_groups,
+            "regions": regions,
+        }
+        Path(path).write_text(json.dumps(data, indent=2, sort_keys=True))
+
+    def export_song_timeline_json(self, song: Song, path: str | Path) -> None:
+        """Write a flat, resolved tempo/region timeline for a song.
+
+        Resolves every section's segments (see :class:`SongSegment`) into
+        a flat list of tempo/meter change points plus section start/end
+        times - the same computation song_creator's
+        ``song_model.compute_timeline`` performs, but kept deliberately
+        flat (no nested JSON objects-within-objects) so
+        ``reaper/create_song_sections.lua``'s regex-based sidecar parser
+        can read it without needing a full JSON parser in Lua.
+
+        Args:
+            song: Song to resolve (segmented or not - non-segmented
+                sections are treated as one implicit segment).
+            path: Destination ``.json`` file path.
+        """
+        import json
+
+        tempo_points = []
+        regions = []
+        t = 0.0
+        last_key = None
+
+        for section in song.sections:
+            region_start = t
+            display_name = section.section_parameters.get(
+                "display_name", section.name.title()
+            )
+            color_group = section.section_parameters.get("color_group", "")
+
+            bar_specs = section.resolved_bar_specs(
+                song.tempo, song.time_signature
+            )
+
+            for bars, tempo, time_sig in bar_specs:
+                key = (tempo, time_sig.numerator, time_sig.denominator)
+                if key != last_key:
+                    tempo_points.append(
+                        {
+                            "time": t,
+                            "bpm": tempo,
+                            "num": time_sig.numerator,
+                            "denom": time_sig.denominator,
+                        }
+                    )
+                    last_key = key
+                t += bars * time_sig.beats_per_bar / (tempo / 60.0)
+
+            regions.append(
+                {
+                    "name": display_name,
+                    "color_group": color_group,
+                    "start_time": region_start,
+                    "end_time": t,
+                }
+            )
+
+        color_groups_source = song.metadata.get("color_groups") or {}
+        color_groups = [
+            {"name": name, "r": rgb[0], "g": rgb[1], "b": rgb[2]}
+            for name, rgb in color_groups_source.items()
+            if isinstance(rgb, (list, tuple)) and len(rgb) == 3
+        ]
+
+        data = {
+            "tempo_points": tempo_points,
+            "regions": regions,
+            "color_groups": color_groups,
+            "total_time": t,
+        }
+        Path(path).write_text(json.dumps(data, indent=2))
+
     def save_as_midi_with_sidecar(
         self, song: Song, filename: str | Path
     ) -> Path:
