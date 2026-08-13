@@ -10,6 +10,50 @@ release process.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-08-13
+
+### Added
+
+- **Per-section tempo/meter segments**: a `Section` can now hold internal
+  tempo/time-signature changes via `SongSegment` (e.g. a 7/8 insert inside
+  an otherwise 4/4 verse), instead of one tempo/meter per section (#53).
+  `MIDIEngine` emits per-segment tempo/time-signature events for segmented
+  sections; non-segmented sections remain byte-identical to prior output.
+- **song_creator JSON bridge**: `DrumGeneratorAPI.create_song_from_song_map()`
+  / `export_song_map_json()` read/write the song_creator "song map" JSON
+  shape (regions -> segments) directly into/out of a `Song`.
+- **Timeline export**: `DrumGeneratorAPI.export_song_timeline_json()` and
+  the `generate --write-timeline` CLI flag resolve a `Song` (segmented or
+  not) to a flat tempo/region timeline JSON, consumed by REAPER's Lua-side
+  "song map" mode.
+- **`generate --song-map` CLI flag**, taking precedence over `--sidecar`
+  when both are given.
+- **REAPER `create_song_sections.lua` "songmap" mode**: reads a song-map
+  JSON, calls the CLI with `--song-map`/`--write-timeline`, and places one
+  tempo/meter marker per resolved change point plus one colored region per
+  song-map region.
+- **Docs site**: an end-to-end Use Cases page, Funk and Electronic recipe
+  cards on the Recipes page (both genres were already fully supported but
+  had no walkthrough), and a shared `docs/site-pages/site.css` stylesheet
+  consolidating the design tokens/nav/layout CSS that was previously
+  duplicated across all 5 site pages.
+
+### Changed
+
+- **Docs site accessibility**: WCAG 2.1 AA color-contrast fixes (`--muted`
+  and other low-contrast tokens), a skip-to-content link, ARIA landmarks
+  with working keyboard-focus targets, visible `:focus-visible` states, and
+  corrected heading hierarchy (TOC sidebar labels demoted from `<h3>` to
+  non-heading elements so each page has one correct `<h1>`-first outline)
+  across all docs pages (#44).
+- `docs/make.py` now copies static assets (e.g. `site.css`) alongside the
+  HTML pages it already copied, via an explicit suffix allowlist.
+
+No breaking changes - every addition above is backwards compatible (new
+optional fields, new methods, new CLI flags); see
+[`docs/RELEASING.md`](docs/RELEASING.md) for what counts as this project's
+public API surface.
+
 ## [0.1.0] - 2026-08-12
 
 First tagged release. This project has been under active development for a
@@ -88,5 +132,6 @@ every prior commit.
   numbers 1:1 instead of collapsing to true GM notes; they now actually
   produce GM-compliant output (#47).
 
-[Unreleased]: https://github.com/fsecada01/midi-drums/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/fsecada01/midi-drums/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/fsecada01/midi-drums/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/fsecada01/midi-drums/releases/tag/v0.1.0

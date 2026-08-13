@@ -2,7 +2,7 @@
 
 <div align="center">
 
-[![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](https://github.com/fsecada01/midi-drums/releases)
+[![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)](https://github.com/fsecada01/midi-drums/releases)
 [![Tests](https://github.com/fsecada01/midi-drums/actions/workflows/tests.yml/badge.svg)](https://github.com/fsecada01/midi-drums/actions/workflows/tests.yml)
 [![Python](https://img.shields.io/badge/Python-3.12%2B%20%7C%203.13-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
