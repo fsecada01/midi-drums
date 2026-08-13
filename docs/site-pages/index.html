@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MIDI Drums Generator — Professional Drum Track Generation</title>
-<meta name="description" content="A plugin-based Python system for creating professional MIDI drum tracks across Metal, Rock, Jazz, and Funk with 7 legendary drummer styles.">
+<meta name="description" content="A plugin-based Python system for creating professional MIDI drum tracks across Metal, Rock, Jazz, Funk, and Electronic with 10 legendary drummer styles.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,600;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -393,10 +393,11 @@ body {
   border-color: var(--gb-color, var(--violet));
   box-shadow: 0 0 20px rgba(0,0,0,0.3), 0 0 0 1px rgba(167,139,250,0.05);
 }
-.gb-metal  { --gb-color: var(--amber); }
-.gb-rock   { --gb-color: var(--sky); }
-.gb-jazz   { --gb-color: var(--violet); }
-.gb-funk   { --gb-color: var(--green); }
+.gb-metal      { --gb-color: var(--amber); }
+.gb-rock       { --gb-color: var(--sky); }
+.gb-jazz       { --gb-color: var(--violet); }
+.gb-funk       { --gb-color: var(--green); }
+.gb-electronic { --gb-color: var(--rose); }
 
 .genre-name {
   font-family: var(--mono); font-size: 0.82rem; font-weight: 600;
@@ -543,8 +544,9 @@ footer {
     </div>
     <p>
       A plugin-based Python system for creating professional MIDI drum tracks
-      across Metal, Rock, Jazz, and Funk — with 7 legendary drummer personalities,
-      Reaper DAW integration, and optional AI-powered natural language generation.
+      across Metal, Rock, Jazz, Funk, and Electronic — with 10 legendary drummer
+      personalities, Reaper DAW integration, and optional AI-powered natural
+      language generation.
     </p>
     <div class="hero-btns">
       <a class="btn btn-primary" href="quickstart.html">Get Started →</a>
@@ -678,7 +680,7 @@ api<span class="p">.</span><span class="f">save_pattern_as_midi</span><span clas
 <section class="genres-section">
   <div class="genres-inner">
     <div class="section-label">supported genres</div>
-    <h2 class="section-title">28 styles across 4 genres</h2>
+    <h2 class="section-title">32 styles across 5 genres</h2>
     <div class="genre-grid">
       <div class="genre-block gb-metal">
         <div class="genre-name"><span class="g-icon">🤘</span> metal</div>
@@ -728,6 +730,15 @@ api<span class="p">.</span><span class="f">save_pattern_as_midi</span><span clas
           <span class="style-chip">heavy</span>
         </div>
       </div>
+      <div class="genre-block gb-electronic">
+        <div class="genre-name"><span class="g-icon">🎧</span> electronic</div>
+        <div class="genre-styles">
+          <span class="style-chip">house</span>
+          <span class="style-chip">techno</span>
+          <span class="style-chip">drum_and_bass</span>
+          <span class="style-chip">dubstep</span>
+        </div>
+      </div>
     </div>
   </div>
 </section>
@@ -735,7 +746,7 @@ api<span class="p">.</span><span class="f">save_pattern_as_midi</span><span clas
 <!-- DRUMMERS -->
 <section class="drummers-section">
   <div class="section-label">drummer personalities</div>
-  <h2 class="section-title">7 legendary styles</h2>
+  <h2 class="section-title">10 legendary styles</h2>
   <p class="section-sub">Each drummer is a composable modification you can apply to any genre pattern.</p>
   <div class="drummers-grid">
     <div class="drummer-card">
@@ -792,6 +803,30 @@ api<span class="p">.</span><span class="f">save_pattern_as_midi</span><span clas
       <div class="drummer-desc">Mechanical precision, blast beats, progressive complexity</div>
       <div class="drummer-tags">
         <span class="dtag">metal</span><span class="dtag">death</span>
+      </div>
+    </div>
+    <div class="drummer-card">
+      <div class="drummer-name">Neil Peart</div>
+      <div class="drummer-handle">--drummer peart</div>
+      <div class="drummer-desc">Extreme timing precision, linear limb independence, polyrhythmic fills</div>
+      <div class="drummer-tags">
+        <span class="dtag">rock</span><span class="dtag">progressive</span><span class="dtag">metal</span>
+      </div>
+    </div>
+    <div class="drummer-card">
+      <div class="drummer-name">Buddy Rich</div>
+      <div class="drummer-handle">--drummer rich</div>
+      <div class="drummer-desc">Virtuosic single-stroke speed, dramatic dynamic contrast</div>
+      <div class="drummer-tags">
+        <span class="dtag">jazz</span><span class="dtag">rock</span>
+      </div>
+    </div>
+    <div class="drummer-card">
+      <div class="drummer-name">Stewart Copeland</div>
+      <div class="drummer-handle">--drummer copeland</div>
+      <div class="drummer-desc">Reggae/ska-influenced off-beat hi-hat, cross-stick snare</div>
+      <div class="drummer-tags">
+        <span class="dtag">rock</span><span class="dtag">funk</span>
       </div>
     </div>
   </div>
