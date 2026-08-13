@@ -10,7 +10,7 @@ release process.
 
 ## [Unreleased]
 
-## [0.1.0] - 2026-08-11
+## [0.1.0] - 2026-08-12
 
 First tagged release. This project has been under active development for a
 while (see git history for the full commit-by-commit record); this entry is
@@ -19,22 +19,32 @@ every prior commit.
 
 ### Added
 
-- **Multi-genre pattern generation**: Metal, Rock, Jazz, and Funk, each with
-  7 styles (e.g. metal: heavy/death/power/progressive/thrash/doom/breakdown).
-- **Drummer style imitation**: 7 individual drummer plugins (Bonham, Porcaro,
-  Weckl, Chambers, Roeder, Dee, Hoglan) plus a composite plugin
-  (`CompositeDoomBluesPlugin`) layering multiple drummers' techniques.
+- **Multi-genre pattern generation**: Metal, Rock, Jazz, Funk, and
+  Electronic, each with 4-7 styles (e.g. metal:
+  heavy/death/power/progressive/thrash/doom/breakdown; electronic:
+  house/techno/drum'n'bass/dubstep).
+- **Drummer style imitation**: 10 individual drummer plugins (Bonham,
+  Porcaro, Weckl, Chambers, Roeder, Dee, Hoglan, Peart, Rich, Copeland) plus
+  a composite plugin (`CompositeDoomBluesPlugin`) layering multiple
+  drummers' techniques.
 - **Song structure & composition**: configurable section structures (intro,
   verse, chorus, bridge, breakdown, outro, ...), pattern variations, fills,
   humanization, and complexity controls.
 - **Plugin architecture**: `GenrePlugin`/`DrummerPlugin` strategy interfaces
   with auto-discovery, so new genres/drummers can be added without touching
   core code.
-- **MIDI export**: EZDrummer 3-compatible output with realistic velocity and
-  timing.
+- **MIDI export with per-preset note mappings**: `ezdrummer3` (primary
+  target, extended hi-hat articulations) and GM-compliant presets
+  (`gm_drums`, `studio_drummer3`, `addictive_drums`, `bfd3`, `modo_drums`,
+  `ml_drums`) that correctly collapse to true General MIDI notes, plus
+  custom mapping support via `--mapping-file` / `DrumKit.from_json()` /
+  `DrumKit.from_dict()`.
 - **Reaper DAW integration**: generate `.RPP` project files with automatic
   section markers, genre-aware marker colors, and combined MIDI+markers
-  export.
+  export, plus vendored `reaper/create_song_sections.lua` and
+  `reaper/midi_drums_help.lua` ReaScripts bridging REAPER and this module
+  via a JSON sidecar file (three modes: REAPER-driven, Python-driven,
+  AI-agent-driven).
 - **AI-assisted generation** (optional, `ai` extra): natural-language pattern
   and song generation via Pydantic AI / Langchain, with multi-provider
   backend support (Anthropic, OpenAI, and others).
@@ -62,6 +72,21 @@ every prior commit.
 - `DrumGeneratorAPI.batch_generate()` no longer raises `TypeError` when a
   spec dict includes an explicit `name` key (the pattern shown in the
   method's own docstring example).
+- `DrumGeneratorAPI.create_song()` now honors a caller-supplied `drum_kit`
+  over the `mapping` preset name, and treats an explicit `drum_kit=None` as
+  "no explicit kit" rather than leaving a stale kit in place (#24).
+- Genre-aware high-energy timekeeper selection and drummer-modification
+  ordering, so drummer style passes apply in a consistent, predictable
+  sequence (#18).
+- Drummer signature fills are now actually wired into fill generation
+  instead of being defined but unused (#32).
+- Beat provenance tracking and a shared timekeeper-cymbal registry, closing
+  a conflict where multiple modifications could clobber each other's
+  cymbal choices (#36).
+- GM-baseline kit presets (`gm_drums` and the other GM-compliant presets
+  listed above) previously matched EZDrummer 3's extended-articulation note
+  numbers 1:1 instead of collapsing to true GM notes; they now actually
+  produce GM-compliant output (#47).
 
 [Unreleased]: https://github.com/fsecada01/midi-drums/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/fsecada01/midi-drums/releases/tag/v0.1.0
