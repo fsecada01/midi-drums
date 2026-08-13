@@ -48,15 +48,43 @@ jobs:
             echo "::error::No '## [${VERSION}]' heading found in CHANGELOG.md - add one before tagging (see docs/RELEASING.md)."
             exit 1
           fi
-          NOTES=$(awk -v ver="## [${VERSION}]" '
+          RAW_NOTES=$(awk -v ver="## [${VERSION}]" '
             $0 ~ /^## \[/ { if (found) exit; if (index($0, ver) == 1) { found=1; next } }
             found && $0 ~ /^\[.*\]:/ { exit }
             found { print }
           ' CHANGELOG.md)
-          if [ -z "${NOTES}" ]; then
+          if [ -z "${RAW_NOTES}" ]; then
             echo "::error::Found '## [${VERSION}]' heading in CHANGELOG.md but it has no content beneath it - add release notes before tagging."
             exit 1
           fi
+          # CHANGELOG.md hard-wraps prose at ~80 chars for readable diffs, but
+          # GitHub renders a single newline as a hard <br> in Release notes
+          # (unlike the plain CommonMark used for the repo file viewer), so
+          # passing wrapped paragraphs/list items straight through would
+          # render them fragmented. Reflow each paragraph/list item onto one
+          # line: blank lines and lines starting with '#' or '- ' start a new
+          # block, everything else is a continuation of the current one.
+          NOTES=$(printf '%s\n' "${RAW_NOTES}" | awk '
+            {
+              line = $0
+              content = line
+              sub(/^[ \t]+/, "", content)
+              sub(/[ \t]+$/, "", content)
+              if (content == "") {
+                if (buf != "") { print buf; buf = "" }
+                print ""
+                next
+              }
+              is_new_block = (content ~ /^#/) || (content ~ /^-[ \t]/)
+              if (is_new_block || buf == "") {
+                if (buf != "") print buf
+                buf = content
+              } else {
+                buf = buf " " content
+              }
+            }
+            END { if (buf != "") print buf }
+          ')
           {
             DELIM="RELEASE_NOTES_EOF_$(openssl rand -hex 8)"
             echo "notes<<${DELIM}"
