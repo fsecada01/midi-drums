@@ -87,6 +87,8 @@ ul,ol{margin:.6rem 0 .6rem 1.5rem;}li{margin:.25rem 0;}
 .rc-metal{--rc-color:var(--amber);}
 .rc-jazz {--rc-color:var(--violet);}
 .rc-prog {--rc-color:var(--sky);}
+.rc-funk {--rc-color:var(--green);}
+.rc-electronic{--rc-color:#fb7185;}
 
 .recipe-tag{
   position:absolute;top:1rem;right:1.25rem;
@@ -96,6 +98,8 @@ ul,ol{margin:.6rem 0 .6rem 1.5rem;}li{margin:.25rem 0;}
 .tag-metal{color:var(--amber);border:1px solid rgba(251,191,36,.4);background:rgba(251,191,36,.06);}
 .tag-jazz {color:var(--violet);border:1px solid rgba(167,139,250,.4);background:rgba(167,139,250,.06);}
 .tag-prog {color:var(--sky);border:1px solid rgba(56,189,248,.4);background:rgba(56,189,248,.06);}
+.tag-funk {color:var(--green);border:1px solid rgba(74,222,128,.4);background:rgba(74,222,128,.06);}
+.tag-electronic{color:#fb7185;border:1px solid rgba(251,113,133,.4);background:rgba(251,113,133,.06);}
 
 .recipe-meta{display:flex;flex-wrap:wrap;gap:1.5rem;margin:1rem 0 1.5rem;font-size:.85rem;color:var(--muted);}
 .recipe-meta span{display:flex;align-items:center;gap:.4rem;}
@@ -459,6 +463,13 @@ classic = api.create_song(
     complexity=0.7,
     humanization=0.4,
     drummer="chambers",
+    structure=[
+        ("intro",  4),
+        ("verse",  8),
+        ("chorus", 8),
+        ("verse",  8),
+        ("outro",  4),
+    ],
 )
 api.save_as_midi(classic, "funk_classic_chambers.mid")
 
@@ -517,6 +528,13 @@ dnb = api.create_song(
     style="drum_and_bass",
     tempo=174,
     complexity=0.6,
+    structure=[
+        ("intro",     4),
+        ("verse",     8),
+        ("breakdown", 4),
+        ("chorus",    8),
+        ("outro",     4),
+    ],
 )
 api.save_as_midi(dnb, "electronic_dnb.mid")
 
