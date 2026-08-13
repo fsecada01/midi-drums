@@ -24,6 +24,7 @@ class DrumGeneratorAPI:
         tempo: int = 120,
         name: str | None = None,
         mapping: str = "ezdrummer3",
+        mapping_file: str | Path | None = None,
         **kwargs,
     ) -> Song:
         """Create a complete song.
@@ -38,6 +39,9 @@ class DrumGeneratorAPI:
                 an explicit drum_kit takes precedence over mapping, but
                 drum_kit=None falls back to mapping instead of being
                 treated as an explicit choice.
+            mapping_file: Path to a custom MIDI mapping JSON file (see
+                DrumKit.from_json()). Takes precedence over mapping when
+                supplied, but not over an explicit drum_kit kwarg.
             **kwargs: Additional parameters (complexity, humanization,
                 drum_kit, etc.)
 
@@ -45,10 +49,15 @@ class DrumGeneratorAPI:
             Generated Song object
         """
         # An explicit, truthy drum_kit kwarg always takes precedence over
-        # mapping. A caller passing drum_kit=None falls back to mapping
-        # rather than leaving None to skip DrumGenerator's own kit swap.
+        # mapping/mapping_file. A caller passing drum_kit=None falls back
+        # to mapping_file/mapping rather than leaving None to skip
+        # DrumGenerator's own kit swap.
         if not kwargs.get("drum_kit"):
-            kwargs["drum_kit"] = DrumKit.from_preset(mapping)
+            kwargs["drum_kit"] = (
+                DrumKit.from_json(mapping_file)
+                if mapping_file
+                else DrumKit.from_preset(mapping)
+            )
 
         song = self.generator.create_song(genre, style, tempo, **kwargs)
         if name:

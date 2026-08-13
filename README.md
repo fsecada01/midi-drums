@@ -294,9 +294,26 @@ See [docs/REAPER_INTEGRATION.md](docs/REAPER_INTEGRATION.md) for complete docume
 
 ### ReaScript Lua Integration (`create_song_sections.lua`)
 
-`C:/REAPER/Scripts/create_song_sections.lua` is a three-mode bi-directional bridge between REAPER and this module, driven by a JSON sidecar file (`io.popen` subprocess — no server, no ports).
+The script [`reaper/create_song_sections.lua`](reaper/create_song_sections.lua)
+(vendored in this repo) provides a three-mode bi-directional bridge between
+REAPER and the midi_drums Python module. See
+[`reaper/README.md`](reaper/README.md) for the install step (symlink or copy
+into REAPER's `Scripts/` directory).
 
-**Setup:** open the script, point `PYTHON_EXE` at your virtualenv, load it in REAPER via **Actions → Load ReaScript**, and optionally bind a key shortcut. Run `midi_drums_help.lua` from the same directory at any time for in-REAPER usage instructions.
+#### Quick Setup
+
+1. Symlink or copy `reaper/create_song_sections.lua` and
+   `reaper/midi_drums_help.lua` into REAPER's `Scripts/` directory (see
+   [`reaper/README.md`](reaper/README.md)).
+2. Open the script in a text editor and set `PYTHON_EXE` to your virtualenv:
+   ```lua
+   local PYTHON_EXE = "C:/path/to/midi_drums/.venv/Scripts/pythonw.exe"
+   ```
+3. Add it as a REAPER action: **Actions → Load ReaScript** → select the file.
+4. Bind it to a key shortcut for quick access.
+5. Run **`midi_drums_help.lua`** from the same directory at any time for in-REAPER usage instructions.
+
+#### Three Modes
 
 | Mode | When to use | Wait time |
 |------|-------------|-----------|
@@ -654,11 +671,57 @@ python migrate_from_original.py      # compare with the original single-file gen
 
 ## 🎼 MIDI Output
 
-Generates professional MIDI files compatible with:
-- **EZDrummer 3** (primary target), **Superior Drummer 3**, **BFD3**, any GM-compatible drum sampler
-- **DAWs** (Logic Pro, Pro Tools, Cubase, Reaper, etc.)
+The system generates professional MIDI files for use in any DAW (Logic Pro,
+Pro Tools, Cubase, Reaper, etc.). Note-number output depends on the
+`--mapping` preset (or `--mapping-file`) you choose — presets are **not**
+all identical:
 
-**Features:** standard GM drum mapping, realistic velocity variations (60-127), configurable humanized timing, ghost notes and accents, dynamic fills and variations, multi-bar pattern support.
+- **`ezdrummer3`** (default, primary target) — uses EZDrummer 3's real note
+  numbers for extended hi-hat articulations (closed-hat edge/tip, tight-hat
+  edge/tip, open-hat 1-3/max) that don't exist in General MIDI at all.
+- **`gm_drums`** / **`gm`** / **`general_midi`** — strict GM Level 1
+  percussion. The extended hi-hat articulations above are collapsed to
+  their nearest real GM note (closed-hat family → note 42, open-hat family
+  → note 46) so output stays GM-compliant.
+- **`studio_drummer3`**, **`addictive_drums`**, **`bfd3`**, **`modo_drums`**,
+  **`ml_drums`** — use the same GM-collapsed note table as `gm_drums`
+  (no vendor-specific note research has been done for these yet — see
+  `claudedocs/research_vendor_drum_midi_maps_20260812.md`); safe to use
+  with any GM-compatible sampler today, but not yet verified against each
+  vendor's own default map, which may differ from strict GM.
+- **Custom mapping** — pass `--mapping-file path/to/mapping.json` (CLI) or
+  `mapping_file="path/to/mapping.json"` (`DrumGeneratorAPI.create_song()`)
+  to supply your own note table without editing the library. See
+  `DrumKit.from_json()` / `DrumKit.from_dict()` for the expected JSON shape.
+
+Run `python -m midi_drums list mappings` for the full list with
+descriptions.
+
+### MIDI Features
+
+- ✅ Per-preset drum note mapping (see above)
+- ✅ Realistic velocity variations (60-127)
+- ✅ Humanized timing (configurable)
+- ✅ Ghost notes and accents
+- ✅ Dynamic fills and variations
+- ✅ Multi-bar pattern support
+
+## 📊 Migration from Original
+
+This system evolved from a simple single-file generator (`generate_metal_drum_track.py`) into a comprehensive platform:
+
+### Before → After
+
+| Original | New Architecture |
+|----------|------------------|
+| Single file | Modular plugin system |
+| One metal style | 7+ metal styles, expandable |
+| Fixed song structure | Configurable structures |
+| Hardcoded patterns | Dynamic pattern generation |
+| No API | Multiple interfaces |
+| No variations | Humanization & variations |
+
+The original script is preserved for compatibility, and `migrate_from_original.py` demonstrates equivalent functionality.
 
 ## 🤝 Contributing
 

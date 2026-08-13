@@ -7,6 +7,8 @@ those keys were forwarded twice - once as an explicit kwarg, once via
 **spec.
 """
 
+import json
+
 from midi_drums.api.python_api import DrumGeneratorAPI
 from midi_drums.core.models.kit import DrumKit
 
@@ -84,6 +86,47 @@ class TestCreateSongDrumKitPrecedence:
 
         assert len(generated_files) == 1
         assert generated_files[0].exists()
+        assert api.generator.drum_kit.name == "Jazz Kit"
+
+
+class TestCreateSongMappingFile:
+    """#47: create_song() accepts a mapping_file path, taking precedence
+    over the `mapping` preset name but not over an explicit drum_kit."""
+
+    def test_mapping_file_builds_kit_from_json(self, tmp_path):
+        mapping_path = tmp_path / "custom_kit.json"
+        mapping_path.write_text(
+            json.dumps({"name": "File Kit", "mappings": {"KICK": 30}}),
+            encoding="utf-8",
+        )
+        api = DrumGeneratorAPI()
+
+        api.create_song(
+            "metal",
+            "heavy",
+            tempo=140,
+            mapping="ezdrummer3",
+            mapping_file=str(mapping_path),
+        )
+
+        assert api.generator.drum_kit.name == "File Kit"
+
+    def test_explicit_drum_kit_still_wins_over_mapping_file(self, tmp_path):
+        mapping_path = tmp_path / "custom_kit.json"
+        mapping_path.write_text(
+            json.dumps({"name": "File Kit", "mappings": {"KICK": 30}}),
+            encoding="utf-8",
+        )
+        api = DrumGeneratorAPI()
+
+        api.create_song(
+            "metal",
+            "heavy",
+            tempo=140,
+            mapping_file=str(mapping_path),
+            drum_kit=DrumKit.create_jazz_kit(),
+        )
+
         assert api.generator.drum_kit.name == "Jazz Kit"
 
 
