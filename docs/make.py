@@ -29,6 +29,7 @@ REPO_ROOT = DOCS_DIR.parent
 PACKAGE = "midi_drums"
 TEMPLATES_DIR = DOCS_DIR / "pdoc_templates"
 DEFAULT_OUT = DOCS_DIR / "site"
+STATIC_ASSET_SUFFIXES = {".css", ".js", ".png", ".jpg", ".jpeg", ".svg", ".ico"}
 
 
 # ── Environment bootstrap ─────────────────────────────────────────────────────
@@ -71,7 +72,7 @@ def build(output_dir: Path) -> None:
         assets = [
             p
             for p in site_pages_dir.iterdir()
-            if p.is_file() and p.suffix != ".html"
+            if p.is_file() and p.suffix in STATIC_ASSET_SUFFIXES
         ]
         for asset in assets:
             shutil.copy2(asset, output_dir / asset.name)

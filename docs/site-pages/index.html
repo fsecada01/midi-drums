@@ -50,7 +50,7 @@ body { line-height: 1.7; }
   border: 1px solid rgba(74,222,128,0.35);
   background: rgba(74,222,128,0.05);
 }
-.nav-sep { color: var(--dim); margin: 0 0.85rem; }
+.nav-sep { color: var(--muted); margin: 0 0.85rem; }
 .nav-links {
   margin-left: auto; display: flex; align-items: center; gap: 1.25rem;
 }
@@ -451,11 +451,9 @@ body { line-height: 1.7; }
 .install-cmd .arg    { color: var(--sky); }
 
 /* ── FOOTER ──────────────────────────────────────────────────────────────── */
-footer {
-  border-top: 1px solid var(--border);
-  padding: 2.5rem 1.75rem;
-  font-family: var(--mono); font-size: 0.78rem; color: var(--muted);
-}
+/* border/font/color come from site.css's shared footer rule; only padding
+   differs here (2.5rem vs 2rem top/bottom) so we override just that. */
+footer { padding: 2.5rem 1.75rem; }
 .footer-inner {
   max-width: 960px; margin: 0 auto;
   display: flex; align-items: center; justify-content: space-between;
@@ -499,7 +497,7 @@ footer {
   </div>
 </nav>
 
-<main id="main-content">
+<main id="main-content" tabindex="-1">
 
 <!-- HERO -->
 <section class="hero">

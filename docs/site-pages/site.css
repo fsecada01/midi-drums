@@ -38,9 +38,7 @@
   --violet:      #a78bfa;
   --violet-d:    #7c5fdb;
   --violet-dim:  rgba(167,139,250,0.08);
-  --violet-glow: rgba(167,139,250,0.15);
   --amber:       #fbbf24;
-  --amber-dim:   rgba(251,191,36,0.08);
   --sky:         #38bdf8;
   --sky-dim:     rgba(56,189,248,0.06);
   --green:       #4ade80;
@@ -124,7 +122,7 @@ input:focus-visible,
 .dm-logo::before { content: "> "; color: var(--amber); }
 .dm-logo:hover { color: var(--white); }
 .dm-badge { font-size: 9px; letter-spacing: .12em; padding: 2px 7px; border-radius: 2px; margin-right: .85rem; color: var(--green); border: 1px solid rgba(74,222,128,.35); background: rgba(74,222,128,.05); }
-.dm-sep { color: var(--dim); margin: 0 .85rem; }
+.dm-sep { color: var(--muted); margin: 0 .85rem; }
 .dm-links { margin-left: auto; display: flex; align-items: center; gap: 1.25rem; }
 .dm-links a { color: var(--muted); text-decoration: none; font-size: 11px; padding-bottom: 2px; border-bottom: 1px solid transparent; transition: color .15s, border-color .15s; }
 .dm-links a:hover, .dm-links a.active { color: var(--violet); border-bottom-color: rgba(167,139,250,.5); }
