@@ -25,40 +25,35 @@ MIDI Drums Generator is a Python system that creates professional-quality drum t
 
 ### ✨ Key Features
 
-🎪 **Multi-Genre Support** — 32 styles across 5 genres
-- **Metal**: Heavy, Death, Power, Progressive, Doom, Thrash, Breakdown
-- **Rock**: Classic, Blues, Alternative, Progressive, Punk, Hard, Pop
-- **Jazz**: Swing, Bebop, Fusion, Latin, Ballad, Hard Bop, Contemporary
-- **Funk**: Classic, P-Funk, Shuffle, New Orleans, Fusion, Minimal, Heavy
-- **Electronic**: House, Techno, Drum & Bass, Dubstep
-- **Expandable**: Plugin architecture for more genres
-
-🥁 **Drummer Imitation** — 10 legendary styles
-- Bonham, Porcaro, Weckl, Chambers, Roeder, Dee, Hoglan, Peart, Rich, Copeland
-- Signature fills and playing techniques based on research
-- Compatible across multiple genres with authentic styles
-
-🏗️ **Flexible Song Structure**
-- Configurable sections (verse, chorus, bridge, breakdown)
-- Pattern variations and dynamic fills
-- Custom song arrangements
-
-🎛️ **Professional Features**
-- Realistic velocity variations and humanization
-- EZDrummer 3 compatible MIDI mapping
-- Multiple complexity and dynamics levels
-
-🔧 **Multiple Interfaces**
-- Python API for integration
-- Command-line interface (CLI tool installable with `uv tool install`)
-- Direct module usage for custom applications
-- Reaper DAW integration for professional workflows
-
-🤖 **AI-Powered Generation**
-- Natural language pattern generation with Pydantic AI
-- Intelligent multi-section composition with Langchain agents
-- Provider-agnostic backend (Anthropic, OpenAI, Groq, Cohere)
-- Environment-driven configuration for production use
+- 🎪 **Multi-Genre Support** — 32 styles across 5 genres
+  - **Metal**: Heavy, Death, Power, Progressive, Doom, Thrash, Breakdown
+  - **Rock**: Classic, Blues, Alternative, Progressive, Punk, Hard, Pop
+  - **Jazz**: Swing, Bebop, Fusion, Latin, Ballad, Hard Bop, Contemporary
+  - **Funk**: Classic, P-Funk, Shuffle, New Orleans, Fusion, Minimal, Heavy
+  - **Electronic**: House, Techno, Drum & Bass, Dubstep
+  - **Expandable**: Plugin architecture for more genres
+- 🥁 **Drummer Imitation** — 10 legendary styles
+  - Bonham, Porcaro, Weckl, Chambers, Roeder, Dee, Hoglan, Peart, Rich, Copeland
+  - Signature fills and playing techniques based on research
+  - Compatible across multiple genres with authentic styles
+- 🏗️ **Flexible Song Structure**
+  - Configurable sections (verse, chorus, bridge, breakdown)
+  - Pattern variations and dynamic fills
+  - Custom song arrangements
+- 🎛️ **Professional Features**
+  - Realistic velocity variations and humanization
+  - EZDrummer 3 compatible MIDI mapping
+  - Multiple complexity and dynamics levels
+- 🔧 **Multiple Interfaces**
+  - Python API for integration
+  - Command-line interface (CLI tool installable with `uv tool install`)
+  - Direct module usage for custom applications
+  - Reaper DAW integration for professional workflows
+- 🤖 **AI-Powered Generation**
+  - Natural language pattern generation with Pydantic AI
+  - Intelligent multi-section composition with Langchain agents
+  - Provider-agnostic backend (Anthropic, OpenAI, Groq, Cohere)
+  - Environment-driven configuration for production use
 
 ## 🚀 Quick Start
 
