@@ -365,6 +365,7 @@ Full documentation — quickstart, genre/drummer recipes, Reaper walkthrough, au
 | **[Home](https://fsecada01.github.io/midi-drums/)** | Overview, features, quick examples |
 | **[Quickstart](https://fsecada01.github.io/midi-drums/quickstart.html)** | Installation, first track, AI setup |
 | **[Recipes](https://fsecada01.github.io/midi-drums/recipes.html)** | Death metal, modern jazz, progressive rock examples |
+| **[Use Cases](https://fsecada01.github.io/midi-drums/use-cases.html)** | End-to-end scenarios: batch export, Reaper sidecar round-trip, AI prompt to drummer lock-in |
 | **[Reaper Tutorial](https://fsecada01.github.io/midi-drums/reaper.html)** | DAW integration walkthrough |
 | **[API Reference](https://fsecada01.github.io/midi-drums/midi_drums/)** | Auto-generated module documentation |
 
