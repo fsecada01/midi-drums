@@ -64,6 +64,11 @@ jobs:
           # render them fragmented. Reflow each paragraph/list item onto one
           # line: blank lines and lines starting with '#' or '- ' start a new
           # block, everything else is a continuation of the current one.
+          # Blank-line separators are deferred (pending_blank) rather than
+          # printed immediately, so a leading blank right after the version
+          # heading and a trailing blank right before the link-reference
+          # block never make it into the output - only blanks that actually
+          # sit between two blocks of real content do.
           NOTES=$(printf '%s\n' "${RAW_NOTES}" | awk '
             {
               line = $0
@@ -72,9 +77,12 @@ jobs:
               sub(/[ \t]+$/, "", content)
               if (content == "") {
                 if (buf != "") { print buf; buf = "" }
-                print ""
+                pending_blank = 1
                 next
               }
+              if (pending_blank && started) print ""
+              pending_blank = 0
+              started = 1
               is_new_block = (content ~ /^#/) || (content ~ /^-[ \t]/)
               if (is_new_block || buf == "") {
                 if (buf != "") print buf
