@@ -209,7 +209,7 @@ end
 -- Run a Python command via io.popen, return (ok, output_string).
 local function run_python(cmd)
   reaper.ShowConsoleMsg("midi_drums: " .. cmd .. "\n")
-  local handle = io.popen(cmd .. " 2>&1")
+  local handle = io.popen('cmd /S /C "' .. cmd .. ' 2>&1"')
   local out    = handle:read("*a")
   local ok     = handle:close()
   if out and out ~= "" then
