@@ -1,7 +1,10 @@
 """Generation parameters value object."""
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from midi_drums.core.value_objects.riff_accent import RiffAccentMap
 
 
 @dataclass
@@ -27,6 +30,16 @@ class GenerationParameters:
     song_genre_context: str | None = None  # Overall song genre for adaptation
     context_blend: float = 0.0  # 0.0-1.0, how much to blend with context
 
+    # Riff-lock (audio riff -> kick-locked drum pattern, see
+    # midi_drums.modifications.riff_lock.RiffLockTransform). Applies to a
+    # single generate_pattern() call for exactly one bar - passing this
+    # through create_song()'s **kwargs would apply the same one-bar lock to
+    # every section, which is not what create_song callers want, so callers
+    # that need riff-lock must call generate_pattern() directly per section
+    # (see midi_drums.api.cli's `riff` subcommand).
+    riff_accents: "RiffAccentMap | None" = None
+    riff_lock_strength: float = 1.0  # 0.0-1.0, blend toward riff accents
+
     custom_parameters: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self):
@@ -39,6 +52,7 @@ class GenerationParameters:
             ("swing_ratio", self.swing_ratio),
             ("ride_threshold", self.ride_threshold),
             ("context_blend", self.context_blend),
+            ("riff_lock_strength", self.riff_lock_strength),
         ]:
             if not 0.0 <= value <= 1.0:
                 raise ValueError(

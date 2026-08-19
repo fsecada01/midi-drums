@@ -28,9 +28,15 @@ ai = [
     "pydantic-ai>=0.0.14",
     "numpy>=1.24.0",
     "soundfile>=0.12.0",
+    "librosa>=0.10.0",
     "anthropic>=0.39.0",
     "loguru>=0.7.0",
     "python-dotenv>=1.0.0",
+]
+audio = [
+    "librosa>=0.10.0",
+    "numpy>=1.24.0",
+    "soundfile>=0.12.0",
 ]
 dev = [
     "black>=25.1.0",
@@ -70,9 +76,15 @@ ai = [
     "pydantic-ai>=0.0.14",
     "numpy>=1.24.0",
     "soundfile>=0.12.0",
+    "librosa>=0.10.0",
     "anthropic>=0.39.0",
     "loguru>=0.7.0",
     "python-dotenv>=1.0.0",
+]
+audio = [
+    "librosa>=0.10.0",
+    "numpy>=1.24.0",
+    "soundfile>=0.12.0",
 ]
 
 [tool.ruff]

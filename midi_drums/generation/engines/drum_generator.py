@@ -179,6 +179,26 @@ class DrumGenerator:
             if styled_pattern:
                 pattern = styled_pattern
 
+        # Apply riff-lock if riff accents were supplied - snaps/inserts
+        # kicks onto the riff's rhythmic accents (issue: audio-riff-driven
+        # beat generation). Runs after drummer styling so it operates on
+        # the already-styled kick pattern, before humanization so the
+        # subsequent humanize() call still re-jitters kick timing like it
+        # does for every other beat (a tight lock needs humanization=0 -
+        # this is documented, not special-cased). Routed through
+        # plugin_manager rather than importing
+        # midi_drums.modifications.riff_lock directly - the generation
+        # domain isn't allowed to depend on modifications (see
+        # tests/unit/generation/test_generation_domain_migration.py),
+        # the same reason apply_drummer_style() above is a plugin_manager
+        # call rather than a direct modifications import.
+        if params.riff_accents:
+            locked_pattern = self.plugin_manager.apply_riff_lock(
+                pattern, params.riff_accents, params.riff_lock_strength
+            )
+            if locked_pattern:
+                pattern = locked_pattern
+
         # Apply humanization if requested
         if params.humanization > 0:
             timing_var = params.humanization * 0.05  # Scale to reasonable range

@@ -3,11 +3,16 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from midi_drums.core.models.kit import DrumKit
 from midi_drums.core.models.pattern import Pattern
 from midi_drums.core.models.song import Song
 from midi_drums.generation.engines.drum_generator import DrumGenerator
+
+if TYPE_CHECKING:
+    from midi_drums.core.value_objects.riff_accent import RiffAccentMap
+    from midi_drums.core.value_objects.time_signature import TimeSignature
 
 
 class DrumGeneratorAPI:
@@ -117,6 +122,54 @@ class DrumGeneratorAPI:
         drum_kit = DrumKit.from_preset(mapping)
         self.generator.export_pattern_midi(
             pattern, output_path, tempo, drum_kit=drum_kit
+        )
+
+    def analyze_riff(
+        self,
+        wav_path: str | Path,
+        tempo: float,
+        time_signature: TimeSignature | None = None,
+        grid: str = "16th",
+        **kwargs,
+    ) -> RiffAccentMap:
+        """Analyze a rendered riff audio file into a RiffAccentMap.
+
+        Thin wrapper around :func:`midi_drums.analysis.audio_analysis.
+        analyze_riff` (imported lazily here so this module itself never
+        requires librosa). Feed the result into ``generate_pattern`` via
+        ``riff_accents=...`` - it rides through ``**kwargs`` to
+        ``GenerationParameters`` the same way ``song_genre_context``/
+        ``context_blend`` already do, so there's no separate composite
+        "create_pattern_from_riff" API method.
+
+        Args:
+            wav_path: Path to the rendered riff audio.
+            tempo: Tempo in BPM (no audio-tempo inference is performed).
+            time_signature: Bar length for wraparound. Defaults to 4/4.
+            grid: Quantization grid ("8th", "16th", "32nd", "8th_triplet",
+                "16th_triplet").
+            **kwargs: Forwarded to
+                ``midi_drums.analysis.audio_analysis.analyze_riff``
+                (offset_beats, strong_threshold, audio_offset,
+                audio_duration).
+
+        Returns:
+            RiffAccentMap describing the riff's rhythmic accents.
+
+        Raises:
+            ImportError: If the ``audio`` extras group isn't installed
+                (``uv sync --group audio``).
+        """
+        from midi_drums.analysis.audio_analysis import (
+            analyze_riff as _analyze_riff,
+        )
+
+        return _analyze_riff(
+            wav_path,
+            tempo,
+            time_signature=time_signature,
+            grid=grid,
+            **kwargs,
         )
 
     def list_genres(self) -> list[str]:

@@ -28,6 +28,7 @@ from midi_drums.modifications.drummer_mods import (
     TripletVocabulary,
     TwistedAccents,
 )
+from midi_drums.modifications.riff_lock import RiffLockTransform
 
 __all__ = [
     # Base class
@@ -45,6 +46,11 @@ __all__ = [
     "SpeedPrecision",
     "TwistedAccents",
     "MechanicalPrecision",
+    # Riff-lock (audio riff -> kick-locked pattern). Intentionally NOT
+    # registered in MODIFICATION_REGISTRY - it requires a riff_accents
+    # argument with no sensible default, so ModificationRegistry's
+    # zero-arg construction would fail. Construct and call it directly.
+    "RiffLockTransform",
     # Registry
     "ModificationRegistry",
 ]
