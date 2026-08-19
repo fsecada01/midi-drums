@@ -1192,6 +1192,15 @@ def handle_prompt_command(args) -> None:
 
 def main():
     """Main CLI entry point."""
+    # On Windows, stdout/stderr default to the console's ANSI codepage
+    # rather than UTF-8 when not attached to a real console (e.g. piped
+    # through REAPER's io.popen), so AI-generated text containing
+    # non-ASCII characters (emoji, smart quotes) raises UnicodeEncodeError
+    # instead of printing.
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
+
     parser = create_parser()
     args = parser.parse_args()
 
