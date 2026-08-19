@@ -280,7 +280,7 @@ local MODE = "reaper"
 if mode_choice ~= 6 then   -- user chose External
   local ok_ext, ext_input = reaper.GetUserInputs(
     "External Source", 1,
-    "Mode: sidecar / ai / songmap",
+    "Mode: sidecar / ai / songmap,extrawidth=100",
     "sidecar"
   )
   if not ok_ext then return end
@@ -365,7 +365,7 @@ elseif MODE == "ai" then
   -- 1. Get description
   local ok1, desc_csv = reaper.GetUserInputs(
     "AI Drum Description", 1,
-    "Describe the drums (e.g. 'heavy doom riff, slow and crushing')",
+    "Describe the drums (e.g. 'heavy doom riff, slow and crushing'),extrawidth=400",
     "heavy doom riff, slow and crushing"
   )
   if not ok1 then return end
@@ -378,7 +378,7 @@ elseif MODE == "ai" then
   -- 2. Get tempo
   local ok2, tempo_csv = reaper.GetUserInputs(
     "AI Generation Settings", 1,
-    "Tempo (BPM)  — leave blank to let the AI decide",
+    "Tempo (BPM)  — leave blank to let the AI decide,extrawidth=100",
     DEFAULT_AI_TEMPO
   )
   if not ok2 then return end
@@ -432,7 +432,7 @@ elseif MODE == "ai" then
 elseif MODE == "songmap" then
   local ok_map, map_input = reaper.GetUserInputs(
     "Song-Map Source", 1,
-    "Path to song-map JSON (regions with per-segment bars/bpm/num/denom)",
+    "Path to song-map JSON (regions with per-segment bars/bpm/num/denom),extrawidth=200",
     get_project_dir() .. "/song_map.json"
   )
   if not ok_map then return end
@@ -453,7 +453,8 @@ elseif MODE == "songmap" then
 
   local ok_inp, csv = reaper.GetUserInputs(
     "Song-Map Generation Settings", 3,
-    "Genre (metal/rock/jazz/funk),Style (doom/heavy/classic…),Mapping (ezdrummer3/gm_drums…)",
+    "Genre (metal/rock/jazz/funk),Style (doom/heavy/classic…),"
+      .. "Mapping (ezdrummer3/gm_drums…),extrawidth=100",
     DEFAULT_GENRE .. "," .. DEFAULT_STYLE .. "," .. DEFAULT_MAPPING
   )
   if not ok_inp then return end
@@ -541,7 +542,8 @@ if MODE == "reaper" then
 
   local ok_inp, csv = reaper.GetUserInputs(
     "Template Generation Settings", 3,
-    "Genre (metal/rock/jazz/funk),Style (doom/heavy/classic…),Mapping (ezdrummer3/gm_drums…)",
+    "Genre (metal/rock/jazz/funk),Style (doom/heavy/classic…),"
+      .. "Mapping (ezdrummer3/gm_drums…),extrawidth=100",
     DEFAULT_GENRE .. "," .. DEFAULT_STYLE .. "," .. DEFAULT_MAPPING
   )
   if not ok_inp then return end
