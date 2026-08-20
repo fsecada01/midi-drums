@@ -901,10 +901,20 @@ Added to `midi_drums/api/python_api.py`:
 
 ### Lua Config Block
 
-At the top of the Lua script — the only values users need to edit:
+The Python venv path is **not** a hardcoded constant in tracked source — a
+public repo shouldn't require hand-editing (or risk someone committing
+back) a local machine path. `get_python_exe()` in both
+`create_song_sections.lua` and `create_beat_from_riff.lua` resolves it from
+REAPER's persistent `ExtState` (`reaper.ini`-backed, scoped to the REAPER
+install, section `"midi_drums"`, key `"python_exe"`) instead, prompting via
+`GetUserInputs` on first run — or again if the stored path no longer opens
+— and caching the result via `SetExtState`. Both scripts share the same
+section/key, so configuring one configures the other.
+
+What's left at the top of `create_song_sections.lua` as values users may
+still want to edit:
 
 ```lua
-local PYTHON_EXE     = "C:/path/to/midi_drums/.venv/Scripts/pythonw.exe"
 local SIDECAR_PATH   = nil            -- nil = <project dir>/midi_drums_sections.json
 local DEFAULT_GENRE  = "metal"
 local DEFAULT_STYLE  = "doom"

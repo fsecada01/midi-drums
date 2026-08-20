@@ -47,13 +47,17 @@ Then in REAPER: **Actions → Load ReaScript** → select `create_song_sections.
 → assign a shortcut. Repeat for `create_beat_from_riff.lua` and
 `midi_drums_help.lua` if you want dedicated shortcuts for those too.
 
-Before first use, open `create_song_sections.lua` **and**
-`create_beat_from_riff.lua` and set `PYTHON_EXE` in each to your own
-`midi_drums` virtualenv's `pythonw.exe` path — the checked-in value is a
-placeholder (`C:/path/to/midi_drums/.venv/Scripts/pythonw.exe`).
-`create_beat_from_riff.lua` additionally needs `uv sync --group audio` run
-once inside that virtualenv (librosa for onset detection) — this is a
-separate extras group from `--group ai`.
+Neither script hardcodes a Python path in tracked source — the first time
+you run either one, it prompts for your `midi_drums` virtualenv's
+`pythonw.exe` path and remembers it in REAPER's persistent `ExtState`
+(`reaper.ini`-backed, scoped to this REAPER install, section `midi_drums`,
+key `python_exe`), not in a file. Both scripts share the same stored value,
+so configuring it via either one configures the other too. If the
+configured path stops resolving (moved venv, new machine, a fresh REAPER
+install), the same prompt reappears, pre-filled with the old value so
+re-confirming is one click. `create_beat_from_riff.lua` additionally needs
+`uv sync --group audio` run once inside that virtualenv (librosa for onset
+detection) — this is a separate extras group from `--group ai`.
 
 ## `drum_midi_generator.lua` — not vendored
 
