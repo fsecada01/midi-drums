@@ -82,7 +82,26 @@ local SS_MODE_HELP = {
 }
 
 -- ===== Riff-Lock Beat tab state =====
--- Task 7 fills this in
+local rl_genre = settings.get("default_genre")
+local rl_style = settings.get("default_style")
+local rl_drummer = ""
+local rl_section = "verse"
+local rl_mapping = settings.get("default_mapping")
+local rl_grid = "16th"
+local rl_lock_strength = 1.0
+local rl_snare_mode = 1 -- 1=Off, 2=Reinforce, 3=Stab
+local rl_snare_threshold = 0.85
+local rl_status = ""
+
+local RL_SNARE_HELP = {
+  { title = "Off", body = "Snare is untouched by the riff — comes purely "
+    .. "from the genre plugin/drummer style." },
+  { title = "Reinforce", body = "Boosts velocity on existing snare hits "
+    .. "that land near a strong riff accent." },
+  { title = "Stab", body = "Inserts a unison snare hit at very strong "
+    .. "accents where a kick was locked but no snare is nearby. "
+    .. "Threshold below controls how strong an accent must be." },
+}
 
 local function sidecar_path()
   local override = settings.get("sidecar_path_override")
@@ -217,7 +236,108 @@ local function draw_song_sections_tab()
 end
 
 local function draw_riff_lock_tab()
-  -- Task 7 fills this in
+  -- Read selection fresh every frame: unlike the retired per-run
+  -- script, this panel persists across generations, so item selection
+  -- must be read at Generate-click time, not panel-open time.
+  local item_count = reaper.CountSelectedMediaItems(0)
+
+  if item_count == 0 then
+    reaper.ImGui_TextColored(ctx, 0xfb7185ff, "Select a riff media item first.")
+  else
+    reaper.ImGui_TextWrapped(ctx, item_count .. " item(s) selected (first will be used).")
+  end
+
+  reaper.ImGui_Separator(ctx)
+
+  local changed
+  changed, rl_genre = reaper.ImGui_InputText(ctx, "Genre", rl_genre)
+  changed, rl_style = reaper.ImGui_InputText(ctx, "Style", rl_style)
+  changed, rl_drummer = reaper.ImGui_InputText(ctx, "Drummer (optional)", rl_drummer)
+  changed, rl_section = reaper.ImGui_InputText(ctx, "Section", rl_section)
+  changed, rl_mapping = reaper.ImGui_InputText(ctx, "Mapping", rl_mapping)
+  changed, rl_grid = reaper.ImGui_InputText(ctx, "Grid", rl_grid)
+
+  changed, rl_lock_strength = reaper.ImGui_SliderDouble(ctx, "Lock Strength", rl_lock_strength, 0.0, 1.0)
+
+  reaper.ImGui_Text(ctx, "Snare Reaction:")
+  if reaper.ImGui_RadioButton(ctx, "Off", rl_snare_mode == 1) then rl_snare_mode = 1 end
+  reaper.ImGui_SameLine(ctx)
+  if reaper.ImGui_RadioButton(ctx, "Reinforce", rl_snare_mode == 2) then rl_snare_mode = 2 end
+  reaper.ImGui_SameLine(ctx)
+  if reaper.ImGui_RadioButton(ctx, "Stab", rl_snare_mode == 3) then rl_snare_mode = 3 end
+  draw_help_button("rl_snare", RL_SNARE_HELP)
+
+  if rl_snare_mode == 3 then
+    changed, rl_snare_threshold = reaper.ImGui_SliderDouble(ctx, "Stab Threshold", rl_snare_threshold, 0.0, 1.0)
+  end
+
+  reaper.ImGui_Separator(ctx)
+
+  local disabled = job_runner.is_running() or item_count == 0
+  if disabled then reaper.ImGui_BeginDisabled(ctx) end
+  if reaper.ImGui_Button(ctx, "Generate") then
+    local python_exe = settings.resolve_python_exe()
+    if not python_exe then
+      rl_status = "Cancelled: no Python interpreter configured."
+    else
+      local item = reaper.GetSelectedMediaItem(0, 0)
+      local take = reaper.GetActiveTake(item)
+
+      local offset_beats, bar_start_qn, bar_end_qn, ts_num, ts_denom, bpm =
+        riff_lock.compute_bar_alignment(item)
+
+      local audio_path, audio_offset, audio_duration, err =
+        riff_lock.resolve_audio_source(item, take, bar_start_qn, bar_end_qn)
+
+      if not audio_path then
+        reaper.ShowMessageBox(err or "Could not resolve riff audio.", "midi_drums", 0)
+        rl_status = "Error: " .. (err or "could not resolve riff audio")
+      else
+        local snare_mode_str = "off"
+        if rl_snare_mode == 2 then snare_mode_str = "reinforce"
+        elseif rl_snare_mode == 3 then snare_mode_str = "stab" end
+
+        local sc_path = sidecar_path()
+        local midi_out = midi_out_path("midi_drums_riff.mid")
+        local region_start_time = reaper.TimeMap2_QNToTime(0, bar_start_qn)
+
+        local cmd = riff_lock.build_cmd(python_exe, {
+          audio_path = audio_path,
+          audio_offset = audio_offset,
+          audio_duration = audio_duration,
+          genre = rl_genre,
+          style = rl_style,
+          drummer = rl_drummer,
+          bpm = bpm,
+          section = rl_section,
+          ts_num = ts_num,
+          ts_denom = ts_denom,
+          bars = 4,
+          grid = rl_grid,
+          lock_strength = rl_lock_strength,
+          mapping = rl_mapping,
+          snare_mode = snare_mode_str,
+          snare_threshold = rl_snare_threshold,
+          offset_beats = offset_beats,
+          midi_out = midi_out,
+          sidecar_path = sc_path,
+        })
+
+        job_runner.start(cmd, "Riff-Lock Beat", function()
+          riff_lock.on_job_complete({
+            sidecar_path = sc_path,
+            midi_out = midi_out,
+            region_start_time = region_start_time,
+          })
+          rl_status = "Done."
+        end)
+        rl_status = "Running..."
+      end
+    end
+  end
+  if disabled then reaper.ImGui_EndDisabled(ctx) end
+
+  reaper.ImGui_TextWrapped(ctx, rl_status)
 end
 
 local function draw_settings_tab()
