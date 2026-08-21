@@ -287,35 +287,38 @@ midi-drums reaper add-markers --structure "intro:4,verse:8,chorus:8,outro:4" --t
 
 See [docs/REAPER_INTEGRATION.md](docs/REAPER_INTEGRATION.md) for complete documentation.
 
-### ReaScript Lua Integration (`create_song_sections.lua`)
+### ReaScript Panel Integration (`midi_drums_panel.lua`)
 
-The script [`reaper/create_song_sections.lua`](reaper/create_song_sections.lua)
-(vendored in this repo) provides a four-mode bi-directional bridge between
+[`reaper/midi_drums_panel.lua`](reaper/midi_drums_panel.lua) (vendored in
+this repo) is a dockable ReaImGui panel with four tabs — Song Sections,
+Riff-Lock Beat, Settings, Log — providing a bi-directional bridge between
 REAPER and the midi_drums Python module. See
-[`reaper/README.md`](reaper/README.md) for the install step (symlink or copy
-into REAPER's `Scripts/` directory).
+[`reaper/README.md`](reaper/README.md) for prerequisites (REAPER, ReaPack,
+ReaImGui) and the install step (symlink or copy the entry-point script
+plus its `reaper/midi_drums/` support modules into REAPER's `Scripts/`
+directory).
 
 #### Quick Setup
 
-1. Symlink or copy `reaper/create_song_sections.lua` and
-   `reaper/midi_drums_help.lua` into REAPER's `Scripts/` directory (see
+1. Install ReaPack and the ReaImGui package via **Extensions → ReaPack →
+   Browse packages...** (see [`reaper/README.md`](reaper/README.md)).
+2. Symlink or copy `reaper/midi_drums_panel.lua` and the
+   `reaper/midi_drums/` directory into REAPER's `Scripts/` directory (see
    [`reaper/README.md`](reaper/README.md)).
-2. Open the script in a text editor and set `PYTHON_EXE` to your virtualenv:
-   ```lua
-   local PYTHON_EXE = "C:/path/to/midi_drums/.venv/Scripts/pythonw.exe"
-   ```
-3. Add it as a REAPER action: **Actions → Load ReaScript** → select the file.
-4. Bind it to a key shortcut for quick access.
-5. Run **`midi_drums_help.lua`** from the same directory at any time for in-REAPER usage instructions.
+3. Add it as a REAPER action: **Actions → Load ReaScript** → select
+   `midi_drums_panel.lua`, and optionally bind it to a key shortcut.
+4. Run the action to open the panel. The first time you click Generate on
+   any tab, it prompts for your `midi_drums` virtualenv's `pythonw.exe`
+   path and remembers it — no manual file editing needed.
 
-#### Four Modes
+#### Song Sections Tab: Four Modes
 
 | Mode | When to use | Wait time |
 |------|-------------|-----------|
-| **REAPER** (default, YES) | You define the structure in the script | ~1–2 s |
-| **Python sidecar** (NO → "sidecar") | Python already generated MIDI + sidecar | instant |
-| **AI agent** (NO → "ai") | Natural language description drives everything | ~20–45 s |
-| **Song map** (NO → "songmap") | A song_creator-shaped JSON drives per-section tempo/meter | ~1–2 s |
+| **REAPER** (default) | You define the structure via the panel's built-in defaults | ~1–2 s |
+| **Sidecar** | Python already generated MIDI + sidecar | instant |
+| **AI** | Natural language description drives everything | ~20–45 s |
+| **Song Map** | A song_creator-shaped JSON drives per-section tempo/meter | ~1–2 s |
 
 The follow-up prompt after choosing "External" is a text field, not another
 Yes/No dialog — type `sidecar`, `ai`, or `songmap`.
