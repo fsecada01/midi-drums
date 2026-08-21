@@ -4,7 +4,12 @@ This module provides AI-powered features including:
 - Natural language pattern generation
 - Intelligent pattern evolution
 - Adaptive song composition
-- Audio-to-MIDI pattern analysis
+
+Audio-to-MIDI pattern analysis (onset detection for riff-locked drum
+generation) lives in the sibling ``midi_drums.analysis`` package instead of
+here - it's plain DSP with no LLM/API dependency, and this package's own
+``__init__`` eagerly imports the LangChain/pydantic-ai stack, which would
+otherwise be forced onto that lightweight feature too.
 
 Architecture:
 - Pydantic AI: Type-safe structured outputs and validation

@@ -751,6 +751,10 @@ for the install step) is the bi-directional bridge between REAPER and the
 midi_drums Python module. It has four modes and calls Python via `io.popen`
 (blocking subprocess, ~1-2 s for templates, ~20-45 s for AI).
 
+A second script, `reaper/create_beat_from_riff.lua`, is a separate action
+(not a mode of `create_song_sections.lua`) for riff-locked drum generation —
+see the dedicated section below.
+
 A standalone help script `reaper/midi_drums_help.lua` can be run as a REAPER
 action to display usage instructions inside REAPER at any time.
 
@@ -773,6 +777,42 @@ Song-map mode is the only mode that doesn't reuse the shared
 places one `SetTempoTimeSigMarker` per resolved tempo/meter change point and
 one colored region per song-map region, mirroring song_creator's own
 `song_reaper_build.lua:B.apply_to_reaper`.
+
+### Riff-Locked Drums (`create_beat_from_riff.lua`)
+
+Separate action from `create_song_sections.lua` above — select a recorded/
+rendered guitar or bass riff item and run it. It generates a drum pattern
+whose **kick hits lock to the riff's rhythmic accents**, while snare,
+hi-hat, cymbals, and drummer styling still come from the normal
+genre-plugin pipeline (`python -m midi_drums riff`, routed through
+`PluginManager.apply_riff_lock` → `RiffLockTransform`, see
+`midi_drums/modifications/riff_lock.py`). v1 scope: the riff is analyzed as
+**one representative bar** and tiled to fill `--bars` — a multi-bar riff
+with an evolving groove still only locks bar 1.
+
+Requires `uv sync --group audio` (librosa) inside the `midi_drums`
+virtualenv — a separate extras group from `--group ai`, since onset
+detection is plain DSP with no LLM dependency
+(`midi_drums/analysis/audio_analysis.py`, a sibling package of `midi_drums/ai/`
+rather than nested inside it, specifically so importing it doesn't drag in
+the LangChain/pydantic-ai stack).
+
+Source audio comes from one of two paths, chosen automatically from the
+selected item's take:
+
+- **Audio take** — reads the take's own source file directly
+  (`--audio-offset`/`--audio-duration` slice it to the item's played
+  region). No rendering, no project state touched.
+- **MIDI/VSTi take** — renders to a temp WAV via a bar-aligned time
+  selection (`Main_OnCommand(42230, 0)`, "using most recent settings").
+  `RENDER_FILE`/`RENDER_PATTERN`/`RENDER_BOUNDSFLAG` and the time selection
+  are saved before and restored immediately after the render, on every
+  path.
+
+Bar-alignment: if the selected item doesn't start on a bar line, the
+script computes the offset between the item's start (in quarter notes, via
+`TimeMap2_timeToQN`) and the enclosing bar's start, and passes it as
+`--offset-beats` so accents aren't locked to a phase-shifted riff.
 
 ### Sidecar Format (`midi_drums_sections.json`)
 
@@ -847,6 +887,7 @@ Added to `midi_drums/api/python_api.py`:
 | `create_song_from_song_map(song_map, genre, style, **kw)` | Read song-map JSON (dict/path/string) → generate matching `Song` with per-region `segments` |
 | `export_song_map_json(song, path)` | Serialize a `Song`'s sections/segments back to song-map JSON |
 | `export_song_timeline_json(song, path)` | Resolve a `Song` (segmented or not) to a flat tempo/region timeline JSON |
+| `analyze_riff(wav_path, tempo, time_signature=None, grid="16th", **kw)` | Analyze a rendered riff audio file into a `RiffAccentMap` (requires `uv sync --group audio`) |
 
 ### New CLI Flags
 
@@ -856,13 +897,24 @@ Added to `midi_drums/api/python_api.py`:
 | `generate` | `--song-map JSON` | Read section structure **and per-segment tempo/meter** from a song-map JSON. Takes precedence over `--sidecar` if both are given |
 | `generate` | `--write-timeline JSON` | Write a resolved timeline JSON after generation (most useful with `--song-map`) |
 | `prompt` | `--write-sidecar JSON` | Write sidecar after AI generation |
+| `riff` | *(new subcommand)* | Analyze `--audio` for accents, generate a pattern via `generate_pattern` with `riff_accents`/`riff_lock_strength` set, optionally `--write-sidecar` |
 
 ### Lua Config Block
 
-At the top of the Lua script — the only values users need to edit:
+The Python venv path is **not** a hardcoded constant in tracked source — a
+public repo shouldn't require hand-editing (or risk someone committing
+back) a local machine path. `get_python_exe()` in both
+`create_song_sections.lua` and `create_beat_from_riff.lua` resolves it from
+REAPER's persistent `ExtState` (`reaper.ini`-backed, scoped to the REAPER
+install, section `"midi_drums"`, key `"python_exe"`) instead, prompting via
+`GetUserInputs` on first run — or again if the stored path no longer opens
+— and caching the result via `SetExtState`. Both scripts share the same
+section/key, so configuring one configures the other.
+
+What's left at the top of `create_song_sections.lua` as values users may
+still want to edit:
 
 ```lua
-local PYTHON_EXE     = "C:/path/to/midi_drums/.venv/Scripts/pythonw.exe"
 local SIDECAR_PATH   = nil            -- nil = <project dir>/midi_drums_sections.json
 local DEFAULT_GENRE  = "metal"
 local DEFAULT_STYLE  = "doom"

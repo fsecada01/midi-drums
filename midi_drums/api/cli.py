@@ -50,6 +50,11 @@ Examples:
   # Generate a pattern from a natural language prompt
   python -m midi_drums prompt "funky groove with ghost notes and syncopation"
   python -m midi_drums prompt "aggressive death metal breakdown" --tempo 180 -o breakdown.mid
+
+  # Generate a pattern whose kicks lock to a recorded riff's accents
+  # (requires: uv sync --group audio)
+  python -m midi_drums riff --audio riff.wav --genre metal --style death \\
+      --tempo 180 --output locked.mid
         """,
     )
 
@@ -401,6 +406,146 @@ Examples:
             "Write a midi_drums_sections.json sidecar at this path after "
             "generation. Used by the REAPER create_song_sections.lua script "
             "to create matching timeline regions."
+        ),
+    )
+
+    # Riff-lock command — analyze an audio riff, generate a pattern whose
+    # kicks lock to its accents (requires `uv sync --group audio`).
+    riff_parser = subparsers.add_parser(
+        "riff",
+        help=(
+            "Generate a drum pattern whose kicks lock to an audio riff's "
+            "rhythmic accents"
+        ),
+    )
+    riff_parser.add_argument(
+        "--audio", required=True, metavar="WAV", help="Path to riff audio"
+    )
+    riff_parser.add_argument(
+        "--genre", required=True, help="Genre (e.g., metal, rock, jazz)"
+    )
+    riff_parser.add_argument(
+        "--tempo",
+        type=float,
+        required=True,
+        help=(
+            "Tempo in BPM. Required - no audio-tempo inference is "
+            "performed in v1"
+        ),
+    )
+    riff_parser.add_argument(
+        "--style", default="default", help="Style within genre"
+    )
+    riff_parser.add_argument("--drummer", help="Drummer style to apply")
+    riff_parser.add_argument(
+        "--section",
+        default="verse",
+        help="Section type (verse, chorus, bridge, etc.)",
+    )
+    riff_parser.add_argument(
+        "--time-signature",
+        default="4/4",
+        help='Time signature as "N/D", e.g. "4/4" or "7/8"',
+    )
+    riff_parser.add_argument(
+        "--bars",
+        type=int,
+        default=4,
+        help=(
+            "Number of bars in the output (default: 4). The riff is "
+            "analyzed as ONE representative bar and tiled to fill this - "
+            "an 8-bar riff selection still only produces one locked bar, "
+            "repeated"
+        ),
+    )
+    riff_parser.add_argument(
+        "--grid",
+        default="16th",
+        choices=["8th", "16th", "32nd", "8th_triplet", "16th_triplet"],
+        help="Onset quantization grid (default: 16th)",
+    )
+    riff_parser.add_argument(
+        "--lock-strength",
+        type=float,
+        default=1.0,
+        help="Riff-lock blend strength 0.0-1.0 (default: 1.0)",
+    )
+    riff_parser.add_argument(
+        "--snare-mode",
+        default="off",
+        choices=["off", "reinforce", "stab"],
+        help=(
+            "How the snare reacts to the same riff accents (default: "
+            "off). 'reinforce' boosts velocity on existing snare hits "
+            "near a strong accent; 'stab' inserts a unison snare hit at "
+            "very strong accents where a kick was locked but no snare "
+            "is nearby"
+        ),
+    )
+    riff_parser.add_argument(
+        "--snare-stab-threshold",
+        type=float,
+        default=0.85,
+        help="Accent strength required to trigger a snare stab (default: 0.85)",
+    )
+    riff_parser.add_argument(
+        "--offset-beats",
+        type=float,
+        default=0.0,
+        help=(
+            "Beats to subtract before wrapping onsets into the bar - "
+            "corrects for the selected audio not starting on a bar line"
+        ),
+    )
+    riff_parser.add_argument(
+        "--audio-offset",
+        type=float,
+        default=None,
+        metavar="SECONDS",
+        help="Seconds into --audio to start reading",
+    )
+    riff_parser.add_argument(
+        "--audio-duration",
+        type=float,
+        default=None,
+        metavar="SECONDS",
+        help="Seconds of --audio to read starting at --audio-offset",
+    )
+    riff_parser.add_argument(
+        "--humanization",
+        type=float,
+        default=0.0,
+        help=(
+            "Humanization level 0.0-1.0 (default: 0.0 - a tight riff lock "
+            "wants no re-jittering of kick timing)"
+        ),
+    )
+    riff_parser.add_argument(
+        "--complexity",
+        type=float,
+        default=0.5,
+        help="Complexity level (0.0-1.0)",
+    )
+    riff_parser.add_argument(
+        "--mapping",
+        "--vst",
+        default="ezdrummer3",
+        help=(
+            "MIDI mapping preset (ezdrummer3, studio_drummer3, "
+            "addictive_drums, bfd3, gm_drums, modo_drums, ml_drums, "
+            "metal, jazz)"
+        ),
+    )
+    riff_parser.add_argument(
+        "--output", "-o", required=True, help="Output MIDI file"
+    )
+    riff_parser.add_argument(
+        "--write-sidecar",
+        metavar="JSON",
+        help=(
+            "Write a midi_drums_sections.json sidecar (single section) at "
+            "this path after generation, for the REAPER "
+            "create_song_sections.lua script"
         ),
     )
 
@@ -1190,8 +1335,114 @@ def handle_prompt_command(args) -> None:
         sys.exit(1)
 
 
+def handle_riff_command(args) -> None:
+    """Handle the 'riff' command - riff-locked drum pattern generation."""
+    # ── guard: audio extras installed? ───────────────────────────────────
+    try:
+        from midi_drums.analysis.audio_analysis import (  # noqa: PLC0415
+            analyze_riff,
+        )
+    except ImportError:
+        print(
+            "\nAudio analysis dependencies are not installed.\n"
+            "Install them with:\n"
+            "  uv sync --group audio\n"
+            "  # or: pip install 'midi-drums[audio]'\n",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    from midi_drums.core.value_objects.time_signature import TimeSignature
+
+    try:
+        numerator, denominator = map(int, args.time_signature.split("/"))
+        time_sig = TimeSignature(numerator, denominator)
+    except (ValueError, AttributeError):
+        print(f"Invalid time signature: {args.time_signature}", file=sys.stderr)
+        print('Expected format: "4/4" or "7/8"', file=sys.stderr)
+        sys.exit(1)
+
+    print(f"Analyzing riff: {args.audio}")
+    try:
+        riff_accents = analyze_riff(
+            args.audio,
+            tempo=args.tempo,
+            time_signature=time_sig,
+            grid=args.grid,
+            offset_beats=args.offset_beats,
+            audio_offset=args.audio_offset,
+            audio_duration=args.audio_duration,
+        )
+    except Exception as e:
+        print(f"Riff analysis failed: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    print(f"  Accents  : {len(riff_accents)} detected")
+
+    generator = DrumGenerator()
+    pattern = generator.generate_pattern(
+        genre=args.genre,
+        section=args.section,
+        bars=args.bars,
+        style=args.style,
+        drummer=args.drummer,
+        complexity=args.complexity,
+        humanization=args.humanization,
+        riff_accents=riff_accents,
+        riff_lock_strength=args.lock_strength,
+        riff_snare_mode=args.snare_mode,
+        riff_snare_stab_threshold=args.snare_stab_threshold,
+    )
+    if pattern is None:
+        print(
+            f"Failed to generate pattern for {args.genre}/{args.section}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    drum_kit = DrumKit.from_preset(args.mapping)
+    output_path = Path(args.output)
+    generator.export_pattern_midi(
+        pattern, output_path, tempo=int(args.tempo), drum_kit=drum_kit
+    )
+
+    if args.write_sidecar:
+        # The sidecar contract (export_sections_json) needs a Song, not a
+        # bare Pattern - wrap it as a one-section Song, mirroring how
+        # handle_prompt_command does the same thing for its single-pattern
+        # path (see the Song(...) construction above, around --rpp).
+        from midi_drums.api.python_api import DrumGeneratorAPI
+        from midi_drums.core.models.song import Section, Song
+
+        song = Song(
+            name=Path(args.output).stem,
+            tempo=int(args.tempo),
+            time_signature=time_sig,
+            sections=[
+                Section(name=args.section, pattern=pattern, bars=args.bars)
+            ],
+            metadata={"genre": args.genre, "style": args.style},
+        )
+        DrumGeneratorAPI().export_sections_json(song, args.write_sidecar)
+        print(f"  Sidecar  : {args.write_sidecar}")
+
+    print("\nDone!")
+    print(f"  Output   : {output_path}")
+    print(f"  Genre    : {args.genre} / {args.style}")
+    print(f"  Tempo    : {args.tempo} BPM  |  Bars: {args.bars}")
+
+
 def main():
     """Main CLI entry point."""
+    # On Windows, stdout/stderr default to the console's ANSI codepage
+    # rather than UTF-8 when not attached to a real console (e.g. piped
+    # through REAPER's io.popen), so AI-generated text containing
+    # non-ASCII characters (emoji, smart quotes) raises UnicodeEncodeError
+    # instead of printing.
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
+
     parser = create_parser()
     args = parser.parse_args()
 
@@ -1201,6 +1452,10 @@ def main():
 
     if args.command == "prompt":
         handle_prompt_command(args)
+        return
+
+    if args.command == "riff":
+        handle_riff_command(args)
         return
 
     # Initialize generator
