@@ -43,6 +43,23 @@ Historical development documentation for the MIDI Drums Generator project.
 
 ---
 
+### 2026-08-21_docs-cleanup/ - Documentation Reorganization (Issue #59)
+**Date**: 2026-08-21
+
+**Content**: Design docs, implementation plans, and research notes
+superseded by their shipped features or migrated into
+[`docs/adr/`](../../docs/adr/) as decision records:
+- `design_reaper_panel.md`, `2026-08-21-unified-reaper-panel-plan.md` -> [ADR 0001](../../docs/adr/0001-unified-reaper-panel.md)
+- `PHYSICAL_FEASIBILITY_FIXES.md`, `HUMANIZATION_IMPROVEMENTS.md`, `HUMANIZATION_SUMMARY.md` -> [ADR 0002](../../docs/adr/0002-physical-feasibility-and-advanced-humanization.md)
+- `2026-08-10-system-prompt-update-design.md`, `2026-08-10-system-prompt-update-plan.md`, `research_subagent_token_reduction_20260810.md` -> [ADR 0003](../../docs/adr/0003-claude-code-workflow-policy.md)
+- `REFACTORING_PLAN.md`, `REFACTORING_PROGRESS.md` - superseded by `CLAUDE.md`'s own "Refactoring Achievement" section (same content, kept current there instead)
+- `AI_GENERATION_SUCCESS.md` - a single dated manual test log, pure point-in-time record
+- `AI_BACKEND_MIGRATION.md` - Langchain backend migration, now complete (see `docs/AI_INTEGRATION.md` for the current architecture)
+- `research_vendor_drum_midi_maps_20260812.md` - vendor MIDI note-map research for issue #47 (EZDrummer 3 confirmed; Superior Drummer 3/BFD3/Addictive Drums 2 remain unresolved if that follow-up research is picked back up)
+- `REAPER_INTEGRATION.md`, `REAPER_TASKS.md` - the original single-workflow REAPER export feature, superseded by the unified panel (ADR 0001) and current `midi_drums/export/reaper/` module layout
+
+---
+
 ## Document Index by Topic
 
 ### Architecture & Design

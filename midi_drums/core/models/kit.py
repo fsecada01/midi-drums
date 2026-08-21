@@ -160,7 +160,8 @@ class DrumKit:
         """Create a Studio Drummer 3 (Native Instruments) compatible kit.
 
         No Studio Drummer 3-specific note research has been done yet (see
-        claudedocs/research_vendor_drum_midi_maps_20260812.md) - this uses
+        claudedocs/archive/2026-08-21_docs-cleanup/research_vendor_drum_midi_maps_20260812.md)
+        - this uses
         the GM-collapsed baseline so it's at least GM-compliant rather than
         silently inheriting EZDrummer 3's non-GM extended hi-hat notes.
         """
@@ -175,7 +176,8 @@ class DrumKit:
         """Create an Addictive Drums 2 (XLN Audio) compatible kit.
 
         No Addictive Drums 2-specific note research has been done yet (see
-        claudedocs/research_vendor_drum_midi_maps_20260812.md) - this uses
+        claudedocs/archive/2026-08-21_docs-cleanup/research_vendor_drum_midi_maps_20260812.md)
+        - this uses
         the GM-collapsed baseline so it's at least GM-compliant rather than
         silently inheriting EZDrummer 3's non-GM extended hi-hat notes.
         """
@@ -190,7 +192,8 @@ class DrumKit:
         """Create a BFD3 (FXpansion) compatible kit using common mappings.
 
         No BFD3-specific note research has been done yet (see
-        claudedocs/research_vendor_drum_midi_maps_20260812.md) - this uses
+        claudedocs/archive/2026-08-21_docs-cleanup/research_vendor_drum_midi_maps_20260812.md)
+        - this uses
         the GM-collapsed baseline so it's at least GM-compliant rather than
         silently inheriting EZDrummer 3's non-GM extended hi-hat notes.
         """
@@ -214,7 +217,8 @@ class DrumKit:
         """Create a MODO Drums (IK Multimedia) compatible kit.
 
         No MODO Drums-specific note research has been done yet (see
-        claudedocs/research_vendor_drum_midi_maps_20260812.md) - this uses
+        claudedocs/archive/2026-08-21_docs-cleanup/research_vendor_drum_midi_maps_20260812.md)
+        - this uses
         the GM-collapsed baseline so it's at least GM-compliant rather than
         silently inheriting EZDrummer 3's non-GM extended hi-hat notes.
         """
@@ -229,7 +233,8 @@ class DrumKit:
         """Create an ML Drums (ML Sound Lab) compatible kit.
 
         No ML Drums-specific note research has been done yet (see
-        claudedocs/research_vendor_drum_midi_maps_20260812.md) - this uses
+        claudedocs/archive/2026-08-21_docs-cleanup/research_vendor_drum_midi_maps_20260812.md)
+        - this uses
         the GM-collapsed baseline so it's at least GM-compliant rather than
         silently inheriting EZDrummer 3's non-GM extended hi-hat notes.
         """

@@ -326,32 +326,39 @@ def quick_song(description: str, output_path: Optional[str] = None) -> str
 
 ## Future Enhancements
 
+**Audio Analysis has shipped** (see below) — it's no longer on this list.
+
 ### Planned Features
-- [ ] **Audio Analysis**: WAV/MP3 → MIDI pattern extraction
 - [ ] **Pattern Evolution**: AI-driven pattern variations and progressions
 - [ ] **Style Transfer**: Blend drummer styles or transfer between genres
 - [ ] **Learning System**: Learn from user feedback and preferences
 - [ ] **Real-time Generation**: Stream-based pattern generation
 - [ ] **Multi-modal**: Visual pattern editing with AI suggestions
 
-### Audio Analysis (In Progress)
+### Audio Analysis (Shipped)
+
+Audio riff analysis lives in `midi_drums/analysis/audio_analysis.py` — a
+sibling package of `midi_drums/ai/`, not nested inside it, specifically
+so importing it doesn't drag in the LangChain/pydantic-ai stack (it's
+plain DSP onset detection via `librosa`, no LLM involved). Requires
+`uv sync --group audio`.
+
 ```python
-# Future API
-from midi_drums.ai import DrumGeneratorAI
+from midi_drums.api.python_api import DrumGeneratorAPI
 
-ai = DrumGeneratorAI()
-
-# Analyze audio file and generate MIDI pattern
-pattern, analysis = await ai.analyze_audio(
-    audio_path="drums.wav",
-    genre_hint="metal",
-    extract_tempo=True
+api = DrumGeneratorAPI()
+accent_map = api.analyze_riff(
+    "riff.wav", tempo=155, time_signature=(4, 4), grid="16th"
 )
-
-print(f"Detected Tempo: {analysis.detected_tempo} BPM")
-print(f"Pattern: {analysis.pattern_description}")
-ai.export_pattern(pattern, "extracted.mid")
+song = api.generate_pattern(
+    "metal", "verse", style="death", riff_accents=accent_map,
+    riff_lock_strength=1.0,
+)
 ```
+
+Also available via the `riff` CLI subcommand and the REAPER panel's
+Riff-Lock Beat tab — see `CLAUDE.md`'s "Riff-Locked Drums" section for
+the full data flow and CLI flags.
 
 ## Best Practices
 

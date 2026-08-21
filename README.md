@@ -242,7 +242,7 @@ ai_groq = DrumGeneratorAI(backend_config=groq_config)
 
 **Environment Variables:** `AI_PROVIDER`, `AI_MODEL`, `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `GROQ_API_KEY`, `AI_TEMPERATURE` (0.0-2.0, default 0.7), `AI_MAX_TOKENS` (default 4096)
 
-See [claudedocs/AI_BACKEND_MIGRATION.md](claudedocs/AI_BACKEND_MIGRATION.md) for complete documentation.
+See [docs/AI_INTEGRATION.md](docs/AI_INTEGRATION.md) for complete documentation.
 
 ## 🎛️ Reaper DAW Integration
 
@@ -285,7 +285,7 @@ midi-drums reaper add-markers --structure "intro:4,verse:8,chorus:8,outro:4" --t
 
 **Features:** automatic section markers, time-accurate positioning, metadata-based or auto-detected workflow, template support, custom marker colors, immutable operations (originals never modified), optional MIDI export alongside the Reaper project.
 
-See [docs/REAPER_INTEGRATION.md](docs/REAPER_INTEGRATION.md) for complete documentation.
+See [reaper/README.md](reaper/README.md) for the current unified panel, or [ADR 0001](docs/adr/0001-unified-reaper-panel.md) for why the three original standalone scripts were replaced with it.
 
 ### ReaScript Panel Integration (`midi_drums_panel.lua`)
 
@@ -436,7 +436,7 @@ from midi_drums.modifications import BehindBeatTiming, TripletVocabulary
 pattern = behind_beat.apply(triplets.apply(pattern))
 ```
 
-See [`docs/DDD_ARCHITECTURE.md`](docs/DDD_ARCHITECTURE.md) for the domain-boundary rules behind this layout, [`docs/MIGRATION_GUIDE.md`](docs/MIGRATION_GUIDE.md) for pre-DDD-migration import paths, and [claudedocs/REFACTORING_PROGRESS.md](claudedocs/REFACTORING_PROGRESS.md) for the history behind this design (a 62% code-reduction refactor from the original per-plugin implementations).
+See [`docs/DDD_ARCHITECTURE.md`](docs/DDD_ARCHITECTURE.md) for the domain-boundary rules behind this layout, [`docs/MIGRATION_GUIDE.md`](docs/MIGRATION_GUIDE.md) for pre-DDD-migration import paths, and [`CLAUDE.md`'s "Refactoring Achievement" section](CLAUDE.md#refactoring-achievement) for the history behind this design (a 62% code-reduction refactor from the original per-plugin implementations).
 
 ### Available Genres & Styles
 
@@ -702,7 +702,8 @@ all identical:
 - **`studio_drummer3`**, **`addictive_drums`**, **`bfd3`**, **`modo_drums`**,
   **`ml_drums`** — use the same GM-collapsed note table as `gm_drums`
   (no vendor-specific note research has been done for these yet — see
-  `claudedocs/research_vendor_drum_midi_maps_20260812.md`); safe to use
+  `claudedocs/archive/2026-08-21_docs-cleanup/research_vendor_drum_midi_maps_20260812.md`);
+  safe to use
   with any GM-compatible sampler today, but not yet verified against each
   vendor's own default map, which may differ from strict GM.
 - **Custom mapping** — pass `--mapping-file path/to/mapping.json` (CLI) or
