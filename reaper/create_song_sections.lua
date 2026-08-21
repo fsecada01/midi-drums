@@ -4,8 +4,11 @@
 --
 -- ─────────────────────────────────────────────────────────────────────────────
 -- QUICK START
---   1. Set PYTHON_EXE below to your midi_drums virtualenv python.
---   2. Actions → Load ReaScript → select this file → assign a shortcut.
+--   1. Actions → Load ReaScript → select this file → assign a shortcut.
+--   2. Run it - the first run prompts once for your midi_drums virtualenv's
+--      pythonw.exe path and remembers it (REAPER ExtState, not this file -
+--      see USER CONFIG below). create_beat_from_riff.lua shares the same
+--      stored path, so you only configure this once for both scripts.
 --   3. Run midi_drums_help.lua (same folder) for full in-REAPER help.
 -- ─────────────────────────────────────────────────────────────────────────────
 --
@@ -89,9 +92,12 @@
 -- USER CONFIG
 -- ===========================================================================
 
--- Path to the Python executable inside the midi_drums virtualenv.
--- pythonw.exe suppresses the console window on Windows.
-local PYTHON_EXE = "C:/path/to/midi_drums/.venv/Scripts/pythonw.exe"
+-- Path to the Python executable inside the midi_drums virtualenv is NOT
+-- hardcoded here - a public repo shouldn't need anyone to hand-edit (or
+-- accidentally commit back) a local machine path in tracked source. It's
+-- resolved via REAPER's persistent ExtState instead; see get_python_exe()
+-- below and its call near the end of the Helpers section.
+local PYTHON_EXE
 
 -- Override sidecar path (nil = <project dir>/midi_drums_sections.json)
 local SIDECAR_PATH = nil
@@ -264,6 +270,56 @@ local function shell_escape(s)
   s = s:gsub("[&|^<>%%]", "")
   return s
 end
+
+-- Same ExtState section/key as create_beat_from_riff.lua - configuring the
+-- python path via either script's setup prompt also configures the other.
+local EXTSTATE_SECTION        = "midi_drums"
+local EXTSTATE_KEY_PYTHON_EXE = "python_exe"
+
+-- Resolve the midi_drums venv's pythonw.exe path from REAPER's persistent
+-- ExtState (reaper.ini-backed, scoped to this REAPER install - NOT the
+-- project, and NOT this tracked script file) instead of a hardcoded
+-- constant. Prompts once via a dialog on first use, or again if the
+-- previously configured path no longer opens (moved venv, different
+-- machine, a fresh REAPER install, etc.) - the stored value is pre-filled
+-- so re-confirming after a false alarm is one click. Returns nil if the
+-- user cancels setup (caller should `return`).
+local function get_python_exe()
+  local exe = reaper.GetExtState(EXTSTATE_SECTION, EXTSTATE_KEY_PYTHON_EXE)
+  if exe ~= "" then
+    local f = io.open(exe, "rb")
+    if f then f:close(); return exe end
+  end
+
+  local ok, input = reaper.GetUserInputs(
+    "midi_drums Setup", 1,
+    "Path to midi_drums venv pythonw.exe,extrawidth=200",
+    (exe ~= "") and exe or "C:/path/to/midi_drums/.venv/Scripts/pythonw.exe"
+  )
+  if not ok then return nil end
+  local new_exe = input:match("^%s*(.-)%s*$")
+  if new_exe == "" then
+    reaper.ShowMessageBox("Python path cannot be empty.", "Setup Error", 0)
+    return nil
+  end
+
+  local f = io.open(new_exe, "rb")
+  if f then
+    f:close()
+  else
+    local proceed = reaper.ShowMessageBox(
+      "Could not open:\n" .. new_exe .. "\n\nSave it anyway?",
+      "Path Not Found", 4
+    )
+    if proceed ~= 6 then return nil end
+  end
+
+  reaper.SetExtState(EXTSTATE_SECTION, EXTSTATE_KEY_PYTHON_EXE, new_exe, true)
+  return new_exe
+end
+
+PYTHON_EXE = get_python_exe()
+if not PYTHON_EXE then return end
 
 -- ---------------------------------------------------------------------------
 -- Mode selection — a dialog + a text prompt to cover four choices

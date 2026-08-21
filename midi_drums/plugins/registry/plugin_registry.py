@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from midi_drums.core.models.pattern import Pattern
 from midi_drums.core.value_objects.generation_parameters import (
@@ -12,6 +13,9 @@ from midi_drums.core.value_objects.generation_parameters import (
 from midi_drums.plugins.interfaces.drummer_plugin import DrummerPlugin
 from midi_drums.plugins.interfaces.genre_plugin import GenrePlugin
 from midi_drums.plugins.registry.discovery import PluginDiscovery
+
+if TYPE_CHECKING:
+    from midi_drums.core.value_objects.riff_accent import RiffAccentMap
 
 logger = logging.getLogger(__name__)
 
@@ -133,6 +137,65 @@ class PluginManager:
             return plugin.apply_style(pattern)
         except Exception as e:
             logger.error(f"Error applying drummer style {drummer}: {e}")
+            return None
+
+    def apply_riff_lock(
+        self,
+        pattern: Pattern,
+        riff_accents: RiffAccentMap,
+        intensity: float = 1.0,
+    ) -> Pattern | None:
+        """Lock a pattern's kicks onto riff accents.
+
+        Thin pass-through to
+        ``midi_drums.modifications.riff_lock.RiffLockTransform`` - lives
+        here (rather than being called directly from
+        ``midi_drums.generation``) for the same domain-boundary reason
+        ``apply_drummer_style`` delegates to drummer plugins instead of
+        importing ``midi_drums.modifications`` itself: the generation
+        domain isn't allowed to depend on modifications directly (see
+        ``tests/unit/generation/test_generation_domain_migration.py``),
+        only on ``midi_drums.plugins``, which already legitimately depends
+        on modifications via the drummer plugins.
+        """
+        from midi_drums.modifications.riff_lock import RiffLockTransform
+
+        try:
+            return RiffLockTransform(riff_accents=riff_accents).apply(
+                pattern, intensity=intensity
+            )
+        except Exception as e:
+            logger.error(f"Error applying riff-lock: {e}")
+            return None
+
+    def apply_riff_snare_accents(
+        self,
+        pattern: Pattern,
+        riff_accents: RiffAccentMap,
+        mode: str,
+        stab_threshold: float = 0.85,
+        intensity: float = 1.0,
+    ) -> Pattern | None:
+        """React a pattern's snare to riff accents (reinforce or stab).
+
+        Thin pass-through to
+        ``midi_drums.modifications.snare_accent_reaction.SnareAccentReaction``,
+        for the same domain-boundary reason ``apply_riff_lock`` above
+        delegates rather than being called directly from
+        ``midi_drums.generation``.
+        """
+        from midi_drums.modifications.snare_accent_reaction import (
+            SnareAccentReaction,
+        )
+
+        try:
+            return SnareAccentReaction(
+                riff_accents=riff_accents,
+                mode=mode,
+                stab_threshold=stab_threshold,
+            ).apply(pattern, intensity=intensity)
+        except Exception as e:
+            logger.error(f"Error applying riff snare accents: {e}")
             return None
 
     # Convenience methods for accessing registry data
