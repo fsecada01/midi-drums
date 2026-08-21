@@ -340,12 +340,69 @@ local function draw_riff_lock_tab()
   reaper.ImGui_TextWrapped(ctx, rl_status)
 end
 
-local function draw_settings_tab()
-  -- Task 8 fills this in
+-- Auto-saving text field bound directly to an ExtState key — no
+-- separate Save button, matches every other tab's "just works" feel.
+local function settings_field(label, key)
+  local value = settings.get(key)
+  local changed, new_value = reaper.ImGui_InputText(ctx, label, value)
+  if changed then
+    settings.set(key, new_value)
+  end
 end
 
+local function draw_settings_tab()
+  reaper.ImGui_Text(ctx, "Python interpreter")
+  settings_field("Python exe path", "python_exe")
+
+  reaper.ImGui_Separator(ctx)
+  reaper.ImGui_Text(ctx, "Defaults")
+  settings_field("Default genre", "default_genre")
+  settings_field("Default style", "default_style")
+  settings_field("Default mapping", "default_mapping")
+  settings_field("Default AI tempo", "default_ai_tempo")
+  settings_field("Sidecar path override", "sidecar_path_override")
+
+  reaper.ImGui_Separator(ctx)
+  reaper.ImGui_TextWrapped(ctx,
+    "MIDI Drums Panel - unified replacement for create_song_sections.lua, "
+    .. "create_beat_from_riff.lua, and midi_drums_help.lua. Generates "
+    .. "drum MIDI via the midi_drums Python package and imports it into "
+    .. "this project. See reaper/README.md for setup and docs."
+  )
+end
+
+local STATUS_COLORS = {
+  idle = 0x778ca6ff,
+  running = 0x38bdf8ff,
+  done = 0x4ade80ff,
+  error = 0xfb7185ff,
+}
+
 local function draw_log_tab()
-  -- Task 8 fills this in
+  local st = job_runner.state
+  reaper.ImGui_Text(ctx, "Job: " .. (st.job_label or "(none)"))
+  reaper.ImGui_SameLine(ctx)
+  reaper.ImGui_Text(ctx, string.format("(%.1fs)", job_runner.elapsed_seconds()))
+  reaper.ImGui_SameLine(ctx)
+  reaper.ImGui_TextColored(ctx, STATUS_COLORS[st.status] or STATUS_COLORS.idle, st.status)
+
+  reaper.ImGui_Separator(ctx)
+
+  if font_mono then reaper.ImGui_PushFont(ctx, font_mono) end
+  if reaper.ImGui_BeginChild(ctx, "log_box", 0, 300) then
+    if #st.log_lines == 0 then
+      reaper.ImGui_TextDisabled(ctx, "No job run yet.")
+    else
+      for _, line in ipairs(st.log_lines) do
+        reaper.ImGui_TextWrapped(ctx, line)
+      end
+      if job_runner.is_running() then
+        reaper.ImGui_SetScrollHereY(ctx, 1.0)
+      end
+    end
+    reaper.ImGui_EndChild(ctx)
+  end
+  if font_mono then reaper.ImGui_PopFont(ctx) end
 end
 
 local function loop()
