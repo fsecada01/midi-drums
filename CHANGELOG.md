@@ -10,6 +10,42 @@ release process.
 
 ## [Unreleased]
 
+## [0.4.0-alpha.1] - 2026-08-21
+
+**Alpha:** the REAPER panel below has not yet been manually verified inside
+a real REAPER install (no REAPER/Lua runtime was available while it was
+built) - install and try it, but expect to file bugs. In particular,
+`RENDER_BOUNDSFLAG=2` in `riff_lock.lua` is flagged as an unverified
+constant.
+
+### Added
+
+- **Unified REAPER panel** (`reaper/midi_drums_panel.lua`): a single
+  dockable ReaImGui window replaces the three separate
+  `create_song_sections.lua`, `create_beat_from_riff.lua`, and
+  `midi_drums_help.lua` scripts, with four tabs:
+  - **Song Sections** - the same four modes as before (REAPER / Sidecar /
+    AI / Song Map), now a segmented control with inline "?" help instead
+    of a chain of `GetUserInputs` Yes/No dialogs.
+  - **Riff-Lock Beat** - riff-locked drum generation, including the
+    Snare Reaction control (Off/Reinforce/Stab).
+  - **Settings** - Python interpreter path and per-tab defaults,
+    auto-saved to REAPER `ExtState` as you type.
+  - **Log** - a live-streaming job log with a color-coded status pill and
+    elapsed-time counter.
+- **Detached-subprocess job runner** (`reaper/midi_drums/job_runner.lua`):
+  generation now runs as a detached process tailed via a log-file +
+  `DONE <exitcode>` marker, so the panel's UI thread is never blocked -
+  a real fix over the retired scripts' blocking `io.popen` calls.
+- `reaper/midi_drums/sections.lua`, `reaper/midi_drums/riff_lock.lua`, and
+  `reaper/midi_drums/settings.lua` extract the Song Sections, Riff-Lock
+  Beat, and shared-`ExtState`-config business logic respectively out of
+  the entry-point script, matching this project's existing preference for
+  small, focused modules.
+
+No Python-side changes in this release - the panel still shells out to the
+same documented CLI (`midi-drums generate` / `prompt` / `riff`).
+
 ## [0.3.0] - 2026-08-21
 
 ### Added
@@ -189,7 +225,8 @@ every prior commit.
   numbers 1:1 instead of collapsing to true GM notes; they now actually
   produce GM-compliant output (#47).
 
-[Unreleased]: https://github.com/fsecada01/midi-drums/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/fsecada01/midi-drums/compare/v0.4.0-alpha.1...HEAD
+[0.4.0-alpha.1]: https://github.com/fsecada01/midi-drums/compare/v0.3.0...v0.4.0-alpha.1
 [0.3.0]: https://github.com/fsecada01/midi-drums/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/fsecada01/midi-drums/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/fsecada01/midi-drums/releases/tag/v0.1.0
