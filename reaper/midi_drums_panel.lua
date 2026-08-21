@@ -61,8 +61,6 @@ local ss_genre = settings.get("default_genre")
 local ss_style = settings.get("default_style")
 local ss_mapping = settings.get("default_mapping")
 local ss_drummer = ""
-local ss_tempo = "120"
-local ss_ts_num, ss_ts_denom = reaper.GetProjectTimeSignature2(0)
 local ss_ai_description = ""
 local ss_ai_tempo = settings.get("default_ai_tempo")
 local ss_status = ""
@@ -163,13 +161,14 @@ local function draw_song_sections_tab()
           { name = "Outro", bars = 4 },
         }
         local bpm = reaper.Master_GetTempo()
-        sections.create_regions_from_sections(default_sections, bpm, ss_ts_num, ss_ts_denom)
+        local ts_num, ts_denom = reaper.GetProjectTimeSignature2(0)
+        sections.create_regions_from_sections(default_sections, bpm, ts_num, ts_denom)
 
-        local json = sections.sections_to_json(default_sections, bpm, ss_ts_num, ss_ts_denom)
+        local json = sections.sections_to_json(default_sections, bpm, ts_num, ts_denom)
         local f = io.open(sc_path, "w")
         if f then f:write(json); f:close() end
 
-        local cmd = sections.build_template_cmd(python_exe, ss_genre, ss_style, ss_mapping, sc_path, midi_out)
+        local cmd = sections.build_template_cmd(python_exe, ss_genre, ss_style, ss_mapping, sc_path, midi_out, ss_drummer)
         job_runner.start(cmd, "Song Sections (REAPER)", function()
           sections.import_midi(midi_out)
           ss_status = "Done."
@@ -209,7 +208,7 @@ local function draw_song_sections_tab()
       elseif ss_mode == 4 then
         local map_path = sections.get_project_dir() .. "/midi_drums_song_map.json"
         local timeline_path = sections.get_project_dir() .. "/midi_drums_timeline.json"
-        local cmd = sections.build_songmap_cmd(python_exe, ss_genre, ss_style, ss_mapping, map_path, timeline_path, midi_out)
+        local cmd = sections.build_songmap_cmd(python_exe, ss_genre, ss_style, ss_mapping, map_path, timeline_path, midi_out, ss_drummer)
         job_runner.start(cmd, "Song Sections (Song Map)", function()
           local f = io.open(timeline_path, "rb")
           if f then

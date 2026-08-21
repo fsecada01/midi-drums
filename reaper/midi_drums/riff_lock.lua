@@ -184,16 +184,21 @@ function M.build_cmd(python_exe, p)
     audio_duration_flag = string.format(' --audio-duration %g', p.audio_duration)
   end
 
+  local drummer_flag = ""
+  if p.drummer and p.drummer ~= "" then
+    drummer_flag = string.format(' --drummer "%s"', M.shell_escape(p.drummer))
+  end
+
   return string.format(
     '"%s" -m midi_drums riff --audio "%s" --genre "%s" --style "%s"'
     .. ' --tempo %g --section "%s" --time-signature "%d/%d" --bars %d'
     .. ' --grid "%s" --lock-strength %g --mapping "%s"'
-    .. ' --output "%s" --write-sidecar "%s"%s%s%s%s',
+    .. ' --output "%s" --write-sidecar "%s"%s%s%s%s%s',
     python_exe, p.audio_path, M.shell_escape(p.genre), M.shell_escape(p.style),
     p.bpm, M.shell_escape(p.section), p.ts_num, p.ts_denom, p.bars,
     M.shell_escape(p.grid), p.lock_strength, M.shell_escape(p.mapping),
     p.midi_out, p.sidecar_path, snare_flag, offset_flag,
-    audio_offset_flag, audio_duration_flag
+    audio_offset_flag, audio_duration_flag, drummer_flag
   )
 end
 

@@ -90,12 +90,16 @@ function M.parse_timeline(content)
   return tempo_points, regions, color_groups
 end
 
-function M.build_template_cmd(python_exe, genre, style, mapping, sidecar_path, midi_out)
+function M.build_template_cmd(python_exe, genre, style, mapping, sidecar_path, midi_out, drummer)
+  local drummer_flag = ""
+  if drummer and drummer ~= "" then
+    drummer_flag = string.format(' --drummer "%s"', M.shell_escape(drummer))
+  end
   return string.format(
     '"%s" -m midi_drums generate --genre "%s" --style "%s" --mapping "%s"'
-    .. ' --sidecar "%s" --output "%s"',
+    .. ' --sidecar "%s" --output "%s"%s',
     python_exe, M.shell_escape(genre), M.shell_escape(style),
-    M.shell_escape(mapping), sidecar_path, midi_out
+    M.shell_escape(mapping), sidecar_path, midi_out, drummer_flag
   )
 end
 
@@ -110,12 +114,16 @@ function M.build_ai_cmd(python_exe, description, tempo_str, midi_out, sidecar_pa
   )
 end
 
-function M.build_songmap_cmd(python_exe, genre, style, mapping, map_path, timeline_path, midi_out)
+function M.build_songmap_cmd(python_exe, genre, style, mapping, map_path, timeline_path, midi_out, drummer)
+  local drummer_flag = ""
+  if drummer and drummer ~= "" then
+    drummer_flag = string.format(' --drummer "%s"', M.shell_escape(drummer))
+  end
   return string.format(
     '"%s" -m midi_drums generate --genre "%s" --style "%s" --mapping "%s"'
-    .. ' --song-map "%s" --write-timeline "%s" --output "%s"',
+    .. ' --song-map "%s" --write-timeline "%s" --output "%s"%s',
     python_exe, M.shell_escape(genre), M.shell_escape(style),
-    M.shell_escape(mapping), map_path, timeline_path, midi_out
+    M.shell_escape(mapping), map_path, timeline_path, midi_out, drummer_flag
   )
 end
 
