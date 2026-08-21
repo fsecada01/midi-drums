@@ -104,4 +104,6 @@ These documents represent successful feature implementations and are preserved f
 3. Learning from bug fixes
 4. Example project demonstrations
 
-For current development planning, see: `../REFACTORING_PLAN.md`
+The refactoring plan captured here has since been fully executed (see
+`CLAUDE.md`'s "Refactoring Achievement" section for the current record);
+this archive is historical only, not a pointer to active planning.

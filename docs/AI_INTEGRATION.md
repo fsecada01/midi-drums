@@ -345,12 +345,13 @@ plain DSP onset detection via `librosa`, no LLM involved). Requires
 
 ```python
 from midi_drums.api.python_api import DrumGeneratorAPI
+from midi_drums.core.value_objects.time_signature import TimeSignature
 
 api = DrumGeneratorAPI()
 accent_map = api.analyze_riff(
-    "riff.wav", tempo=155, time_signature=(4, 4), grid="16th"
+    "riff.wav", tempo=155, time_signature=TimeSignature(4, 4), grid="16th"
 )
-song = api.generate_pattern(
+pattern = api.generate_pattern(
     "metal", "verse", style="death", riff_accents=accent_map,
     riff_lock_strength=1.0,
 )
