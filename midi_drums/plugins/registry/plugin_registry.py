@@ -168,6 +168,36 @@ class PluginManager:
             logger.error(f"Error applying riff-lock: {e}")
             return None
 
+    def apply_riff_snare_accents(
+        self,
+        pattern: Pattern,
+        riff_accents: RiffAccentMap,
+        mode: str,
+        stab_threshold: float = 0.85,
+        intensity: float = 1.0,
+    ) -> Pattern | None:
+        """React a pattern's snare to riff accents (reinforce or stab).
+
+        Thin pass-through to
+        ``midi_drums.modifications.snare_accent_reaction.SnareAccentReaction``,
+        for the same domain-boundary reason ``apply_riff_lock`` above
+        delegates rather than being called directly from
+        ``midi_drums.generation``.
+        """
+        from midi_drums.modifications.snare_accent_reaction import (
+            SnareAccentReaction,
+        )
+
+        try:
+            return SnareAccentReaction(
+                riff_accents=riff_accents,
+                mode=mode,
+                stab_threshold=stab_threshold,
+            ).apply(pattern, intensity=intensity)
+        except Exception as e:
+            logger.error(f"Error applying riff snare accents: {e}")
+            return None
+
     # Convenience methods for accessing registry data
     def get_available_genres(self) -> list[str]:
         """Get list of available genres."""

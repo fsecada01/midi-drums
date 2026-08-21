@@ -471,6 +471,24 @@ Examples:
         help="Riff-lock blend strength 0.0-1.0 (default: 1.0)",
     )
     riff_parser.add_argument(
+        "--snare-mode",
+        default="off",
+        choices=["off", "reinforce", "stab"],
+        help=(
+            "How the snare reacts to the same riff accents (default: "
+            "off). 'reinforce' boosts velocity on existing snare hits "
+            "near a strong accent; 'stab' inserts a unison snare hit at "
+            "very strong accents where a kick was locked but no snare "
+            "is nearby"
+        ),
+    )
+    riff_parser.add_argument(
+        "--snare-stab-threshold",
+        type=float,
+        default=0.85,
+        help="Accent strength required to trigger a snare stab (default: 0.85)",
+    )
+    riff_parser.add_argument(
         "--offset-beats",
         type=float,
         default=0.0,
@@ -1372,6 +1390,8 @@ def handle_riff_command(args) -> None:
         humanization=args.humanization,
         riff_accents=riff_accents,
         riff_lock_strength=args.lock_strength,
+        riff_snare_mode=args.snare_mode,
+        riff_snare_stab_threshold=args.snare_stab_threshold,
     )
     if pattern is None:
         print(

@@ -199,6 +199,23 @@ class DrumGenerator:
             if locked_pattern:
                 pattern = locked_pattern
 
+        # Apply snare-accent-reaction if requested - reinforce or stab the
+        # snare against the same riff accents (see
+        # midi_drums.modifications.snare_accent_reaction.SnareAccentReaction).
+        # Runs after riff-lock so "stab" can unison-match against the kicks
+        # riff-lock just placed; gated on mode != "off" so nothing is
+        # constructed at all in the (default) off case. Same domain-
+        # boundary routing as riff-lock above.
+        if params.riff_accents and params.riff_snare_mode != "off":
+            reacted_pattern = self.plugin_manager.apply_riff_snare_accents(
+                pattern,
+                params.riff_accents,
+                params.riff_snare_mode,
+                params.riff_snare_stab_threshold,
+            )
+            if reacted_pattern:
+                pattern = reacted_pattern
+
         # Apply humanization if requested
         if params.humanization > 0:
             timing_var = params.humanization * 0.05  # Scale to reasonable range

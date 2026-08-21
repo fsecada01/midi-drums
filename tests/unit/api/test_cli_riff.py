@@ -64,6 +64,8 @@ class TestRiffArgParsing:
         assert args.humanization == 0.0
         assert args.mapping == "ezdrummer3"
         assert args.write_sidecar is None
+        assert args.snare_mode == "off"
+        assert args.snare_stab_threshold == 0.85
 
     def test_riff_grid_rejects_unknown_value(self):
         parser = create_parser()
@@ -117,6 +119,10 @@ class TestRiffArgParsing:
                 "2.0",
                 "--write-sidecar",
                 "sidecar.json",
+                "--snare-mode",
+                "stab",
+                "--snare-stab-threshold",
+                "0.7",
             ]
         )
         assert args.style == "death"
@@ -129,6 +135,27 @@ class TestRiffArgParsing:
         assert args.audio_offset == 1.5
         assert args.audio_duration == 2.0
         assert args.write_sidecar == "sidecar.json"
+        assert args.snare_mode == "stab"
+        assert args.snare_stab_threshold == 0.7
+
+    def test_riff_snare_mode_rejects_unknown_value(self):
+        parser = create_parser()
+        with pytest.raises(SystemExit):
+            parser.parse_args(
+                [
+                    "riff",
+                    "--audio",
+                    "riff.wav",
+                    "--genre",
+                    "metal",
+                    "--tempo",
+                    "180",
+                    "--output",
+                    "out.mid",
+                    "--snare-mode",
+                    "bogus",
+                ]
+            )
 
 
 class TestRiffCommandBehavior:

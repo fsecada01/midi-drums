@@ -29,6 +29,7 @@ from midi_drums.modifications.drummer_mods import (
     TwistedAccents,
 )
 from midi_drums.modifications.riff_lock import RiffLockTransform
+from midi_drums.modifications.snare_accent_reaction import SnareAccentReaction
 
 __all__ = [
     # Base class
@@ -51,6 +52,11 @@ __all__ = [
     # argument with no sensible default, so ModificationRegistry's
     # zero-arg construction would fail. Construct and call it directly.
     "RiffLockTransform",
+    # Snare-accent-reaction (riff accents -> snare reinforce/stab reaction).
+    # Same reasoning as RiffLockTransform above - requires a riff_accents
+    # argument with no sensible default, so it's intentionally NOT
+    # registered in MODIFICATION_REGISTRY. Construct and call it directly.
+    "SnareAccentReaction",
     # Registry
     "ModificationRegistry",
 ]

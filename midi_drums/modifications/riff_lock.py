@@ -22,6 +22,12 @@ from midi_drums.config import VELOCITY
 from midi_drums.core.models.pattern import Beat, Pattern
 from midi_drums.core.value_objects.drum_instrument import DrumInstrument
 from midi_drums.core.value_objects.riff_accent import RiffAccent, RiffAccentMap
+from midi_drums.modifications._riff_accent_selection import (
+    circular_distance as _circular_distance,
+)
+from midi_drums.modifications._riff_accent_selection import (
+    select_accents as _select_accents_shared,
+)
 from midi_drums.modifications.drummer_mods import DrummerModification
 
 # Fallback velocity range used only when the incoming pattern has no
@@ -29,16 +35,10 @@ from midi_drums.modifications.drummer_mods import DrummerModification
 # section with no kick pattern at all).
 _DEFAULT_KICK_VELOCITY_RANGE = (VELOCITY.KICK_LIGHT, VELOCITY.KICK_HEAVY)
 
-
-def _circular_distance(a: float, b: float, period: float) -> float:
-    """Shortest distance between two positions on a period-``period`` ring.
-
-    E.g. with period=4.0, positions 3.875 and 0.0 are 0.125 apart, not
-    3.875 apart - this is the wraparound case the transform must get right
-    at a bar boundary.
-    """
-    diff = abs(a - b) % period
-    return min(diff, period - diff)
+# _circular_distance is re-exported (rather than only imported privately)
+# so existing callers/tests that do
+# ``from midi_drums.modifications.riff_lock import _circular_distance``
+# keep working unchanged after the extraction to _riff_accent_selection.
 
 
 @dataclass
@@ -68,22 +68,12 @@ class RiffLockTransform(DrummerModification):
 
     def _select_accents(self) -> list[RiffAccent]:
         """Greedily pick strong accents respecting spacing/count budgets."""
-        candidates = self.riff_accents.strong_accents(self.strong_threshold)
-        beats_per_bar = self.riff_accents.beats_per_bar
-
-        selected: list[RiffAccent] = []
-        for accent in candidates:  # already strength-descending
-            if len(selected) >= self.max_kicks_per_bar:
-                break
-            if all(
-                _circular_distance(
-                    accent.position, kept.position, beats_per_bar
-                )
-                >= self.min_kick_spacing_beats
-                for kept in selected
-            ):
-                selected.append(accent)
-        return selected
+        return _select_accents_shared(
+            self.riff_accents,
+            self.strong_threshold,
+            self.max_kicks_per_bar,
+            self.min_kick_spacing_beats,
+        )
 
     def _kick_velocity_range(self, pattern: Pattern) -> tuple[int, int]:
         kick_velocities = [
