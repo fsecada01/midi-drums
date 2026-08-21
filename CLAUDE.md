@@ -622,8 +622,8 @@ midi_drums/
 │       ├── dee_refactored.py     # Refactored: 63 lines (82% reduction!)
 │       ├── hoglan.py             # Original: 389 lines
 │       └── hoglan_refactored.py  # Refactored: 63 lines (84% reduction!)
-└── claudedocs/
-    └── REFACTORING_PROGRESS.md   # Complete refactoring documentation
+└── claudedocs/archive/2026-08-21_docs-cleanup/
+    └── REFACTORING_PROGRESS.md   # Complete refactoring documentation (archived; this section is the current copy)
 ```
 
 ### Example: Genre Plugin Refactoring
@@ -740,7 +740,10 @@ class BonhamPluginRefactored(DrummerPlugin):
 4. **Visual Builder**: UI for composing templates visually
 5. **Template Marketplace**: Community-contributed templates and modifications
 
-For complete refactoring documentation, see `claudedocs/REFACTORING_PROGRESS.md`.
+This section is the current, maintained copy of that documentation; the
+original stand-alone doc is archived at
+`claudedocs/archive/2026-08-21_docs-cleanup/REFACTORING_PROGRESS.md` for
+historical reference.
 
 ## REAPER Lua Script Integration
 

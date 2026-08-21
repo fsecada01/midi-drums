@@ -6,9 +6,7 @@ This document provides an overview of the physical feasibility validation and ad
 
 ## Quick Links
 
-- **[Physical Feasibility](PHYSICAL_FEASIBILITY_FIXES.md)** - Validation system details
-- **[Advanced Humanization](HUMANIZATION_SUMMARY.md)** - Humanization engine overview
-- **[Humanization Analysis](HUMANIZATION_IMPROVEMENTS.md)** - Technical deep dive
+- **[ADR 0002](adr/0002-physical-feasibility-and-advanced-humanization.md)** - Why these two systems exist (design rationale, archived original analysis docs)
 - **[AI Module Prompts](midi_drums_prompt.md)** - AI integration guide
 
 ## Overview
