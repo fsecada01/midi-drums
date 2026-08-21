@@ -7,6 +7,35 @@ existed locally at `C:/REAPER/Scripts/`, outside version control, so
 changes to the shared `midi_drums_sections.json` sidecar contract couldn't
 be reviewed or diffed alongside the Python side that shares it.
 
+## Prerequisites for the upcoming unified panel
+
+The three scripts below use REAPER's native `GetUserInputs` dialogs and
+need nothing beyond the Python venv setup already documented in the main
+project `CLAUDE.md`. A unified ReaImGui panel replacing them is currently
+in design (see the design doc once it's written) and will need two
+additional installs first:
+
+- **REAPER** — https://www.reaper.fm/ — any reasonably current 6.x/7.x
+  install.
+- **ReaPack** — https://reapack.com/ — REAPER's package-manager
+  extension. Download the installer for your OS from that site and run
+  it with REAPER closed; ReaPack's default "ReaTeam Extensions"
+  repository index (which carries ReaImGui) is enabled automatically,
+  no separate "Import a repository" step needed.
+- **ReaImGui** (https://github.com/cfillion/reaimgui) — the Dear ImGui
+  binding the panel is built on. Once ReaPack is installed: in REAPER,
+  **Extensions → ReaPack → Browse packages...**, search "ReaImGui",
+  right-click the result → **Install**, then **Extensions → ReaPack →
+  Synchronize packages** and restart REAPER.
+- **Python via `uv`** — https://docs.astral.sh/uv/ — same venv the
+  existing scripts already need. The panel's Riff-Lock Beat tab
+  specifically needs `uv sync --group audio` (librosa) run once inside
+  that venv, same as `create_beat_from_riff.lua` needs today.
+
+The panel checks for ReaImGui on load and shows a message pointing back
+to this section if it's missing, rather than failing with a raw Lua
+error.
+
 ## Scripts
 
 - **`create_song_sections.lua`** — the main bridge script. Four modes
