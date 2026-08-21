@@ -7,13 +7,10 @@ existed locally at `C:/REAPER/Scripts/`, outside version control, so
 changes to the shared `midi_drums_sections.json` sidecar contract couldn't
 be reviewed or diffed alongside the Python side that shares it.
 
-## Prerequisites for the upcoming unified panel
+## Prerequisites
 
-The three scripts below use REAPER's native `GetUserInputs` dialogs and
-need nothing beyond the Python venv setup already documented in the main
-project `CLAUDE.md`. A unified ReaImGui panel replacing them is currently
-in design (see the design doc once it's written) and will need two
-additional installs first:
+The panel is built on ReaImGui, so it needs a couple of installs beyond
+the Python venv setup already documented in the main project `CLAUDE.md`:
 
 - **REAPER** — https://www.reaper.fm/ — any reasonably current 6.x/7.x
   install.
@@ -27,66 +24,75 @@ additional installs first:
   **Extensions → ReaPack → Browse packages...**, search "ReaImGui",
   right-click the result → **Install**, then **Extensions → ReaPack →
   Synchronize packages** and restart REAPER.
-- **Python via `uv`** — https://docs.astral.sh/uv/ — same venv the
-  existing scripts already need. The panel's Riff-Lock Beat tab
-  specifically needs `uv sync --group audio` (librosa) run once inside
-  that venv, same as `create_beat_from_riff.lua` needs today.
+- **Python via `uv`** — https://docs.astral.sh/uv/ — same venv the panel
+  already needs for every tab. The Riff-Lock Beat tab specifically needs
+  `uv sync --group audio` (librosa) run once inside that venv.
 
 The panel checks for ReaImGui on load and shows a message pointing back
 to this section if it's missing, rather than failing with a raw Lua
 error.
 
-## Scripts
+## The panel
 
-- **`create_song_sections.lua`** — the main bridge script. Four modes
-  (REAPER-defined sections, Python sidecar, AI agent, song-map) create
-  matching REAPER timeline regions and optionally generate/import MIDI
-  drums.
-- **`create_beat_from_riff.lua`** — riff-locked drum generation. Select a
-  recorded/rendered guitar or bass riff item, and it generates a drum
-  pattern whose kick hits lock to the riff's rhythmic accents (everything
-  else - snare, hi-hat, cymbals, drummer styling - still comes from the
-  normal genre-plugin pipeline). v1 scope: the riff is analyzed as one
-  representative bar and tiled to fill `--bars`. Requires
-  `uv sync --group audio` (librosa) inside the `midi_drums` venv — a
-  separate extras group from `--group ai`.
-- **`midi_drums_help.lua`** — an in-REAPER help screen. Run it as a REAPER
-  action any time for a refresher on setup and usage.
+`midi_drums_panel.lua` is the single entry point — one REAPER action
+("MIDI Drums: Open Panel") opens a dockable ReaImGui window with four
+tabs:
+
+- **Song Sections** — four modes (REAPER-defined sections, Python
+  sidecar, AI agent, song-map) create matching REAPER timeline regions
+  and optionally generate/import MIDI drums. A "?" popover next to the
+  mode selector explains each mode.
+- **Riff-Lock Beat** — select a recorded/rendered guitar or bass riff
+  item, and it generates a drum pattern whose kick hits lock to the
+  riff's rhythmic accents (everything else — snare, hi-hat, cymbals,
+  drummer styling — still comes from the normal genre-plugin pipeline).
+  v1 scope: the riff is analyzed as one representative bar and tiled to
+  fill the requested bar count. Requires `uv sync --group audio`
+  (librosa) inside the `midi_drums` venv — a separate extras group from
+  `--group ai`.
+- **Settings** — Python interpreter path and per-tab defaults, backed by
+  REAPER `ExtState` and auto-saved as you type.
+- **Log** — a live-streaming log of the currently (or most recently) run
+  job, with a pulsing `*` badge on the tab title while a job is running.
+
+Generation runs as a detached subprocess (`reaper/midi_drums/job_runner.lua`)
+so the panel's UI thread is never blocked; `reaper/midi_drums/sections.lua`
+and `reaper/midi_drums/riff_lock.lua` hold the business logic for the
+Song Sections and Riff-Lock Beat tabs respectively, and
+`reaper/midi_drums/settings.lua` wraps the shared `ExtState` config.
 
 ## Install
 
 REAPER only loads ReaScripts from paths it knows about (typically
 `REAPER_RESOURCE_PATH/Scripts/`), so the files here need a copy or symlink
 into that directory — REAPER's own copy is a deployed instance, this
-directory is the source of truth:
+directory is the source of truth. The panel's supporting modules live in
+a `midi_drums/` subdirectory that must be carried over alongside the
+entry-point script:
 
 ```bash
 # Windows (from an elevated shell, one-time):
-mklink "C:\REAPER\Scripts\create_song_sections.lua" "C:\path\to\midi_drums\reaper\create_song_sections.lua"
-mklink "C:\REAPER\Scripts\create_beat_from_riff.lua" "C:\path\to\midi_drums\reaper\create_beat_from_riff.lua"
-mklink "C:\REAPER\Scripts\midi_drums_help.lua" "C:\path\to\midi_drums\reaper\midi_drums_help.lua"
+mklink "C:\REAPER\Scripts\midi_drums_panel.lua" "C:\path\to\midi_drums\reaper\midi_drums_panel.lua"
+mklink /D "C:\REAPER\Scripts\midi_drums" "C:\path\to\midi_drums\reaper\midi_drums"
 
-# Or, if you'd rather not symlink, just copy the files after every edit:
-copy reaper\create_song_sections.lua "C:\REAPER\Scripts\"
-copy reaper\create_beat_from_riff.lua "C:\REAPER\Scripts\"
-copy reaper\midi_drums_help.lua "C:\REAPER\Scripts\"
+# Or, if you'd rather not symlink, just copy after every edit:
+copy reaper\midi_drums_panel.lua "C:\REAPER\Scripts\"
+xcopy /E /I /Y reaper\midi_drums "C:\REAPER\Scripts\midi_drums\"
 ```
 
-Then in REAPER: **Actions → Load ReaScript** → select `create_song_sections.lua`
-→ assign a shortcut. Repeat for `create_beat_from_riff.lua` and
-`midi_drums_help.lua` if you want dedicated shortcuts for those too.
+Then in REAPER: **Actions → Load ReaScript** → select `midi_drums_panel.lua`
+→ assign a shortcut (e.g. "MIDI Drums: Open Panel").
 
-Neither script hardcodes a Python path in tracked source — the first time
-you run either one, it prompts for your `midi_drums` virtualenv's
+The panel doesn't hardcode a Python path in tracked source — the first
+time you click Generate, it prompts for your `midi_drums` virtualenv's
 `pythonw.exe` path and remembers it in REAPER's persistent `ExtState`
 (`reaper.ini`-backed, scoped to this REAPER install, section `midi_drums`,
-key `python_exe`), not in a file. Both scripts share the same stored value,
-so configuring it via either one configures the other too. If the
-configured path stops resolving (moved venv, new machine, a fresh REAPER
-install), the same prompt reappears, pre-filled with the old value so
-re-confirming is one click. `create_beat_from_riff.lua` additionally needs
-`uv sync --group audio` run once inside that virtualenv (librosa for onset
-detection) — this is a separate extras group from `--group ai`.
+key `python_exe`), not in a file. If the configured path stops resolving
+(moved venv, new machine, a fresh REAPER install), the same prompt
+reappears, pre-filled with the old value so re-confirming is one click.
+The Riff-Lock Beat tab additionally needs `uv sync --group audio` run
+once inside that virtualenv (librosa for onset detection) — this is a
+separate extras group from `--group ai`.
 
 ## `drum_midi_generator.lua` — not vendored
 
@@ -95,7 +101,7 @@ An older standalone script by that name also exists in some local
 hardcoded GM note table, generates a fixed 4/4 pattern with no fills logic
 beyond a single descending-tom fill, and has no awareness of
 `midi_drums_sections.json` or the Python side of this project at all. It
-is superseded by `create_song_sections.lua` + the Python template/AI
+is superseded by the panel's Song Sections tab + the Python template/AI
 engines and is intentionally left out of this directory.
 
 ## Keeping both sides in sync
