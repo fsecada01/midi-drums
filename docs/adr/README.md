@@ -21,3 +21,8 @@ stays in `claudedocs/` (active) or its archive (historical) instead.
 | [0001](0001-unified-reaper-panel.md) | Unified REAPER panel replaces three standalone Lua scripts | Accepted |
 | [0002](0002-physical-feasibility-and-advanced-humanization.md) | Physical feasibility validation and Gaussian-based advanced humanization | Accepted |
 | [0003](0003-claude-code-workflow-policy.md) | Claude Code sub-agent, model-tier, and framework-selection policy | Accepted |
+| [0004](0004-riff-driven-snare-accent-reaction.md) | Riff-driven snare accent reaction as a separate, opt-in modification | Accepted |
+| [0005](0005-genre-context-blending.md) | Genre-context blending via per-genre intensity profiles | Accepted |
+| [0006](0006-ai-backend-provider-abstraction.md) | Provider-agnostic AI backend abstraction | Accepted |
+| [0007](0007-reaper-rpp-export-engine.md) | Direct .RPP file manipulation for Reaper project export | Accepted |
+| [0008](0008-vendor-midi-note-map-corrections.md) | GM preset note-map correction; other vendor kits left unresearched rather than guessed | Accepted |

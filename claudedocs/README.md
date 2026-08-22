@@ -31,10 +31,10 @@ indexed home.
 
 ## Currently active (not yet archived)
 
-- **[design_riff_snare_accents.md](design_riff_snare_accents.md)** - Design
-  for a `SnareAccentReaction` modification, still being implemented (open
-  questions unresolved as of this writing) — stays here until it ships,
-  then either becomes an ADR or moves to `archive/`.
+_None at present._ `design_riff_snare_accents.md` shipped and its decision
+is now recorded in [`docs/adr/0004-riff-driven-snare-accent-reaction.md`](../docs/adr/0004-riff-driven-snare-accent-reaction.md);
+the source doc itself stays here (not archived) per its own updated status
+line, rather than being moved.
 
 ## See Also
 
