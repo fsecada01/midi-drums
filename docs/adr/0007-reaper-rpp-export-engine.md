@@ -55,7 +55,9 @@ running at all.
 
 ## References
 
-- Original design/status doc: [`claudedocs/archive/2026-08-21_docs-cleanup/REAPER_INTEGRATION.md`](../../claudedocs/archive/2026-08-21_docs-cleanup/REAPER_INTEGRATION.md)
+- Original design/status doc has been removed now that this ADR captures
+  its decisions — see `claudedocs/archive/2026-08-21_docs-cleanup/REAPER_INTEGRATION.md`
+  in git history prior to this ADR's introduction for the full text.
 - Shipped in `midi_drums/export/reaper/` (`engine.py`, `exporter.py`,
   `models.py`); compat re-export at `midi_drums/exporters/__init__.py`
 - Related, different layer: [[0001-unified-reaper-panel]] (Lua-side panel,

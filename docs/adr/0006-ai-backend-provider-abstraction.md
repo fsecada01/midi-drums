@@ -51,7 +51,10 @@ disabled" state an earlier draft of this work had it in.
 
 ## References
 
-- Original migration write-up: [`claudedocs/archive/2026-08-21_docs-cleanup/AI_BACKEND_MIGRATION.md`](../../claudedocs/archive/2026-08-21_docs-cleanup/AI_BACKEND_MIGRATION.md)
+- Original migration write-up has been removed now that this ADR captures
+  its decisions — see `claudedocs/archive/2026-08-21_docs-cleanup/AI_BACKEND_MIGRATION.md`
+  in git history prior to this ADR's introduction for the full text.
+- Current architecture/usage guide: [`docs/AI_INTEGRATION.md`](../AI_INTEGRATION.md)
 - Shipped in `midi_drums/ai/backends.py`, `midi_drums/ai/pattern_generator.py`,
   `midi_drums/ai/ai_api.py`, `midi_drums/ai/agents/pattern_agent.py`
 - Model-routing policy for the product's own runtime AI backend (distinct

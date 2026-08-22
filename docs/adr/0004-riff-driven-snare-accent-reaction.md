@@ -66,8 +66,10 @@ maintained copies of the wrap-around-sensitive distance math.
 
 ## References
 
-- Full design doc (requirements, non-goals, architecture, open-question
-  resolutions, testing plan): [`claudedocs/design_riff_snare_accents.md`](../../claudedocs/design_riff_snare_accents.md)
+- Original design doc (requirements, non-goals, architecture, open-question
+  resolutions, testing plan) has been removed now that this ADR captures
+  its decisions — see `claudedocs/design_riff_snare_accents.md` in git
+  history prior to this ADR's introduction for the full text.
 - Shipped in `midi_drums/modifications/snare_accent_reaction.py`,
   `midi_drums/modifications/_riff_accent_selection.py`
 - CLI flags documented in the root `CLAUDE.md`'s "New CLI Flags" table

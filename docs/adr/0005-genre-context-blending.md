@@ -54,8 +54,11 @@ section sharing the same blend amount.
 
 ## References
 
-- Original design doc: [`claudedocs/archive/2025-09-september/GENRE_CONTEXT_ADAPTATION_DESIGN.md`](../../claudedocs/archive/2025-09-september/GENRE_CONTEXT_ADAPTATION_DESIGN.md)
-- Original completion report: [`claudedocs/archive/2025-09-september/GENRE_CONTEXT_ADAPTATION_COMPLETE.md`](../../claudedocs/archive/2025-09-september/GENRE_CONTEXT_ADAPTATION_COMPLETE.md)
+- Original design doc and completion report (`GENRE_CONTEXT_ADAPTATION_DESIGN.md`,
+  `GENRE_CONTEXT_ADAPTATION_COMPLETE.md`) have been removed now that this
+  ADR captures their decisions — see git history under
+  `claudedocs/archive/2025-09-september/` prior to this ADR's introduction
+  for the full text.
 - Shipped in `midi_drums/plugins/interfaces/genre_plugin.py` (intensity
   profiles + blending), `midi_drums/core/value_objects/generation_parameters.py`
   (`song_genre_context`, `context_blend`), and every genre plugin under

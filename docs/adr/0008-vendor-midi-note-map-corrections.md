@@ -54,8 +54,10 @@ no source at all for data that ships as fact in a music tool.
 
 ## References
 
-- Full research report (per-vendor findings, source-confidence notes):
-  [`claudedocs/archive/2026-08-21_docs-cleanup/research_vendor_drum_midi_maps_20260812.md`](../../claudedocs/archive/2026-08-21_docs-cleanup/research_vendor_drum_midi_maps_20260812.md)
+- Full research report (per-vendor findings, source-confidence notes) has
+  been removed now that this ADR captures its decisions — see
+  `claudedocs/archive/2026-08-21_docs-cleanup/research_vendor_drum_midi_maps_20260812.md`
+  in git history prior to this ADR's introduction for the full text.
 - Shipped in `midi_drums/core/models/kit.py` (`_GM_HIHAT_COLLAPSE`,
   `create_gm_drums_kit()`)
 - Source enum: `midi_drums/core/value_objects/drum_instrument.py`

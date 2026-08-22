@@ -33,8 +33,8 @@ indexed home.
 
 _None at present._ `design_riff_snare_accents.md` shipped and its decision
 is now recorded in [`docs/adr/0004-riff-driven-snare-accent-reaction.md`](../docs/adr/0004-riff-driven-snare-accent-reaction.md);
-the source doc itself stays here (not archived) per its own updated status
-line, rather than being moved.
+the source doc was removed outright rather than archived, since the ADR
+fully captures it (see git history for the original text).
 
 ## See Also
 
