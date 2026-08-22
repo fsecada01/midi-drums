@@ -903,6 +903,8 @@ Added to `midi_drums/api/python_api.py`:
 | `generate` | `--write-timeline JSON` | Write a resolved timeline JSON after generation (most useful with `--song-map`) |
 | `prompt` | `--write-sidecar JSON` | Write sidecar after AI generation |
 | `riff` | *(new subcommand)* | Analyze `--audio` for accents, generate a pattern via `generate_pattern` with `riff_accents`/`riff_lock_strength` set, optionally `--write-sidecar` |
+| `riff` | `--snare-mode {off,reinforce,stab}` | Reacts snare hits to riff accents after kick riff-lock runs: `reinforce` boosts velocity on existing non-ghost snares near a strong accent; `stab` inserts a unison snare hit at a very-strong accent where a locked kick exists (collapses to reinforce if a snare is already nearby). Default `off` — pipeline behavior is byte-identical to pre-feature when unset. Not yet exposed in the REAPER panel's Riff-Lock Beat tab (deferred follow-up) |
+| `riff` | `--snare-stab-threshold FLOAT` | Accent-strength threshold (0.0-1.0, default `0.85`) above which `--snare-mode stab` inserts a new snare hit instead of just reinforcing |
 
 ### Lua Config Block
 
