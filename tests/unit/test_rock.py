@@ -1,23 +1,20 @@
-"""Test refactored Rock genre plugin."""
+"""Test the Rock genre plugin."""
 
 from midi_drums.core.value_objects.drum_instrument import DrumInstrument
 from midi_drums.core.value_objects.generation_parameters import (
     GenerationParameters,
 )
 from midi_drums.plugins.genres.rock import RockGenrePlugin
-from midi_drums.plugins.genres.rock_refactored import RockGenrePluginRefactored
 
 
 def test_rock_basic_structure():
-    """Test basic structure matches."""
+    """Test basic plugin structure."""
     print("Testing Rock plugin basic structure...")
 
-    original = RockGenrePlugin()
-    refactored = RockGenrePluginRefactored()
+    refactored = RockGenrePlugin()
 
-    assert original.genre_name == refactored.genre_name
-    assert set(original.supported_styles) == set(refactored.supported_styles)
-    assert original.intensity_profile == refactored.intensity_profile
+    assert refactored.genre_name == "rock"
+    assert len(refactored.supported_styles) == 7
 
     print(f"  [OK] Genre: {refactored.genre_name}")
     print(f"  [OK] Styles: {len(refactored.supported_styles)}")
@@ -27,7 +24,7 @@ def test_rock_all_combinations():
     """Test all style/section combinations."""
     print("Testing all Rock combinations...")
 
-    refactored = RockGenrePluginRefactored()
+    refactored = RockGenrePlugin()
     styles = refactored.supported_styles
     sections = ["intro", "verse", "chorus", "breakdown", "bridge", "outro"]
 
@@ -50,7 +47,7 @@ def test_rock_classic_style():
     """Test classic rock style."""
     print("Testing classic rock style...")
 
-    refactored = RockGenrePluginRefactored()
+    refactored = RockGenrePlugin()
     params = GenerationParameters(
         genre="rock", style="classic", complexity=0.7, humanization=0.3
     )
@@ -71,7 +68,7 @@ def test_rock_blues_shuffle():
     """Test blues rock shuffle."""
     print("Testing blues rock shuffle...")
 
-    refactored = RockGenrePluginRefactored()
+    refactored = RockGenrePlugin()
     params = GenerationParameters(
         genre="rock", style="blues", complexity=0.7, humanization=0.3
     )
@@ -89,7 +86,7 @@ def test_rock_punk_energy():
     """Test punk rock energy."""
     print("Testing punk rock energy...")
 
-    refactored = RockGenrePluginRefactored()
+    refactored = RockGenrePlugin()
     params = GenerationParameters(
         genre="rock", style="punk", complexity=0.7, humanization=0.3
     )
@@ -109,7 +106,7 @@ def test_rock_fills():
     """Test fill generation."""
     print("Testing Rock fills...")
 
-    refactored = RockGenrePluginRefactored()
+    refactored = RockGenrePlugin()
     fills = refactored.get_common_fills()
 
     assert len(fills) >= 2
@@ -118,18 +115,6 @@ def test_rock_fills():
         assert len(fill.pattern.beats) > 0
 
     print(f"  [OK] Fills: {len(fills)} fills generated")
-
-
-def compare_results():
-    """Display comparison."""
-    print("\n" + "=" * 60)
-    print("Rock Genre Refactoring Results")
-    print("=" * 60)
-    print("Original rock.py:           513 lines")
-    print("Refactored rock_refactored.py: 332 lines")
-    print("Reduction:                  181 lines (35% reduction)")
-    print("\nBetter than Metal! (Metal was 22%, Rock is 35%)")
-    print("=" * 60)
 
 
 if __name__ == "__main__":
@@ -145,7 +130,5 @@ if __name__ == "__main__":
     test_rock_fills()
 
     print("=" * 60)
-    print("All Rock refactoring tests passed!")
+    print("All Rock tests passed!")
     print("=" * 60)
-
-    compare_results()
