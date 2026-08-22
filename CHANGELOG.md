@@ -10,6 +10,99 @@ release process.
 
 ## [Unreleased]
 
+## [0.4.0-alpha.1] - 2026-08-21
+
+**Alpha:** the REAPER panel below has not yet been manually verified inside
+a real REAPER install (no REAPER/Lua runtime was available while it was
+built) - install and try it, but expect to file bugs. In particular,
+`RENDER_BOUNDSFLAG=2` in `riff_lock.lua` is flagged as an unverified
+constant.
+
+### Added
+
+- **Unified REAPER panel** (`reaper/midi_drums_panel.lua`): a single
+  dockable ReaImGui window replaces the three separate
+  `create_song_sections.lua`, `create_beat_from_riff.lua`, and
+  `midi_drums_help.lua` scripts, with four tabs:
+  - **Song Sections** - the same four modes as before (REAPER / Sidecar /
+    AI / Song Map), now a segmented control with inline "?" help instead
+    of a chain of `GetUserInputs` Yes/No dialogs.
+  - **Riff-Lock Beat** - riff-locked drum generation, including the
+    Snare Reaction control (Off/Reinforce/Stab).
+  - **Settings** - Python interpreter path and per-tab defaults,
+    auto-saved to REAPER `ExtState` as you type.
+  - **Log** - a live-streaming job log with a color-coded status pill and
+    elapsed-time counter.
+- **Detached-subprocess job runner** (`reaper/midi_drums/job_runner.lua`):
+  generation now runs as a detached process tailed via a log-file +
+  `DONE <exitcode>` marker, so the panel's UI thread is never blocked -
+  a real fix over the retired scripts' blocking `io.popen` calls.
+- `reaper/midi_drums/sections.lua`, `reaper/midi_drums/riff_lock.lua`, and
+  `reaper/midi_drums/settings.lua` extract the Song Sections, Riff-Lock
+  Beat, and shared-`ExtState`-config business logic respectively out of
+  the entry-point script, matching this project's existing preference for
+  small, focused modules.
+
+No Python-side changes in this release - the panel still shells out to the
+same documented CLI (`midi-drums generate` / `prompt` / `riff`).
+
+## [0.3.0] - 2026-08-21
+
+### Added
+
+- **Riff-locked drum generation**: a new `riff` CLI subcommand and
+  `DrumGeneratorAPI.analyze_riff()` analyze a recorded guitar/bass riff's
+  rhythmic accents via onset detection (librosa) and lock a genre plugin's
+  kick pattern onto them, while snare, hi-hat, cymbals, fills, and drummer
+  styling still come from the normal generation pipeline untouched (#57).
+  V1 scope: the riff is analyzed as one representative bar and tiled to
+  fill `--bars`.
+- **`RiffLockTransform` modification**, applied via
+  `PluginManager.apply_riff_lock()` (routed through the `plugins` domain
+  rather than `generation` importing `modifications` directly, per this
+  project's existing DDD domain-boundary rules).
+- **Snare-accent-reaction**: `SnareAccentReaction` reacts the snare to the
+  same riff accents, in either `reinforce` mode (velocity-boosts existing
+  snare hits near a strong accent) or `stab` mode (inserts a unison snare
+  hit at very strong accents where riff-lock placed a kick but no snare was
+  nearby, deterministically collapsing to reinforce instead of stacking a
+  second hit when an existing snare is already close by). New
+  `--snare-mode`/`--snare-stab-threshold` CLI flags and
+  `GenerationParameters.riff_snare_mode`/`riff_snare_stab_threshold` fields;
+  defaults to `"off"` (no behavior change unless explicitly enabled).
+- **New `midi_drums.analysis` package** (a sibling of `midi_drums.ai`, not
+  nested in it, so importing onset-detection code doesn't drag in the
+  LangChain/pydantic-ai stack) and a new `audio` extras group
+  (`uv sync --group audio`: librosa, soundfile, numpy).
+- **New REAPER `create_beat_from_riff.lua` action**: select a riff item and
+  run it to get a kick-locked drum pattern back. Uses the take's own audio
+  source directly when available, or a bar-aligned time-selection render
+  for MIDI/VSTi takes; corrects for riffs that don't start on a bar line
+  via `--offset-beats`.
+
+### Fixed
+
+- REAPER's `io.popen` command construction is now routed through
+  `cmd /S /C`, avoiding a Windows quote-stripping bug that corrupted
+  commands built from multiple quoted segments (surfaced as `'...' is not
+  recognized` in AI-agent mode).
+- CLI stdout/stderr are reconfigured to UTF-8 on Windows, avoiding a
+  `UnicodeEncodeError` crash when AI-generated text containing non-ASCII
+  characters is piped through REAPER's `io.popen`.
+- `GetUserInputs` dialogs in `create_song_sections.lua` are now wide enough
+  to comfortably read and edit free-text fields, especially the AI
+  description prompt.
+- The AI agent's system prompt now requires a complete song structure (6-8+
+  sections, including a chorus/hook and an outro) instead of allowing it to
+  infer a bare 2-section song from a partial description.
+- Release-notes generation (`release.yml`) no longer emits a spurious
+  leading/trailing blank line around each version's changelog section.
+
+No breaking changes - `riff_snare_mode` defaults to `"off"` (identical to
+pre-feature behavior) and every other addition is a new optional
+field/method/CLI flag; see [`docs/RELEASING.md`](docs/RELEASING.md) for what
+counts as this project's public API surface.
+
 ## [0.2.0] - 2026-08-13
 
 ### Added
@@ -132,6 +225,8 @@ every prior commit.
   numbers 1:1 instead of collapsing to true GM notes; they now actually
   produce GM-compliant output (#47).
 
-[Unreleased]: https://github.com/fsecada01/midi-drums/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/fsecada01/midi-drums/compare/v0.4.0-alpha.1...HEAD
+[0.4.0-alpha.1]: https://github.com/fsecada01/midi-drums/compare/v0.3.0...v0.4.0-alpha.1
+[0.3.0]: https://github.com/fsecada01/midi-drums/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/fsecada01/midi-drums/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/fsecada01/midi-drums/releases/tag/v0.1.0

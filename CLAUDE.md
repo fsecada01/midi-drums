@@ -622,8 +622,8 @@ midi_drums/
 │       ├── dee_refactored.py     # Refactored: 63 lines (82% reduction!)
 │       ├── hoglan.py             # Original: 389 lines
 │       └── hoglan_refactored.py  # Refactored: 63 lines (84% reduction!)
-└── claudedocs/
-    └── REFACTORING_PROGRESS.md   # Complete refactoring documentation
+└── claudedocs/archive/2026-08-21_docs-cleanup/
+    └── REFACTORING_PROGRESS.md   # Complete refactoring documentation (archived; this section is the current copy)
 ```
 
 ### Example: Genre Plugin Refactoring
@@ -740,36 +740,40 @@ class BonhamPluginRefactored(DrummerPlugin):
 4. **Visual Builder**: UI for composing templates visually
 5. **Template Marketplace**: Community-contributed templates and modifications
 
-For complete refactoring documentation, see `claudedocs/REFACTORING_PROGRESS.md`.
+This section is the current, maintained copy of that documentation; the
+original stand-alone doc is archived at
+`claudedocs/archive/2026-08-21_docs-cleanup/REFACTORING_PROGRESS.md` for
+historical reference.
 
 ## REAPER Lua Script Integration
 
 ### Overview
 
-`reaper/create_song_sections.lua` (vendored in this repo — see `reaper/README.md`
+`reaper/midi_drums_panel.lua` (vendored in this repo — see `reaper/README.md`
 for the install step) is the bi-directional bridge between REAPER and the
-midi_drums Python module. It has four modes and calls Python via `io.popen`
-(blocking subprocess, ~1-2 s for templates, ~20-45 s for AI).
-
-A second script, `reaper/create_beat_from_riff.lua`, is a separate action
-(not a mode of `create_song_sections.lua`) for riff-locked drum generation —
-see the dedicated section below.
-
-A standalone help script `reaper/midi_drums_help.lua` can be run as a REAPER
-action to display usage instructions inside REAPER at any time.
+midi_drums Python module: a single dockable ReaImGui panel with four tabs
+(Song Sections, Riff-Lock Beat, Settings, Log) that replaced three separate
+per-action scripts. Generation runs as a detached subprocess tailed by
+`reaper/midi_drums/job_runner.lua` (~1-2 s for templates, ~20-45 s for AI),
+so the panel's UI thread is never blocked while a job runs — a change from
+the retired scripts' blocking `io.popen` calls. Business logic for the two
+generation tabs lives in `reaper/midi_drums/sections.lua` and
+`reaper/midi_drums/riff_lock.lua`; shared config lives in
+`reaper/midi_drums/settings.lua`. Contextual "?" help popovers inside the
+panel replaced the old standalone help script.
 
 ### Modes
 
-| Mode | Triggered by | Python command | Regions source |
+| Mode | Selected via | Python command | Regions source |
 |------|-------------|----------------|----------------|
-| **REAPER** (default) | YES on first dialog | `generate --sidecar` | `REAPER_SECTIONS` table |
-| **Python sidecar** | NO → "sidecar" | *(none — reads existing sidecar)* | JSON from `save_as_midi_with_sidecar` |
-| **AI agent** | NO → "ai" | `prompt --song --write-sidecar` | AI-chosen structure |
-| **Song map** (issue #53) | NO → "songmap" | `generate --song-map --write-timeline` | Per-segment tempo/meter timeline JSON |
+| **REAPER** (default) | Song Sections tab mode selector | `generate --sidecar` | Hardcoded 5-section structure |
+| **Sidecar** | Song Sections tab mode selector | *(none — reads existing sidecar)* | JSON from `save_as_midi_with_sidecar` |
+| **AI** | Song Sections tab mode selector | `prompt --song --write-sidecar` | AI-chosen structure |
+| **Song Map** (issue #53) | Song Sections tab mode selector | `generate --song-map --write-timeline` | Per-segment tempo/meter timeline JSON |
 
-The external-source follow-up prompt is a `GetUserInputs` text field
-(default `"sidecar"`) rather than a third Yes/No dialog, so it can name all
-three external modes without another round of binary dialogs.
+The four modes are a segmented `RadioButton` control in the panel's Song
+Sections tab, with a "?" popover explaining each mode inline — replacing
+the old script's sequence of Yes/No and text-field `GetUserInputs` dialogs.
 
 Song-map mode is the only mode that doesn't reuse the shared
 `AddProjectMarker2`-per-section loop driven by a single global
@@ -778,10 +782,10 @@ places one `SetTempoTimeSigMarker` per resolved tempo/meter change point and
 one colored region per song-map region, mirroring song_creator's own
 `song_reaper_build.lua:B.apply_to_reaper`.
 
-### Riff-Locked Drums (`create_beat_from_riff.lua`)
+### Riff-Locked Drums (panel's Riff-Lock Beat tab)
 
-Separate action from `create_song_sections.lua` above — select a recorded/
-rendered guitar or bass riff item and run it. It generates a drum pattern
+Select a recorded/rendered guitar or bass riff item, switch to the
+panel's Riff-Lock Beat tab, and click Generate. It generates a drum pattern
 whose **kick hits lock to the riff's rhythmic accents**, while snare,
 hi-hat, cymbals, and drummer styling still come from the normal
 genre-plugin pipeline (`python -m midi_drums riff`, routed through
@@ -870,10 +874,11 @@ mid-section (e.g. `Verse 1` above holds a 7/8 bar inside a 4/4 verse).
 ```
 
 Written by `DrumGeneratorAPI.export_song_timeline_json()`. Deliberately flat
-(no JSON objects nested inside other objects) so `create_song_sections.lua`'s
-song-map mode can parse it with plain Lua string patterns rather than a full
-JSON library — every object type (`tempo_points[]`, `regions[]`,
-`color_groups[]`) has a fixed, known key set.
+(no JSON objects nested inside other objects) so the panel's Song Sections
+tab (song-map mode, `reaper/midi_drums/sections.lua:parse_timeline`) can
+parse it with plain Lua string patterns rather than a full JSON library —
+every object type (`tempo_points[]`, `regions[]`, `color_groups[]`) has a
+fixed, known key set.
 
 ### New Python API Methods
 
@@ -903,36 +908,35 @@ Added to `midi_drums/api/python_api.py`:
 
 The Python venv path is **not** a hardcoded constant in tracked source — a
 public repo shouldn't require hand-editing (or risk someone committing
-back) a local machine path. `get_python_exe()` in both
-`create_song_sections.lua` and `create_beat_from_riff.lua` resolves it from
-REAPER's persistent `ExtState` (`reaper.ini`-backed, scoped to the REAPER
-install, section `"midi_drums"`, key `"python_exe"`) instead, prompting via
-`GetUserInputs` on first run — or again if the stored path no longer opens
-— and caching the result via `SetExtState`. Both scripts share the same
-section/key, so configuring one configures the other.
+back) a local machine path. `settings.lua:M.resolve_python_exe()` resolves
+it from REAPER's persistent `ExtState` (`reaper.ini`-backed, scoped to the
+REAPER install, section `"midi_drums"`, key `"python_exe"`) instead,
+prompting via `GetUserInputs` on first run — or again if the stored path
+no longer opens — and caching the result via `SetExtState`. Every tab that
+launches a subprocess calls the same `settings.resolve_python_exe()`, so
+configuring it once (from any tab's Generate button, or directly from the
+Settings tab) configures every tab.
 
-What's left at the top of `create_song_sections.lua` as values users may
-still want to edit:
+`settings.lua:M.DEFAULTS` holds the values users may still want to edit —
+default genre/style/mapping/AI-tempo and a sidecar path override — all
+editable live from the panel's Settings tab (auto-saved, no Save button)
+rather than by hand-editing Lua source.
 
-```lua
-local SIDECAR_PATH   = nil            -- nil = <project dir>/midi_drums_sections.json
-local DEFAULT_GENRE  = "metal"
-local DEFAULT_STYLE  = "doom"
-local DEFAULT_MAPPING = "ezdrummer3"
-local DEFAULT_AI_TEMPO = "120"
-```
-
-See `reaper/README.md` for how to load this script into REAPER (symlink or
-copy into REAPER's `Scripts/` directory — the repo copy is the source of
-truth).
+See `reaper/README.md` for how to load the panel into REAPER (symlink or
+copy `midi_drums_panel.lua` plus the `midi_drums/` module directory into
+REAPER's `Scripts/` directory — the repo copy is the source of truth).
 
 ### IPC Pattern
 
-Uses **file sidecar + `io.popen` subprocess** — the recommended community pattern for
-REAPER↔Python batch workflows. No server, no ports, no extra dependencies.
+Uses **file sidecar + a detached subprocess**, tailed via a log-file +
+`DONE <exitcode>` marker (`reaper/midi_drums/job_runner.lua`) — the
+recommended community pattern for REAPER↔Python batch workflows, adapted
+to avoid blocking REAPER's UI thread while a job runs. No server, no
+ports, no extra dependencies.
 
-For AI mode the wait (~20-45 s) is expected; a confirmation dialog warns the user before
-blocking. All Python output is printed to the REAPER console for debugging.
+For AI mode the wait (~20-45 s) is expected; the Log tab's status pill and
+elapsed-time counter make the wait visible without blocking the rest of
+the panel. All Python output streams into the Log tab as it's written.
 
 ## Common Development Tasks
 

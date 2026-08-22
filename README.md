@@ -242,7 +242,7 @@ ai_groq = DrumGeneratorAI(backend_config=groq_config)
 
 **Environment Variables:** `AI_PROVIDER`, `AI_MODEL`, `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `GROQ_API_KEY`, `AI_TEMPERATURE` (0.0-2.0, default 0.7), `AI_MAX_TOKENS` (default 4096)
 
-See [claudedocs/AI_BACKEND_MIGRATION.md](claudedocs/AI_BACKEND_MIGRATION.md) for complete documentation.
+See [docs/AI_INTEGRATION.md](docs/AI_INTEGRATION.md) for complete documentation.
 
 ## 🎛️ Reaper DAW Integration
 
@@ -285,37 +285,40 @@ midi-drums reaper add-markers --structure "intro:4,verse:8,chorus:8,outro:4" --t
 
 **Features:** automatic section markers, time-accurate positioning, metadata-based or auto-detected workflow, template support, custom marker colors, immutable operations (originals never modified), optional MIDI export alongside the Reaper project.
 
-See [docs/REAPER_INTEGRATION.md](docs/REAPER_INTEGRATION.md) for complete documentation.
+See [reaper/README.md](reaper/README.md) for the current unified panel, or [ADR 0001](docs/adr/0001-unified-reaper-panel.md) for why the three original standalone scripts were replaced with it.
 
-### ReaScript Lua Integration (`create_song_sections.lua`)
+### ReaScript Panel Integration (`midi_drums_panel.lua`)
 
-The script [`reaper/create_song_sections.lua`](reaper/create_song_sections.lua)
-(vendored in this repo) provides a four-mode bi-directional bridge between
+[`reaper/midi_drums_panel.lua`](reaper/midi_drums_panel.lua) (vendored in
+this repo) is a dockable ReaImGui panel with four tabs — Song Sections,
+Riff-Lock Beat, Settings, Log — providing a bi-directional bridge between
 REAPER and the midi_drums Python module. See
-[`reaper/README.md`](reaper/README.md) for the install step (symlink or copy
-into REAPER's `Scripts/` directory).
+[`reaper/README.md`](reaper/README.md) for prerequisites (REAPER, ReaPack,
+ReaImGui) and the install step (symlink or copy the entry-point script
+plus its `reaper/midi_drums/` support modules into REAPER's `Scripts/`
+directory).
 
 #### Quick Setup
 
-1. Symlink or copy `reaper/create_song_sections.lua` and
-   `reaper/midi_drums_help.lua` into REAPER's `Scripts/` directory (see
+1. Install ReaPack and the ReaImGui package via **Extensions → ReaPack →
+   Browse packages...** (see [`reaper/README.md`](reaper/README.md)).
+2. Symlink or copy `reaper/midi_drums_panel.lua` and the
+   `reaper/midi_drums/` directory into REAPER's `Scripts/` directory (see
    [`reaper/README.md`](reaper/README.md)).
-2. Open the script in a text editor and set `PYTHON_EXE` to your virtualenv:
-   ```lua
-   local PYTHON_EXE = "C:/path/to/midi_drums/.venv/Scripts/pythonw.exe"
-   ```
-3. Add it as a REAPER action: **Actions → Load ReaScript** → select the file.
-4. Bind it to a key shortcut for quick access.
-5. Run **`midi_drums_help.lua`** from the same directory at any time for in-REAPER usage instructions.
+3. Add it as a REAPER action: **Actions → Load ReaScript** → select
+   `midi_drums_panel.lua`, and optionally bind it to a key shortcut.
+4. Run the action to open the panel. The first time you click Generate on
+   any tab, it prompts for your `midi_drums` virtualenv's `pythonw.exe`
+   path and remembers it — no manual file editing needed.
 
-#### Four Modes
+#### Song Sections Tab: Four Modes
 
 | Mode | When to use | Wait time |
 |------|-------------|-----------|
-| **REAPER** (default, YES) | You define the structure in the script | ~1–2 s |
-| **Python sidecar** (NO → "sidecar") | Python already generated MIDI + sidecar | instant |
-| **AI agent** (NO → "ai") | Natural language description drives everything | ~20–45 s |
-| **Song map** (NO → "songmap") | A song_creator-shaped JSON drives per-section tempo/meter | ~1–2 s |
+| **REAPER** (default) | You define the structure via the panel's built-in defaults | ~1–2 s |
+| **Sidecar** | Python already generated MIDI + sidecar | instant |
+| **AI** | Natural language description drives everything | ~20–45 s |
+| **Song Map** | A song_creator-shaped JSON drives per-section tempo/meter | ~1–2 s |
 
 The follow-up prompt after choosing "External" is a text field, not another
 Yes/No dialog — type `sidecar`, `ai`, or `songmap`.
@@ -433,7 +436,7 @@ from midi_drums.modifications import BehindBeatTiming, TripletVocabulary
 pattern = behind_beat.apply(triplets.apply(pattern))
 ```
 
-See [`docs/DDD_ARCHITECTURE.md`](docs/DDD_ARCHITECTURE.md) for the domain-boundary rules behind this layout, [`docs/MIGRATION_GUIDE.md`](docs/MIGRATION_GUIDE.md) for pre-DDD-migration import paths, and [claudedocs/REFACTORING_PROGRESS.md](claudedocs/REFACTORING_PROGRESS.md) for the history behind this design (a 62% code-reduction refactor from the original per-plugin implementations).
+See [`docs/DDD_ARCHITECTURE.md`](docs/DDD_ARCHITECTURE.md) for the domain-boundary rules behind this layout, [`docs/MIGRATION_GUIDE.md`](docs/MIGRATION_GUIDE.md) for pre-DDD-migration import paths, and [`CLAUDE.md`'s "Refactoring Achievement" section](CLAUDE.md#refactoring-achievement) for the history behind this design (a 62% code-reduction refactor from the original per-plugin implementations).
 
 ### Available Genres & Styles
 
@@ -699,7 +702,8 @@ all identical:
 - **`studio_drummer3`**, **`addictive_drums`**, **`bfd3`**, **`modo_drums`**,
   **`ml_drums`** — use the same GM-collapsed note table as `gm_drums`
   (no vendor-specific note research has been done for these yet — see
-  `claudedocs/research_vendor_drum_midi_maps_20260812.md`); safe to use
+  `claudedocs/archive/2026-08-21_docs-cleanup/research_vendor_drum_midi_maps_20260812.md`);
+  safe to use
   with any GM-compatible sampler today, but not yet verified against each
   vendor's own default map, which may differ from strict GM.
 - **Custom mapping** — pass `--mapping-file path/to/mapping.json` (CLI) or

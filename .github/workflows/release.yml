@@ -21,8 +21,18 @@ jobs:
         id: version
         run: |
           TAG="${GITHUB_REF_NAME}"
+          VERSION="${TAG#v}"
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
-          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          # A version with a pre-release identifier (a hyphen, per semver -
+          # e.g. "0.4.0-alpha.1") publishes as a GitHub pre-release rather
+          # than "Latest", so alpha/beta builds don't shadow the last
+          # stable release for users installing without pinning a tag.
+          if [[ "${VERSION}" == *-* ]]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Verify pyproject.toml version matches tag
         run: |
@@ -125,7 +135,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_NOTES: ${{ steps.changelog.outputs.notes }}
+          PRERELEASE_FLAG: ${{ steps.version.outputs.prerelease == 'true' && '--prerelease' || '' }}
         run: |
           printf '%s\n' "${RELEASE_NOTES}" | gh release create "${{ steps.version.outputs.tag }}" \
             --title "${{ steps.version.outputs.tag }}" \
-            --notes-file -
+            --notes-file - \
+            ${PRERELEASE_FLAG}
