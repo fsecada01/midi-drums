@@ -276,6 +276,99 @@ def test_empty_accent_map_leaves_pattern_unchanged():
         assert result is not pattern
 
 
+def test_reinforce_does_not_force_accent_flag_when_no_velocity_change():
+    # A snare already at the pattern's own ceiling gets no velocity boost
+    # from reinforce, so it must not be force-flipped to accent=True just
+    # for being the nearest match - that would grant it accent-only
+    # humanization treatment it didn't earn.
+    builder = PatternBuilder("no_change")
+    builder.snare(1.0, VELOCITY.SNARE_ACCENT)
+    builder.pattern.add_beat(
+        3.0, DrumInstrument.SNARE, VELOCITY.SNARE_ACCENT, accent=True
+    )
+    pattern = builder.build()
+    accents = RiffAccentMap.from_positions([(1.0, 1.0)], beats_per_bar=4.0)
+
+    result = SnareAccentReaction(riff_accents=accents, mode="reinforce").apply(
+        pattern, intensity=1.0
+    )
+
+    touched = next(s for s in snares(result) if abs(s.position - 1.0) < 1e-6)
+    assert touched.velocity == VELOCITY.SNARE_ACCENT
+    assert touched.accent is False
+
+
+def test_stab_does_not_duplicate_snare_when_two_accents_share_a_kick():
+    # Two stab accents close enough together to both fall within
+    # stab_kick_tolerance_beats of the SAME locked kick must not both
+    # insert a snare hit there - the second must find no unclaimed kick
+    # and skip, rather than stacking a duplicate on top of the first.
+    pattern = basic_pattern()
+    accents = RiffAccentMap.from_positions(
+        [(1.5, 0.95), (1.55, 0.9)], beats_per_bar=4.0
+    )
+    locked = RiffLockTransform(
+        riff_accents=accents, min_kick_spacing_beats=0.01, max_kicks_per_bar=1
+    ).apply(pattern, intensity=1.0)
+    assert len(kicks(locked)) == len(kicks(pattern)) + 1
+    new_kick = next(k for k in kicks(locked) if abs(k.position - 1.5) < 1e-6)
+
+    result = SnareAccentReaction(
+        riff_accents=accents,
+        mode="stab",
+        stab_threshold=0.85,
+        min_stab_spacing_beats=0.02,
+        stab_kick_tolerance_beats=0.2,
+    ).apply(locked, intensity=1.0)
+
+    stabbed_at_kick = [
+        s for s in snares(result) if abs(s.position - new_kick.position) < 1e-6
+    ]
+    assert len(stabbed_at_kick) == 1
+
+
+def test_stab_collapse_keeps_strongest_accents_boost_not_last_writer():
+    # Accents arrive strength-descending (select_accents); when two both
+    # collapse onto the same existing snare, the first (strongest) boost
+    # must win, not be silently overwritten by a later, weaker one.
+    pattern = pattern_with_accent_headroom()
+    accents = RiffAccentMap.from_positions(
+        [(1.0, 0.95), (1.02, 0.5)], beats_per_bar=4.0
+    )
+    locked = RiffLockTransform(riff_accents=accents).apply(
+        pattern, intensity=1.0
+    )
+
+    result = SnareAccentReaction(
+        riff_accents=accents,
+        mode="stab",
+        stab_threshold=0.4,
+        min_stab_spacing_beats=0.01,
+        stab_collapse_tolerance_beats=0.125,
+    ).apply(locked, intensity=1.0)
+
+    boosted = next(s for s in snares(result) if abs(s.position - 1.0) < 1e-6)
+    ceiling = VELOCITY.SNARE_ACCENT
+    current = VELOCITY.SNARE_LIGHT
+    strongest_expected = min(
+        127, max(current, current + round((ceiling - current) * 0.95))
+    )
+    assert boosted.velocity == strongest_expected
+
+
+def test_generation_parameters_rejects_invalid_snare_mode():
+    from midi_drums.core.value_objects.generation_parameters import (
+        GenerationParameters,
+    )
+
+    try:
+        GenerationParameters(genre="metal", riff_snare_mode="bogus")
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("expected ValueError for riff_snare_mode='bogus'")
+
+
 def test_invalid_mode_raises():
     accents = RiffAccentMap.from_positions([(0.0, 0.9)], beats_per_bar=4.0)
     try:

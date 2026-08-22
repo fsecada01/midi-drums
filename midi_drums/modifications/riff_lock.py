@@ -22,8 +22,11 @@ from midi_drums.config import VELOCITY
 from midi_drums.core.models.pattern import Beat, Pattern
 from midi_drums.core.value_objects.drum_instrument import DrumInstrument
 from midi_drums.core.value_objects.riff_accent import RiffAccent, RiffAccentMap
-from midi_drums.modifications._riff_accent_selection import (
+from midi_drums.modifications._riff_accent_selection import (  # noqa: F401
     circular_distance as _circular_distance,
+)
+from midi_drums.modifications._riff_accent_selection import (
+    nearest_within as _nearest_within,
 )
 from midi_drums.modifications._riff_accent_selection import (
     select_accents as _select_accents_shared,
@@ -39,6 +42,7 @@ _DEFAULT_KICK_VELOCITY_RANGE = (VELOCITY.KICK_LIGHT, VELOCITY.KICK_HEAVY)
 # so existing callers/tests that do
 # ``from midi_drums.modifications.riff_lock import _circular_distance``
 # keep working unchanged after the extraction to _riff_accent_selection.
+# Used directly by tests/unit/modifications/test_riff_lock.py.
 
 
 @dataclass
@@ -117,19 +121,13 @@ class RiffLockTransform(DrummerModification):
         new_kick_beats: list[Beat] = []
 
         for accent in selected_accents:
-            nearest_kick = None
-            nearest_distance = None
-            for kick in existing_kicks:
-                if id(kick) in matched_kick_ids:
-                    continue
-                distance = _circular_distance(
-                    accent.position, kick.position, beats_per_bar
-                )
-                if distance <= self.kick_tolerance_beats and (
-                    nearest_distance is None or distance < nearest_distance
-                ):
-                    nearest_kick = kick
-                    nearest_distance = distance
+            nearest_kick = _nearest_within(
+                accent.position,
+                existing_kicks,
+                beats_per_bar,
+                self.kick_tolerance_beats,
+                exclude_ids=matched_kick_ids,
+            )
 
             if nearest_kick is not None:
                 matched_kick_ids.add(id(nearest_kick))

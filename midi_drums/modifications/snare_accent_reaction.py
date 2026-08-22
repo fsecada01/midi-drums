@@ -29,12 +29,12 @@ argument) - construct and call it directly (see
 from dataclasses import dataclass
 from typing import Literal
 
-from midi_drums.config import VELOCITY
+from midi_drums.config import TIMING, VELOCITY
 from midi_drums.core.models.pattern import Beat, Pattern
 from midi_drums.core.value_objects.drum_instrument import DrumInstrument
 from midi_drums.core.value_objects.riff_accent import RiffAccent, RiffAccentMap
 from midi_drums.modifications._riff_accent_selection import (
-    circular_distance,
+    nearest_within,
     select_accents,
 )
 from midi_drums.modifications.drummer_mods import DrummerModification
@@ -42,7 +42,7 @@ from midi_drums.modifications.drummer_mods import DrummerModification
 # Fallback used only when the incoming pattern has no snare beats at all to
 # derive a velocity ceiling/duration from (e.g. a snare-less texture bar).
 _DEFAULT_SNARE_ACCENT_VELOCITY = VELOCITY.SNARE_ACCENT
-_DEFAULT_SNARE_DURATION = 0.25
+_DEFAULT_SNARE_DURATION = TIMING.SIXTEENTH
 
 
 def _is_reinforceable_snare(beat: Beat) -> bool:
@@ -89,33 +89,20 @@ def _blend_velocity(
     return min(127, max(current, boosted))
 
 
-def _nearest_within(position, candidates, period, tolerance):
-    """Nearest of ``candidates`` (anything with a ``.position``) to
-    ``position`` within ``tolerance`` (circular), or ``None``.
-
-    Generic over both ``RiffAccent`` (reinforce lookups) and ``Beat``
-    (stab collapse/kick-match lookups) - both simply expose ``.position``.
-    """
-    best = None
-    best_distance = None
-    for candidate in candidates:
-        distance = circular_distance(position, candidate.position, period)
-        if distance <= tolerance and (
-            best_distance is None or distance < best_distance
-        ):
-            best = candidate
-            best_distance = distance
-    return best
-
-
 def _reinforced_beat(beat: Beat, new_velocity: int) -> Beat:
+    """Apply ``new_velocity``, marking the beat accented only if it was
+    already accented or this boost actually raised its velocity - a beat
+    that was merely the nearest match but already at/above the ceiling
+    (``new_velocity == beat.velocity``) shouldn't be flipped to accented
+    with no audible change to justify it (it would otherwise pick up
+    accent-only humanization treatment it didn't earn)."""
     return Beat(
         position=beat.position,
         instrument=beat.instrument,
         velocity=new_velocity,
         duration=beat.duration,
         ghost_note=beat.ghost_note,
-        accent=True,
+        accent=beat.accent or new_velocity > beat.velocity,
         instrument_promoted=beat.instrument_promoted,
     )
 
@@ -184,7 +171,7 @@ class SnareAccentReaction(DrummerModification):
         new_beats: list[Beat] = []
         for beat in pattern.beats:
             nearest = (
-                _nearest_within(
+                nearest_within(
                     beat.position,
                     strong,
                     beats_per_bar,
@@ -232,37 +219,49 @@ class SnareAccentReaction(DrummerModification):
         ]
 
         reinforced_velocities: dict[int, int] = {}
+        matched_kick_ids: set[int] = set()
         new_stab_beats: list[Beat] = []
 
         for accent in stab_accents:
-            collapse_target = _nearest_within(
+            collapse_target = nearest_within(
                 accent.position,
                 existing_snares,
                 beats_per_bar,
                 self.stab_collapse_tolerance_beats,
             )
             if collapse_target is not None:
-                reinforced_velocities[id(collapse_target)] = _blend_velocity(
-                    collapse_target.velocity,
-                    ceiling,
-                    accent.strength,
-                    intensity,
-                )
+                # Accents arrive strength-descending (select_accents), so
+                # the first accent to claim a given snare is always the
+                # strongest one that will - don't let a later, weaker
+                # accent overwrite it with a smaller boost.
+                if id(collapse_target) not in reinforced_velocities:
+                    reinforced_velocities[id(collapse_target)] = (
+                        _blend_velocity(
+                            collapse_target.velocity,
+                            ceiling,
+                            accent.strength,
+                            intensity,
+                        )
+                    )
                 continue
 
-            matched_kick = _nearest_within(
+            matched_kick = nearest_within(
                 accent.position,
                 existing_kicks,
                 beats_per_bar,
                 self.stab_kick_tolerance_beats,
+                exclude_ids=matched_kick_ids,
             )
             if matched_kick is None:
-                # No kick landed here - either the accent didn't clear the
-                # kick's own strong_threshold, or RiffLockTransform's own
-                # max_kicks_per_bar/min_kick_spacing_beats budget rejected
-                # it. A "stab" with no kick under it isn't a unison hit,
-                # it's just an extra snare note out of nowhere - skip.
+                # No unclaimed kick landed here - either the accent didn't
+                # clear the kick's own strong_threshold, RiffLockTransform's
+                # own max_kicks_per_bar/min_kick_spacing_beats budget
+                # rejected it, or another stab accent already claimed the
+                # only nearby kick. A "stab" with no kick under it isn't a
+                # unison hit, it's just an extra snare note out of nowhere -
+                # skip.
                 continue
+            matched_kick_ids.add(id(matched_kick))
 
             new_stab_beats.append(
                 Beat(

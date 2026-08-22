@@ -11,7 +11,13 @@ Private module (leading underscore): not part of the package's public
 surface, imported directly by the two modification modules that need it.
 """
 
+from typing import Protocol
+
 from midi_drums.core.value_objects.riff_accent import RiffAccent, RiffAccentMap
+
+
+class _HasPosition(Protocol):
+    position: float
 
 
 def circular_distance(a: float, b: float, period: float) -> float:
@@ -52,3 +58,32 @@ def select_accents(
         ):
             selected.append(accent)
     return selected
+
+
+def nearest_within(
+    position: float,
+    candidates: list,
+    period: float,
+    tolerance: float,
+    exclude_ids: frozenset = frozenset(),
+) -> _HasPosition | None:
+    """Nearest of ``candidates`` (anything with a ``.position``) to
+    ``position`` within ``tolerance`` (circular), or ``None``.
+
+    ``exclude_ids`` (a set of ``id(candidate)`` values) lets callers rule
+    out candidates already matched to a different accent in the same pass
+    - e.g. so two accents can't both claim the same kick (see
+    ``RiffLockTransform.apply``'s ``matched_kick_ids``).
+    """
+    best = None
+    best_distance = None
+    for candidate in candidates:
+        if id(candidate) in exclude_ids:
+            continue
+        distance = circular_distance(position, candidate.position, period)
+        if distance <= tolerance and (
+            best_distance is None or distance < best_distance
+        ):
+            best = candidate
+            best_distance = distance
+    return best

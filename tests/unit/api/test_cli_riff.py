@@ -226,3 +226,46 @@ class TestRiffCommandBehavior:
         assert exc_info.value.code == 1
         captured = capsys.readouterr()
         assert "Invalid time signature" in captured.err
+
+    def test_riff_command_reports_invalid_generation_params_cleanly(
+        self, monkeypatch, capsys
+    ):
+        # An out-of-range --snare-stab-threshold passes argparse (it's a
+        # plain float) but fails GenerationParameters' own validation deep
+        # inside generate_pattern() - must surface as a clean CLI error,
+        # not a raw traceback.
+        from midi_drums.core.value_objects.riff_accent import RiffAccentMap
+
+        def fake_analyze_riff(*args, **kwargs):
+            return RiffAccentMap.from_positions([(0.0, 0.9)], beats_per_bar=4.0)
+
+        monkeypatch.setattr(
+            "midi_drums.analysis.audio_analysis.analyze_riff",
+            fake_analyze_riff,
+        )
+
+        parser = create_parser()
+        args = parser.parse_args(
+            [
+                "riff",
+                "--audio",
+                "riff.wav",
+                "--genre",
+                "metal",
+                "--tempo",
+                "180",
+                "--output",
+                "out.mid",
+                "--snare-mode",
+                "stab",
+                "--snare-stab-threshold",
+                "1.5",
+            ]
+        )
+
+        with pytest.raises(SystemExit) as exc_info:
+            handle_riff_command(args)
+
+        assert exc_info.value.code == 1
+        captured = capsys.readouterr()
+        assert "Invalid generation parameters" in captured.err
