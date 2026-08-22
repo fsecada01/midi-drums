@@ -1,9 +1,16 @@
 # Design: Riff-Driven Snare Accent Reaction
 
-**Status**: proposed, not implemented. Companion to the shipped `riff` /
+**Status**: implemented (`feat/riff-locked-drum-generation`, commit
+`e48abf5`) — `SnareAccentReaction`, the `_riff_accent_selection.py`
+extraction, and the `--snare-mode`/`--snare-stab-threshold` CLI flags below
+all match this design as written. Companion to the shipped `riff` /
 `RiffLockTransform` feature (PR #57) — extends it to answer: *"the guitar
-riff is heavily accented, would the snare reflect it?"* Today: no, by
+riff is heavily accented, would the snare reflect it?"* Previously: no, by
 design (`RiffLockTransform` only ever touches `DrumInstrument.KICK`).
+
+REAPER Lua panel exposure (`--snare-mode`/`--snare-stab-threshold` on the
+Riff-Lock Beat tab) is still outstanding — see this doc's own note under
+"CLI surface" that it was deliberately scoped out as a separate follow-up.
 
 ## Requirements
 

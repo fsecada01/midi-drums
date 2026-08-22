@@ -1380,19 +1380,23 @@ def handle_riff_command(args) -> None:
     print(f"  Accents  : {len(riff_accents)} detected")
 
     generator = DrumGenerator()
-    pattern = generator.generate_pattern(
-        genre=args.genre,
-        section=args.section,
-        bars=args.bars,
-        style=args.style,
-        drummer=args.drummer,
-        complexity=args.complexity,
-        humanization=args.humanization,
-        riff_accents=riff_accents,
-        riff_lock_strength=args.lock_strength,
-        riff_snare_mode=args.snare_mode,
-        riff_snare_stab_threshold=args.snare_stab_threshold,
-    )
+    try:
+        pattern = generator.generate_pattern(
+            genre=args.genre,
+            section=args.section,
+            bars=args.bars,
+            style=args.style,
+            drummer=args.drummer,
+            complexity=args.complexity,
+            humanization=args.humanization,
+            riff_accents=riff_accents,
+            riff_lock_strength=args.lock_strength,
+            riff_snare_mode=args.snare_mode,
+            riff_snare_stab_threshold=args.snare_stab_threshold,
+        )
+    except ValueError as e:
+        print(f"Invalid generation parameters: {e}", file=sys.stderr)
+        sys.exit(1)
     if pattern is None:
         print(
             f"Failed to generate pattern for {args.genre}/{args.section}",
