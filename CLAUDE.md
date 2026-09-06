@@ -902,6 +902,7 @@ Added to `midi_drums/api/python_api.py`:
 | `generate` | `--song-map JSON` | Read section structure **and per-segment tempo/meter** from a song-map JSON. Takes precedence over `--sidecar` if both are given |
 | `generate` | `--write-timeline JSON` | Write a resolved timeline JSON after generation (most useful with `--song-map`) |
 | `prompt` | `--write-sidecar JSON` | Write sidecar after AI generation |
+| `prompt` | `--research-song` | Experimental: give the `--song` AI agent path the `research_song` tool (verified tempo/genre/date/drummer-credit lookup via MusicBrainz/AcousticBrainz — see `midi_drums/ai/song_research.py` and `claudedocs/design_song_research_grounding.md`). No effect without `--song`; ignored (with a stderr note) for single-pattern generation. Surfaced in the REAPER panel as the Song Sections tab's AI-mode "Research Song" checkbox, threaded through `sections.lua:build_ai_cmd`. |
 | `riff` | *(new subcommand)* | Analyze `--audio` for accents, generate a pattern via `generate_pattern` with `riff_accents`/`riff_lock_strength` set, optionally `--write-sidecar` |
 
 ### Lua Config Block

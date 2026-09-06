@@ -63,6 +63,7 @@ local ss_mapping = settings.get("default_mapping")
 local ss_drummer = ""
 local ss_ai_description = ""
 local ss_ai_tempo = settings.get("default_ai_tempo")
+local ss_ai_research_song = false
 local ss_status = ""
 
 local SS_MODE_HELP = {
@@ -77,6 +78,15 @@ local SS_MODE_HELP = {
     .. "and MIDI file." },
   { title = "Song Map", body = "Read a song-map JSON file with per-segment "
     .. "tempo/meter changes and build a tempo-aware timeline in REAPER." },
+}
+
+local SS_AI_RESEARCH_SONG_HELP = {
+  { title = "Research Song (experimental)", body = "Before composing, let "
+    .. "the AI agent look up verified metadata (tempo, genre, release "
+    .. "date, drummer credit) for a real, named song via MusicBrainz/"
+    .. "AcousticBrainz - use this when your Description names a real "
+    .. "song or artist. Metadata-only: never fetches lyrics or audio. "
+    .. "AI mode only. See claudedocs/design_song_research_grounding.md." },
 }
 
 -- ===== Riff-Lock Beat tab state =====
@@ -132,6 +142,10 @@ local function draw_song_sections_tab()
       ctx, "Description", ss_ai_description, -1, 80
     )
     changed, ss_ai_tempo = reaper.ImGui_InputText(ctx, "Tempo (BPM)", ss_ai_tempo)
+    changed, ss_ai_research_song = reaper.ImGui_Checkbox(
+      ctx, "Research Song (experimental)", ss_ai_research_song
+    )
+    draw_help_button("ss_ai_research_song", SS_AI_RESEARCH_SONG_HELP)
   else
     local changed
     changed, ss_genre = reaper.ImGui_InputText(ctx, "Genre", ss_genre)
@@ -190,7 +204,7 @@ local function draw_song_sections_tab()
           end
         end
       elseif ss_mode == 3 then
-        local cmd = sections.build_ai_cmd(python_exe, ss_ai_description, ss_ai_tempo, midi_out, sc_path)
+        local cmd = sections.build_ai_cmd(python_exe, ss_ai_description, ss_ai_tempo, midi_out, sc_path, ss_ai_research_song)
         job_runner.start(cmd, "Song Sections (AI)", function()
           local f = io.open(sc_path, "rb")
           if f then

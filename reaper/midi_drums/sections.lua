@@ -103,14 +103,15 @@ function M.build_template_cmd(python_exe, genre, style, mapping, sidecar_path, m
   )
 end
 
-function M.build_ai_cmd(python_exe, description, tempo_str, midi_out, sidecar_path)
+function M.build_ai_cmd(python_exe, description, tempo_str, midi_out, sidecar_path, research_song)
   local tempo_arg = ""
   if tempo_str and tempo_str ~= "" and tonumber(tempo_str) then
     tempo_arg = "--tempo " .. tempo_str
   end
+  local research_flag = research_song and " --research-song" or ""
   return string.format(
-    '"%s" -m midi_drums prompt "%s" --song %s --output "%s" --write-sidecar "%s"',
-    python_exe, M.shell_escape(description), tempo_arg, midi_out, sidecar_path
+    '"%s" -m midi_drums prompt "%s" --song %s --output "%s" --write-sidecar "%s"%s',
+    python_exe, M.shell_escape(description), tempo_arg, midi_out, sidecar_path, research_flag
   )
 end
 
