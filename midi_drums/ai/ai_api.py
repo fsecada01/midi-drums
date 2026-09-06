@@ -54,18 +54,29 @@ class DrumGeneratorAI:
         self,
         api_key: str | None = None,
         backend_config: AIBackendConfig | None = None,
+        enable_song_research: bool | None = None,
     ):
         """Initialize the AI drum generator.
 
         Args:
             api_key: Optional API key (deprecated, use backend_config or env vars)
             backend_config: AI backend configuration. If None, uses env vars.
+            enable_song_research: Give the Langchain composition agent
+                (``.agent`` / ``compose_with_agent``) the experimental
+                research_song tool (verified song metadata lookup via
+                MusicBrainz/AcousticBrainz — see
+                ``midi_drums/ai/song_research.py``). None (default) falls
+                back to the MIDI_DRUMS_ENABLE_SONG_RESEARCH env var for
+                backward compatibility. Has no effect on
+                ``pydantic_generator``/``generate_pattern_from_text*``,
+                which has no tool-calling loop to attach it to.
         """
         # Handle legacy api_key parameter
         if api_key and not backend_config:
             backend_config = AIBackendConfig(api_key=api_key)
 
         self.backend_config = backend_config
+        self.enable_song_research = enable_song_research
 
         # Initialize AI approaches (lazy-loaded)
         self._pydantic_gen: PydanticPatternGenerator | None = None
@@ -85,7 +96,8 @@ class DrumGeneratorAI:
         """Lazy-load Langchain composition agent."""
         if self._agent is None:
             self._agent = PatternCompositionAgent(
-                backend_config=self.backend_config
+                backend_config=self.backend_config,
+                enable_song_research=self.enable_song_research,
             )
         return self._agent
 

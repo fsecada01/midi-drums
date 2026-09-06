@@ -1,12 +1,15 @@
 # Design: Song-Research Grounding for AI Pattern Generation
 
-**Status**: spike / proposed, opt-in only. Implements a first cut of
-`research_song` as a `MIDI_DRUMS_ENABLE_SONG_RESEARCH=1`-gated tool on
+**Status**: spike / proposed, opt-in only, built up past the initial spike
+with a CLI flag, on-disk caching, and a reliability fix (see "Built up
+past the spike" below). Implements `research_song` as an opt-in tool on
 `PatternCompositionAgent` (`midi_drums/ai/agents/pattern_agent.py`) backed
 by `midi_drums/ai/song_research.py`. Off by default — no existing caller
 (CLI, REAPER panel, tests) changes behavior or starts making network
-calls. Not yet an ADR: this is a working spike to validate the approach
-before committing to it as a supported feature.
+calls unless explicitly enabled via `--research-song` or the
+`MIDI_DRUMS_ENABLE_SONG_RESEARCH` env var. Not yet an ADR: this is a
+working spike to validate the approach before committing to it as a
+supported feature.
 
 ## Context
 
@@ -113,15 +116,55 @@ both MusicBrainz and AcousticBrainz source links. This is a genuine,
 non-trivial confirmation the approach works, not just that the code
 runs.
 
-## Non-goals (explicitly out of scope for this spike)
+**Second round of live testing** (after the "build up" pass below)
+surfaced two further observations, not full bugs:
+
+- The 20s timeout on the heavy `inc=` detail query still timed out on
+  2 of 3 live runs against the same song. Fixed with a one-shot retry
+  on a bare `TimeoutError` (never on a definite 4xx/5xx/malformed-JSON
+  error, where a retry can't help) — see `_rate_limited_get(retries=1)`
+  and `TestRateLimitedGetRetry`.
+- MusicBrainz's own tied-score search ordering is not perfectly stable
+  across separate calls — 3 live runs of the same title+artist query
+  returned 3 different top-ranked candidates. `_pick_best_candidate`'s
+  official-release preference still resolves this correctly in
+  practice (the studio release consistently wins over bootlegs
+  regardless of search-result order), but it's an accepted external-
+  service limitation worth knowing about, not something further
+  client-side code can fully eliminate.
+
+## Built up past the spike
+
+Once the spike was validated against a real song, it was promoted from
+an env-var-only prototype to a properly parameterized feature:
+
+- **CLI flag**: `python -m midi_drums prompt --song --research-song ...`
+  (`midi_drums/api/cli.py`). Warns to stderr and is ignored if `--song`
+  isn't also set, since the tool only attaches to the agent path.
+- **Constructor param, env var preserved for compat**:
+  `DrumGeneratorAI(enable_song_research=...)` →
+  `PatternCompositionAgent(enable_song_research=...)`. `None` (the
+  default) falls back to reading `MIDI_DRUMS_ENABLE_SONG_RESEARCH`, so
+  existing env-var-based usage is unaffected; an explicit `True`/`False`
+  always takes precedence.
+- **On-disk caching**: `research_song()` is now a caching wrapper around
+  the original lookup logic (renamed `_research_song_live`). Cache file
+  at `~/.midi_drums_cache/song_research_cache.json` (overridable via
+  `MIDI_DRUMS_CACHE_DIR` for tests), keyed on lowercased
+  `title|artist`. A successful match (`mbid` set) is cached for 30
+  days; a total lookup miss is cached for only 24 hours, so a
+  transiently-unavailable song isn't permanently remembered as
+  unfindable.
+- **Retry-on-timeout**: see "Second round of live testing" above.
+
+## Non-goals (still out of scope)
 
 - Tempo/key fallback via GetSongBPM or any paid API — AcousticBrainz-only
   for now, which will miss most post-2022 or lesser-known tracks. Known
   gap, not a blocker for validating the approach.
-- Caching of lookups across CLI invocations (each `research_song` call is
-  a live network round-trip; no local cache/TTL layer yet).
-- Any change to `PydanticPatternGenerator` or the CLI's `prompt` command
-  wiring — this spike only touches the LangChain agent path.
+- Any change to `PydanticPatternGenerator` — it has no tool-calling loop
+  to attach a retrieval step to; wiring it in would need a separate
+  pre-analysis call.
 - Reproducing or fetching the actual drum performance, lyrics, or any
   audio of the referenced song — deliberately unsupported, see Research
   point 4.
@@ -146,14 +189,14 @@ runs.
 
 ## Follow-ups if this graduates past spike
 
+- ~~Local on-disk cache~~ — done, see "Built up past the spike" above.
+- ~~Promote to a first-class CLI flag~~ — done (`--research-song`).
 - Add GetSongBPM as a tempo/key fallback when AcousticBrainz misses.
-- Local on-disk cache (title+artist → SongFacts, TTL) to avoid repeat
-  network round-trips and reduce load on MusicBrainz's shared service.
+  Deferred: requires the user to obtain and configure a free API key,
+  not something to add without checking with them first.
 - Surface a match-confidence signal so the agent can ask for
   disambiguation ("Which 'Renegade'?") instead of silently trusting a
   fuzzy top-1 match.
-- Decide whether to promote from a `MIDI_DRUMS_ENABLE_SONG_RESEARCH` env
-  flag to a first-class CLI flag (`--research-song`) once validated.
 - If accepted as a permanent feature, write a proper ADR referencing this
   design doc and the research findings above.
 

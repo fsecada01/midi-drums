@@ -4,9 +4,24 @@ All network access is mocked via monkeypatch on the module's internal
 ``_rate_limited_get`` — these tests must never hit the real MusicBrainz/
 AcousticBrainz APIs, matching this repo's convention of deterministic,
 offline unit tests.
+
+The on-disk lookup cache is redirected to a per-test tmp_path via the
+autouse ``_isolate_cache`` fixture below, so tests never read/write a
+real user's home directory and never leak cached state between tests.
 """
 
+import json
+import time
+
+import pytest
+
 from midi_drums.ai import song_research
+
+
+@pytest.fixture(autouse=True)
+def _isolate_cache(tmp_path, monkeypatch):
+    cache_path = tmp_path / "song_research_cache.json"
+    monkeypatch.setattr(song_research, "_cache_file_path", lambda: cache_path)
 
 
 class TestResearchSongFullMatch:
@@ -86,6 +101,126 @@ class TestResearchSongFullMatch:
         assert "Sources:" in sheet
 
 
+class TestCaching:
+    def test_second_call_uses_cache_without_network(self, monkeypatch):
+        call_count = {"n": 0}
+
+        def fake_get(url, timeout=8.0):
+            call_count["n"] += 1
+            if "query=" in url:
+                return {"recordings": [{"id": "mbid-cached"}]}
+            if "recording/mbid-cached?" in url:
+                return {
+                    "artist-credit": [{"name": "Rush"}],
+                    "releases": [{"date": "1981-02-12"}],
+                    "genres": [{"name": "progressive rock"}],
+                    "relations": [],
+                }
+            return {"rhythm": {"bpm": 155.0}, "tonal": {}}
+
+        monkeypatch.setattr(song_research, "_rate_limited_get", fake_get)
+
+        first = song_research.research_song("Tom Sawyer", "Rush")
+        calls_after_first = call_count["n"]
+        assert calls_after_first > 0
+
+        second = song_research.research_song("Tom Sawyer", "Rush")
+
+        assert call_count["n"] == calls_after_first  # no new network calls
+        assert second == first
+
+    def test_different_song_is_not_a_cache_hit(self, monkeypatch):
+        monkeypatch.setattr(
+            song_research, "_rate_limited_get", lambda url, timeout=8.0: None
+        )
+        song_research.research_song("Song A")
+
+        call_count = {"n": 0}
+
+        def fake_get(url, timeout=8.0):
+            call_count["n"] += 1
+            return None
+
+        monkeypatch.setattr(song_research, "_rate_limited_get", fake_get)
+        song_research.research_song("Song B")
+
+        assert call_count["n"] > 0  # different cache key, still fetched
+
+    def test_expired_hit_entry_triggers_refetch(self, monkeypatch):
+        cache_path = song_research._cache_file_path()
+        key = song_research._cache_key("Headless Cross", "Black Sabbath")
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        cache_path.write_text(
+            json.dumps(
+                {
+                    key: {
+                        "cached_at": (
+                            time.time()
+                            - song_research._CACHE_TTL_HIT_SECONDS
+                            - 1
+                        ),
+                        "data": {
+                            "title": "Headless Cross",
+                            "artist": "Black Sabbath",
+                            "mbid": "stale-mbid",
+                            "first_release_date": None,
+                            "genres": [],
+                            "drummer_personnel": [],
+                            "tempo_bpm": None,
+                            "musical_key": None,
+                            "sources": [],
+                        },
+                    }
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        monkeypatch.setattr(
+            song_research, "_rate_limited_get", lambda url, timeout=8.0: None
+        )
+
+        facts = song_research.research_song("Headless Cross", "Black Sabbath")
+
+        # Refetched (network mocked to miss) rather than returning the
+        # stale cached mbid — proves the expired entry was not reused.
+        assert facts.mbid is None
+
+    def test_fresh_miss_entry_is_reused_without_refetch(self, monkeypatch):
+        cache_path = song_research._cache_file_path()
+        key = song_research._cache_key("Some Obscure Song", None)
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        cache_path.write_text(
+            json.dumps(
+                {
+                    key: {
+                        "cached_at": time.time(),
+                        "data": {
+                            "title": "Some Obscure Song",
+                            "artist": None,
+                            "mbid": None,
+                            "first_release_date": None,
+                            "genres": [],
+                            "drummer_personnel": [],
+                            "tempo_bpm": None,
+                            "musical_key": None,
+                            "sources": [],
+                        },
+                    }
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        def fail_if_called(url, timeout=8.0):
+            raise AssertionError("should have used the cached miss entry")
+
+        monkeypatch.setattr(song_research, "_rate_limited_get", fail_if_called)
+
+        facts = song_research.research_song("Some Obscure Song")
+        assert facts.mbid is None
+
+
 class TestPickBestCandidate:
     """Regression coverage for a bug found via live testing: MusicBrainz's
     title+artist search for a real song ("Headless Cross" by Black
@@ -128,6 +263,81 @@ class TestPickBestCandidate:
         winner = song_research._pick_best_candidate([only_bootleg, no_releases])
 
         assert winner["id"] == "only-bootleg-mbid"
+
+
+class TestRateLimitedGetRetry:
+    """Regression coverage for a second real bug found via live testing:
+    the heavy `inc=` detail query timed out repeatedly against the real
+    MusicBrainz API (observed in 2 of 3 live "Headless Cross" runs) —
+    _rate_limited_get now retries once on a bare timeout before giving up.
+    """
+
+    def test_retries_once_on_timeout_then_succeeds(self, monkeypatch):
+        attempts = {"n": 0}
+
+        def fake_urlopen(request, timeout):
+            attempts["n"] += 1
+            if attempts["n"] == 1:
+                raise TimeoutError("The read operation timed out")
+
+            class _Resp:
+                def __enter__(self):
+                    return self
+
+                def __exit__(self, *a):
+                    return False
+
+                def read(self):
+                    return b'{"ok": true}'
+
+            return _Resp()
+
+        monkeypatch.setattr(
+            song_research.urllib.request, "urlopen", fake_urlopen
+        )
+
+        result = song_research._rate_limited_get("https://example.test/x")
+
+        assert attempts["n"] == 2
+        assert result == {"ok": True}
+
+    def test_gives_up_after_exhausting_retries(self, monkeypatch):
+        attempts = {"n": 0}
+
+        def fake_urlopen(request, timeout):
+            attempts["n"] += 1
+            raise TimeoutError("The read operation timed out")
+
+        monkeypatch.setattr(
+            song_research.urllib.request, "urlopen", fake_urlopen
+        )
+
+        result = song_research._rate_limited_get(
+            "https://example.test/x", retries=1
+        )
+
+        assert attempts["n"] == 2  # initial attempt + 1 retry, then give up
+        assert result is None
+
+    def test_does_not_retry_on_non_timeout_error(self, monkeypatch):
+        attempts = {"n": 0}
+
+        def fake_urlopen(request, timeout):
+            attempts["n"] += 1
+            raise song_research.urllib.error.HTTPError(
+                "https://example.test/x", 404, "Not Found", {}, None
+            )
+
+        monkeypatch.setattr(
+            song_research.urllib.request, "urlopen", fake_urlopen
+        )
+
+        result = song_research._rate_limited_get(
+            "https://example.test/x", retries=1
+        )
+
+        assert attempts["n"] == 1  # no retry for a definite error
+        assert result is None
 
 
 class TestResearchSongLookupMiss:

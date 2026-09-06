@@ -408,6 +408,19 @@ Examples:
             "to create matching timeline regions."
         ),
     )
+    prompt_parser.add_argument(
+        "--research-song",
+        action="store_true",
+        help=(
+            "Let the AI agent look up verified metadata (tempo, genre, "
+            "release date, drummer credit) for a real, named song via "
+            "MusicBrainz/AcousticBrainz before composing — use when your "
+            "description names a real song or artist. Metadata-only "
+            "(never fetches lyrics/audio). Only applies with --song, "
+            "since only the agent path supports tool calls. Experimental "
+            "— see claudedocs/design_song_research_grounding.md."
+        ),
+    )
 
     # Riff-lock command — analyze an audio riff, generate a pattern whose
     # kicks lock to its accents (requires `uv sync --group audio`).
@@ -1134,7 +1147,16 @@ def handle_prompt_command(args) -> None:
     if save_metadata:
         print(f"Output dir: output/{slug}/")
 
-    ai = DrumGeneratorAI(backend_config=config)
+    research_song = getattr(args, "research_song", False)
+    if research_song and not getattr(args, "song", False):
+        print(
+            "Note: --research-song only affects --song composition (the "
+            "AI agent path); ignoring it for single-pattern generation.",
+            file=sys.stderr,
+        )
+    ai = DrumGeneratorAI(
+        backend_config=config, enable_song_research=research_song
+    )
 
     try:
         if getattr(args, "song", False):

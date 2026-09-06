@@ -1,10 +1,14 @@
-"""Spike: factual song-metadata lookup grounding for AI pattern generation.
+"""Factual song-metadata lookup grounding for AI pattern generation.
 
-**Status: experimental spike, opt-in only** — see
+**Status: experimental, opt-in only** — see
 ``claudedocs/design_song_research_grounding.md`` for the research this is
-based on and the design rationale. Not wired into the default agent tool
-list; enabled only when ``MIDI_DRUMS_ENABLE_SONG_RESEARCH=1`` is set (see
-``midi_drums/ai/agents/pattern_agent.py``).
+based on and the design rationale. Not on by default for any caller: the
+``research_song`` tool on ``PatternCompositionAgent`` (see
+``midi_drums/ai/agents/pattern_agent.py``) is added only when its
+``enable_song_research`` constructor param is True, or (for backward
+compatibility with the original spike) when
+``MIDI_DRUMS_ENABLE_SONG_RESEARCH=1`` is set and the param is left at its
+default. Exposed on the CLI as ``prompt --song --research-song``.
 
 Deliberately **metadata-only**: this module fetches factual data (tempo,
 genre tags, recording personnel, release date) about a named song from
@@ -21,16 +25,21 @@ retrieved web content as untrusted data rather than instructions (design
 doc section 3): the only thing that reaches the agent is the rendered
 ``SongFacts.as_prompt_fact_sheet()`` string, a fixed template over
 already-validated fields.
+
+Results are cached on disk (see ``_cache_file_path``) so repeated lookups
+for the same song don't re-hit MusicBrainz/AcousticBrainz on every run.
 """
 
 from __future__ import annotations
 
 import json
+import os
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
+from pathlib import Path
 
 from loguru import logger
 
@@ -42,36 +51,105 @@ _MIN_REQUEST_INTERVAL_SECONDS = 1.0
 
 _last_request_at = 0.0
 
+# Local on-disk cache — avoids re-querying MusicBrainz/AcousticBrainz for
+# the same song on every run and reduces load on their shared services.
+# A populated result (mbid found) is cached far longer than a miss: a
+# miss is often a transient network hiccup or a title MusicBrainz simply
+# doesn't have yet, and should be retried sooner rather than permanently
+# remembered as "no facts exist."
+_CACHE_TTL_HIT_SECONDS = 30 * 24 * 3600  # 30 days
+_CACHE_TTL_MISS_SECONDS = 24 * 3600  # 1 day
 
-def _rate_limited_get(url: str, timeout: float = 20.0) -> dict | None:
+
+def _cache_file_path() -> Path:
+    """Where the on-disk lookup cache lives.
+
+    Overridable via MIDI_DRUMS_CACHE_DIR (used by tests to avoid touching
+    a real user's home directory); otherwise a dotfile under the user's
+    home directory, consistent with this being a personal/local tool
+    rather than a shared deployment.
+    """
+    cache_dir = os.environ.get("MIDI_DRUMS_CACHE_DIR")
+    base = Path(cache_dir) if cache_dir else Path.home() / ".midi_drums_cache"
+    return base / "song_research_cache.json"
+
+
+def _cache_key(title: str, artist: str | None) -> str:
+    return f"{title.strip().lower()}|{(artist or '').strip().lower()}"
+
+
+def _load_cache() -> dict:
+    """Read the cache file, tolerating any missing/corrupt state.
+
+    A cache read failure must never break a lookup — it just means this
+    call falls through to a live network fetch, same as a cold cache.
+    """
+    path = _cache_file_path()
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+
+
+def _save_cache(cache: dict) -> None:
+    """Best-effort cache write — swallows failures (e.g. read-only disk).
+
+    A failed write only means the next call re-fetches instead of
+    reading the cache; it must never surface as a research_song error.
+    """
+    path = _cache_file_path()
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(cache), encoding="utf-8")
+    except OSError as exc:
+        logger.warning(f"song_research: failed to write cache: {exc}")
+
+
+def _rate_limited_get(
+    url: str, timeout: float = 20.0, retries: int = 1
+) -> dict | None:
     """GET a JSON endpoint, honoring MusicBrainz's 1-req/sec courtesy limit.
+
+    Retries once on a bare timeout (live testing against real songs hit
+    this repeatedly on the heavier `inc=` detail query - a transient
+    slow response, not a permanent failure, so worth one retry before
+    giving up) but never on a definite error (4xx/5xx, malformed JSON)
+    where a retry can't help.
 
     Returns None (never raises) on any network/parse failure — a lookup
     miss must never break pattern generation, only leave facts unfilled.
     """
-    global _last_request_at
-    elapsed = time.monotonic() - _last_request_at
-    if elapsed < _MIN_REQUEST_INTERVAL_SECONDS:
-        time.sleep(_MIN_REQUEST_INTERVAL_SECONDS - elapsed)
-
     request = urllib.request.Request(
         url,
         headers={"User-Agent": _USER_AGENT, "Accept": "application/json"},
     )
-    try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
-            data = json.loads(response.read().decode("utf-8"))
-    except (
-        urllib.error.URLError,
-        urllib.error.HTTPError,
-        TimeoutError,
-        ValueError,
-    ) as exc:
-        logger.warning(f"song_research: lookup failed for {url}: {exc}")
-        return None
-    finally:
-        _last_request_at = time.monotonic()
-    return data
+    global _last_request_at
+    for attempt in range(retries + 1):
+        elapsed = time.monotonic() - _last_request_at
+        if elapsed < _MIN_REQUEST_INTERVAL_SECONDS:
+            time.sleep(_MIN_REQUEST_INTERVAL_SECONDS - elapsed)
+        try:
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except TimeoutError as exc:
+            if attempt < retries:
+                logger.debug(
+                    f"song_research: timeout, retrying ({attempt + 1}/"
+                    f"{retries}): {url}"
+                )
+                continue
+            logger.warning(f"song_research: lookup failed for {url}: {exc}")
+            return None
+        except (
+            urllib.error.URLError,
+            urllib.error.HTTPError,
+            ValueError,
+        ) as exc:
+            logger.warning(f"song_research: lookup failed for {url}: {exc}")
+            return None
+        finally:
+            _last_request_at = time.monotonic()
+    return None
 
 
 @dataclass
@@ -216,7 +294,33 @@ def research_song(title: str, artist: str | None = None) -> SongFacts:
     Never raises — a total lookup failure returns a SongFacts with only
     ``title``/``artist`` populated, so callers always get a usable object
     and a fact sheet that says as much.
+
+    Checks the on-disk cache first (see ``_cache_file_path``) and writes
+    the result back to it, so repeated calls for the same
+    (title, artist) don't re-hit MusicBrainz/AcousticBrainz every time.
     """
+    key = _cache_key(title, artist)
+    cache = _load_cache()
+    entry = cache.get(key)
+    if entry is not None:
+        ttl = (
+            _CACHE_TTL_HIT_SECONDS
+            if entry["data"].get("mbid")
+            else _CACHE_TTL_MISS_SECONDS
+        )
+        if time.time() - entry["cached_at"] < ttl:
+            logger.debug(f"song_research: cache hit for '{title}'")
+            return SongFacts(**entry["data"])
+
+    facts = _research_song_live(title, artist)
+
+    cache[key] = {"cached_at": time.time(), "data": asdict(facts)}
+    _save_cache(cache)
+    return facts
+
+
+def _research_song_live(title: str, artist: str | None) -> SongFacts:
+    """Do the actual MusicBrainz/AcousticBrainz lookup, no cache involved."""
     facts = SongFacts(title=title, artist=artist)
 
     summary = _search_recording_mbid(title, artist)

@@ -114,12 +114,19 @@ class PatternCompositionAgent:
         self,
         api_key: str | None = None,
         backend_config: AIBackendConfig | None = None,
+        enable_song_research: bool | None = None,
     ):
         """Initialize the pattern composition agent.
 
         Args:
             api_key: Optional API key (deprecated, use backend_config or env vars)
             backend_config: AI backend configuration. If None, uses env vars.
+            enable_song_research: Add the experimental research_song tool
+                (see midi_drums/ai/song_research.py) to this agent's tool
+                list. None (default) falls back to the
+                MIDI_DRUMS_ENABLE_SONG_RESEARCH env var, preserving the
+                original spike's opt-in-via-env-var behavior for existing
+                callers that don't pass this explicitly.
         """
         logger.info("Initializing Langchain Pattern Composition Agent V2")
 
@@ -132,6 +139,12 @@ class PatternCompositionAgent:
 
         # Get backend config
         self.backend_config = backend_config or AIBackendConfig.from_env()
+
+        self.enable_song_research = (
+            enable_song_research
+            if enable_song_research is not None
+            else os.environ.get(_SONG_RESEARCH_ENV_FLAG) == "1"
+        )
 
         # Initialize LLM using backend factory (returns init_chat_model result)
         self.llm = AIBackendFactory.create_langchain_llm(self.backend_config)
@@ -492,7 +505,7 @@ class PatternCompositionAgent:
             list_genres,
             list_drummers,
         ]
-        if os.environ.get(_SONG_RESEARCH_ENV_FLAG) == "1":
+        if self.enable_song_research:
             tools.append(research_song)
         return tools
 
