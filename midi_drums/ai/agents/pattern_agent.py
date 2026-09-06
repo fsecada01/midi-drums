@@ -6,6 +6,7 @@ drum pattern generation, composition, and evolution.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +16,12 @@ from midi_drums.ai.backends import AIBackendConfig, AIBackendFactory
 from midi_drums.core.models.pattern import Pattern
 from midi_drums.core.models.song import Song
 from midi_drums.generation.engines.drum_generator import DrumGenerator
+
+# Spike flag — see midi_drums/ai/song_research.py and
+# claudedocs/design_song_research_grounding.md. Off by default: this makes
+# network calls to public music-metadata APIs, which existing callers of
+# this agent (tests included) must not suddenly start doing.
+_SONG_RESEARCH_ENV_FLAG = "MIDI_DRUMS_ENABLE_SONG_RESEARCH"
 
 SYSTEM_PROMPT = (
     "You are an expert drum pattern composer and music producer. "
@@ -58,6 +65,36 @@ SYSTEM_PROMPT = (
     "Available tools allow you to generate patterns, apply drummer styles, "
     "create complete songs, and list available options."
 )
+
+# Appended to SYSTEM_PROMPT only when research_song is in the tool list
+# (MIDI_DRUMS_ENABLE_SONG_RESEARCH=1) — see _create_tools/_create_agent.
+_SONG_RESEARCH_PROMPT_ADDENDUM = (
+    "\n\nIMPORTANT — a research_song tool is available. Call it FIRST, "
+    "before generate_pattern/create_song, whenever the user's request names "
+    "a specific real song or artist (e.g. 'drums like Metallica's One', "
+    "'in the style of Rush's Tom Sawyer'). Do NOT call it for generic style "
+    "requests that don't name a real song ('aggressive death metal').\n"
+    "research_song returns VERIFIED facts (tempo, genre tags, release date, "
+    "drummer credit) with source links, when found — treat these as "
+    "authoritative for objective values like tempo, and prefer them over "
+    "your own recollection. Missing fields mean the lookup didn't find that "
+    "data, not that it doesn't exist — fall back to your own musical "
+    "judgment for anything not returned, and for all subjective/stylistic "
+    "choices. The tool never returns lyrics or drum notation — it is "
+    "metadata-only; do not ask it for, or claim to have retrieved, either."
+)
+
+
+def _build_system_prompt(song_research_enabled: bool) -> str:
+    """Compose the agent's system prompt for the tools actually available.
+
+    Kept separate from the constant SYSTEM_PROMPT (rather than baking the
+    addendum in unconditionally) so callers with the spike flag off never
+    see instructions referencing a tool that isn't in their tool list.
+    """
+    if song_research_enabled:
+        return SYSTEM_PROMPT + _SONG_RESEARCH_PROMPT_ADDENDUM
+    return SYSTEM_PROMPT
 
 
 class PatternCompositionAgent:
@@ -392,6 +429,39 @@ class PatternCompositionAgent:
             )
 
         @tool
+        def research_song(title: str, artist: str = "") -> str:
+            """Look up verified factual metadata for a real, named song.
+
+            Use this WHENEVER the user's request names a specific real song
+            or artist (e.g. "drums like Metallica's One", "in the style of
+            Rush's Tom Sawyer"). Do NOT use it for generic style requests
+            that don't name a real song ("aggressive death metal").
+
+            Args:
+                title: The song title as named by the user.
+                artist: The artist/band name, if given. Improves match
+                    accuracy but is optional.
+
+            Returns:
+                A VERIFIED SONG FACTS block (tempo/genre/release date/
+                drummer credit, when found) with source links. Facts are
+                best-effort — a missing field means the lookup didn't find
+                that data, not that it doesn't exist. This tool never
+                returns lyrics or drum transcription; it is metadata-only.
+            """
+            from midi_drums.ai.song_research import (
+                research_song as _research_song,
+            )
+
+            logger.info(f"Tool: research_song({title!r}, {artist!r})")
+            facts = _research_song(title, artist or None)
+            logger.success(
+                f"research_song: mbid={facts.mbid}, "
+                f"tempo={facts.tempo_bpm}, genres={facts.genres}"
+            )
+            return facts.as_prompt_fact_sheet()
+
+        @tool
         def list_genres() -> str:
             """List all available genres.
 
@@ -414,7 +484,7 @@ class PatternCompositionAgent:
                 f"Each has unique signature characteristics."
             )
 
-        return [
+        tools = [
             generate_pattern,
             apply_drummer_style,
             create_song,
@@ -422,6 +492,9 @@ class PatternCompositionAgent:
             list_genres,
             list_drummers,
         ]
+        if os.environ.get(_SONG_RESEARCH_ENV_FLAG) == "1":
+            tools.append(research_song)
+        return tools
 
     def _create_agent(self) -> Any:
         """Create Langchain 1.x agent using create_agent (LangGraph-backed).
@@ -433,10 +506,13 @@ class PatternCompositionAgent:
 
         logger.debug("Creating agent with create_agent()")
 
+        song_research_enabled = any(
+            getattr(t, "name", "") == "research_song" for t in self.tools
+        )
         agent = create_agent(
             model=self.llm,
             tools=self.tools,
-            system_prompt=SYSTEM_PROMPT,
+            system_prompt=_build_system_prompt(song_research_enabled),
         )
 
         logger.debug("LangGraph agent created successfully")
