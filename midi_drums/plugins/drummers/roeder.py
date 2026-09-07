@@ -39,13 +39,13 @@ class RoederPlugin(DrummerPlugin):
     def compatible_genres(self) -> list[str]:
         return ["metal", "sludge", "post_metal", "doom", "atmospheric"]
 
-    def apply_style(self, pattern: Pattern) -> Pattern:
+    def apply_style(self, pattern: Pattern, intensity: float = 1.0) -> Pattern:
         """Apply Jason Roeder's signature style to a pattern."""
         styled = pattern.copy()
         styled.name = f"{pattern.name}_roeder"
 
-        styled = self.minimal.apply(styled, intensity=0.8)
-        styled = self.accents.apply(styled, intensity=0.9)
+        styled = self.minimal.apply(styled, intensity=0.8 * intensity)
+        styled = self.accents.apply(styled, intensity=0.9 * intensity)
 
         return styled
 

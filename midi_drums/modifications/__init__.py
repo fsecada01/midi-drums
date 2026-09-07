@@ -12,6 +12,7 @@ Usage:
     pattern = TripletVocabulary().apply(pattern, intensity=0.9)
 """
 
+from midi_drums.modifications.cymbal_accent_reaction import CymbalAccentReaction
 from midi_drums.modifications.drummer_mods import (
     BehindBeatTiming,
     DrummerModification,
@@ -57,6 +58,12 @@ __all__ = [
     # argument with no sensible default, so it's intentionally NOT
     # registered in MODIFICATION_REGISTRY. Construct and call it directly.
     "SnareAccentReaction",
+    # Cymbal-accent-reaction (riff accents -> hi-hat/crash/ride reinforce/
+    # stab reaction). Same reasoning as SnareAccentReaction above -
+    # requires riff_accents/kit_piece arguments with no sensible default,
+    # so it's intentionally NOT registered in MODIFICATION_REGISTRY.
+    # Construct and call it directly.
+    "CymbalAccentReaction",
     # Registry
     "ModificationRegistry",
 ]

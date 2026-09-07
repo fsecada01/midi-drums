@@ -174,7 +174,7 @@ class DrumGenerator:
         # Apply drummer style if specified
         if params.drummer:
             styled_pattern = self.plugin_manager.apply_drummer_style(
-                pattern, params.drummer
+                pattern, params.drummer, params.drummer_intensity
             )
             if styled_pattern:
                 pattern = styled_pattern
@@ -216,6 +216,49 @@ class DrumGenerator:
             if reacted_pattern:
                 pattern = reacted_pattern
 
+        # Apply cymbal-accent-reaction if requested - reinforce or stab
+        # hi-hat/crash/ride/china against the same riff accents (see
+        # midi_drums.modifications.cymbal_accent_reaction.CymbalAccentReaction).
+        # Each kit piece is independently gated on its own mode != "off",
+        # so e.g. hi-hat can react while crash/ride/china stay off. Runs after
+        # riff-lock (same "stab" unison-match rationale as the snare block
+        # above) and independently of the snare block. Same domain-
+        # boundary routing as riff-lock/snare above.
+        if params.riff_accents:
+            for kit_piece, mode, stab_threshold in (
+                (
+                    "hihat",
+                    params.riff_hihat_mode,
+                    params.riff_hihat_stab_threshold,
+                ),
+                (
+                    "crash",
+                    params.riff_crash_mode,
+                    params.riff_crash_stab_threshold,
+                ),
+                (
+                    "ride",
+                    params.riff_ride_mode,
+                    params.riff_ride_stab_threshold,
+                ),
+                (
+                    "china",
+                    params.riff_china_mode,
+                    params.riff_china_stab_threshold,
+                ),
+            ):
+                if mode == "off":
+                    continue
+                reacted_pattern = self.plugin_manager.apply_riff_cymbal_accents(
+                    pattern,
+                    params.riff_accents,
+                    kit_piece,
+                    mode,
+                    stab_threshold,
+                )
+                if reacted_pattern:
+                    pattern = reacted_pattern
+
         # Apply humanization if requested
         if params.humanization > 0:
             timing_var = params.humanization * 0.05  # Scale to reasonable range
@@ -229,10 +272,12 @@ class DrumGenerator:
         return pattern
 
     def apply_drummer_style(
-        self, pattern: Pattern, drummer: str
+        self, pattern: Pattern, drummer: str, intensity: float = 1.0
     ) -> Pattern | None:
         """Apply drummer-specific style modifications to a pattern."""
-        return self.plugin_manager.apply_drummer_style(pattern, drummer)
+        return self.plugin_manager.apply_drummer_style(
+            pattern, drummer, intensity
+        )
 
     def export_midi(self, song: Song, output_path: Path) -> None:
         """Export song as MIDI file."""

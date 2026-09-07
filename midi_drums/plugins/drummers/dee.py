@@ -39,13 +39,13 @@ class DeePlugin(DrummerPlugin):
     def compatible_genres(self) -> list[str]:
         return ["metal", "speed_metal", "punk", "hard_rock", "horror_metal"]
 
-    def apply_style(self, pattern: Pattern) -> Pattern:
+    def apply_style(self, pattern: Pattern, intensity: float = 1.0) -> Pattern:
         """Apply Mikkey Dee's signature style to a pattern."""
         styled = pattern.copy()
         styled.name = f"{pattern.name}_dee"
 
-        styled = self.precision.apply(styled, intensity=0.9)
-        styled = self.twisted.apply(styled, intensity=0.7)
+        styled = self.precision.apply(styled, intensity=0.9 * intensity)
+        styled = self.twisted.apply(styled, intensity=0.7 * intensity)
 
         return styled
 

@@ -39,13 +39,13 @@ class WecklPlugin(DrummerPlugin):
     def compatible_genres(self) -> list[str]:
         return ["jazz", "fusion", "funk", "rock"]
 
-    def apply_style(self, pattern: Pattern) -> Pattern:
+    def apply_style(self, pattern: Pattern, intensity: float = 1.0) -> Pattern:
         """Apply Dave Weckl's signature style to a pattern."""
         styled = pattern.copy()
         styled.name = f"{pattern.name}_weckl"
 
-        styled = self.linear.apply(styled, intensity=0.8)
-        styled = self.ghost_notes.apply(styled, intensity=0.7)
+        styled = self.linear.apply(styled, intensity=0.8 * intensity)
+        styled = self.ghost_notes.apply(styled, intensity=0.7 * intensity)
 
         return styled
 

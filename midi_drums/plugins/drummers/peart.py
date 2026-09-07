@@ -48,14 +48,14 @@ class PeartPlugin(DrummerPlugin):
     def compatible_genres(self) -> list[str]:
         return ["rock", "progressive", "metal"]
 
-    def apply_style(self, pattern: Pattern) -> Pattern:
+    def apply_style(self, pattern: Pattern, intensity: float = 1.0) -> Pattern:
         """Apply Neil Peart's signature style to a pattern."""
         styled = pattern.copy()
         styled.name = f"{pattern.name}_peart"
 
-        styled = self.linear.apply(styled, intensity=0.7)
-        styled = self.precision.apply(styled, intensity=0.9)
-        styled = self.triplets.apply(styled, intensity=0.6)
+        styled = self.linear.apply(styled, intensity=0.7 * intensity)
+        styled = self.precision.apply(styled, intensity=0.9 * intensity)
+        styled = self.triplets.apply(styled, intensity=0.6 * intensity)
 
         return styled
 

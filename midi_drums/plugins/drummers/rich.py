@@ -50,14 +50,14 @@ class RichPlugin(DrummerPlugin):
     def compatible_genres(self) -> list[str]:
         return ["jazz", "rock"]
 
-    def apply_style(self, pattern: Pattern) -> Pattern:
+    def apply_style(self, pattern: Pattern, intensity: float = 1.0) -> Pattern:
         """Apply Buddy Rich's signature style to a pattern."""
         styled = pattern.copy()
         styled.name = f"{pattern.name}_rich"
 
-        styled = self.ghost_notes.apply(styled, intensity=0.6)
-        styled = self.fast_chops.apply(styled, intensity=0.7)
-        styled = self.accents.apply(styled, intensity=0.9)
+        styled = self.ghost_notes.apply(styled, intensity=0.6 * intensity)
+        styled = self.fast_chops.apply(styled, intensity=0.7 * intensity)
+        styled = self.accents.apply(styled, intensity=0.9 * intensity)
 
         return styled
 

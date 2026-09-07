@@ -158,20 +158,40 @@ function M.resolve_audio_source(item, take, bar_start_qn, bar_end_qn)
   return result, 0.0, (bar_end_time - bar_start_time), nil
 end
 
-function M.build_cmd(python_exe, p)
-  local snare_flag = ""
-  if p.snare_mode == "stab" then
-    snare_flag = string.format(
-      ' --snare-mode stab --snare-stab-threshold %g', p.snare_threshold
+-- Builds a "--<flag>-mode <mode> [--<flag>-stab-threshold N]" fragment
+-- shared by snare and the three cymbal kit pieces - "off" is passed
+-- explicitly (rather than omitted) so a saved default of e.g. "stab"
+-- doesn't leak into a job that meant to turn the reaction off.
+local function reaction_flag(flag_name, mode, threshold)
+  if mode == "stab" then
+    return string.format(
+      ' --%s-mode stab --%s-stab-threshold %g', flag_name, flag_name, threshold
     )
-  elseif p.snare_mode == "reinforce" then
-    snare_flag = ' --snare-mode reinforce'
+  elseif mode == "reinforce" then
+    return string.format(' --%s-mode reinforce', flag_name)
   else
-    snare_flag = ' --snare-mode off'
+    return string.format(' --%s-mode off', flag_name)
   end
+end
 
+function M.build_cmd(python_exe, p)
+  local snare_flag = reaction_flag("snare", p.snare_mode, p.snare_threshold)
+  local hihat_flag = reaction_flag("hihat", p.hihat_mode, p.hihat_threshold)
+  local crash_flag = reaction_flag("crash", p.crash_mode, p.crash_threshold)
+  local ride_flag = reaction_flag("ride", p.ride_mode, p.ride_threshold)
+  local china_flag = reaction_flag("china", p.china_mode, p.china_threshold)
+
+  -- compute_bar_alignment's offset_beats is mathematically >= 0, but
+  -- float reconstruction of bar_index * qn_per_bar can leave a tiny
+  -- negative residual (e.g. -1e-13) when the item starts almost exactly
+  -- on a bar line - the common case, since items are usually snapped to
+  -- grid. An exact `~= 0` check then emits e.g. "--offset-beats -1e-13",
+  -- which argparse rejects: it only recognizes -\d+ / -\d*.\d+ as a
+  -- negative-number token, not scientific notation, so it reads the
+  -- flag as having no value ("expected one argument"). A real tolerance
+  -- avoids emitting the flag for meaningless sub-beat noise.
   local offset_flag = ""
-  if p.offset_beats and p.offset_beats ~= 0 then
+  if p.offset_beats and math.abs(p.offset_beats) > 1e-6 then
     offset_flag = string.format(' --offset-beats %g', p.offset_beats)
   end
 
@@ -187,18 +207,32 @@ function M.build_cmd(python_exe, p)
   local drummer_flag = ""
   if p.drummer and p.drummer ~= "" then
     drummer_flag = string.format(' --drummer "%s"', M.shell_escape(p.drummer))
+    if p.drummer_intensity then
+      drummer_flag = drummer_flag
+        .. string.format(' --drummer-intensity %g', p.drummer_intensity)
+    end
+  end
+
+  -- Fed to the AI pattern generator instead of --genre/--style when
+  -- present (see cli.py's handle_riff_command) - --genre/--style are
+  -- still sent alongside it (harmless; the notes path ignores them) so
+  -- build_cmd's signature stays uniform across both modes.
+  local notes_flag = ""
+  if p.notes and p.notes ~= "" then
+    notes_flag = string.format(' --notes "%s"', M.shell_escape(p.notes))
   end
 
   return string.format(
     '"%s" -m midi_drums riff --audio "%s" --genre "%s" --style "%s"'
     .. ' --tempo %g --section "%s" --time-signature "%d/%d" --bars %d'
     .. ' --grid "%s" --lock-strength %g --mapping "%s"'
-    .. ' --output "%s" --write-sidecar "%s"%s%s%s%s%s',
+    .. ' --output "%s" --write-sidecar "%s"%s%s%s%s%s%s%s%s%s',
     python_exe, p.audio_path, M.shell_escape(p.genre), M.shell_escape(p.style),
     p.bpm, M.shell_escape(p.section), p.ts_num, p.ts_denom, p.bars,
     M.shell_escape(p.grid), p.lock_strength, M.shell_escape(p.mapping),
-    p.midi_out, p.sidecar_path, snare_flag, offset_flag,
-    audio_offset_flag, audio_duration_flag, drummer_flag
+    p.midi_out, p.sidecar_path, snare_flag, hihat_flag, crash_flag,
+    ride_flag, china_flag, offset_flag, audio_offset_flag,
+    audio_duration_flag, drummer_flag .. notes_flag
   )
 end
 

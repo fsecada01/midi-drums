@@ -14,6 +14,12 @@ class GenerationParameters:
     genre: str
     style: str = "default"
     drummer: str | None = None
+    drummer_intensity: float = 1.0  # 0.0-1.0, how strongly the drummer's
+    # signature modifications override the genre plugin's base pattern.
+    # 1.0 = full drummer character (default, matches prior behavior);
+    # 0.0 = genre pattern untouched by drummer styling. Lets a user ask
+    # for e.g. "Porcaro tracking a Death Metal pattern" without the
+    # drummer's feel fully overwriting the genre's identity.
     complexity: float = 0.5  # 0.0-1.0, affects fill density and variation
     dynamics: float = 0.5  # 0.0-1.0, affects volume variation
     humanization: float = 0.3  # 0.0-1.0, affects timing/velocity variation
@@ -48,6 +54,22 @@ class GenerationParameters:
     riff_snare_mode: Literal["off", "reinforce", "stab"] = "off"
     riff_snare_stab_threshold: float = 0.85
 
+    # Cymbal reactions to the same riff accents (see
+    # midi_drums.modifications.cymbal_accent_reaction.CymbalAccentReaction).
+    # Same scope/semantics as riff_snare_mode above, one independent
+    # mode/threshold pair per kit piece - hi-hat, crash, ride, and china
+    # can each be off/reinforce/stab independently. "off" means the
+    # pipeline hook never constructs CymbalAccentReaction for that kit
+    # piece at all.
+    riff_hihat_mode: Literal["off", "reinforce", "stab"] = "off"
+    riff_hihat_stab_threshold: float = 0.85
+    riff_crash_mode: Literal["off", "reinforce", "stab"] = "off"
+    riff_crash_stab_threshold: float = 0.85
+    riff_ride_mode: Literal["off", "reinforce", "stab"] = "off"
+    riff_ride_stab_threshold: float = 0.85
+    riff_china_mode: Literal["off", "reinforce", "stab"] = "off"
+    riff_china_stab_threshold: float = 0.85
+
     custom_parameters: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self):
@@ -65,8 +87,13 @@ class GenerationParameters:
             ("swing_ratio", self.swing_ratio),
             ("ride_threshold", self.ride_threshold),
             ("context_blend", self.context_blend),
+            ("drummer_intensity", self.drummer_intensity),
             ("riff_lock_strength", self.riff_lock_strength),
             ("riff_snare_stab_threshold", self.riff_snare_stab_threshold),
+            ("riff_hihat_stab_threshold", self.riff_hihat_stab_threshold),
+            ("riff_crash_stab_threshold", self.riff_crash_stab_threshold),
+            ("riff_ride_stab_threshold", self.riff_ride_stab_threshold),
+            ("riff_china_stab_threshold", self.riff_china_stab_threshold),
         ]:
             if not 0.0 <= value <= 1.0:
                 raise ValueError(

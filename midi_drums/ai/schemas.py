@@ -6,7 +6,18 @@ compatible with the existing MIDI Drums Generator architecture.
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+
+def _normalize_section_str(v: object) -> object:
+    """Lowercase/strip a section string before Literal validation.
+
+    Callers (e.g. the REAPER panel's free-text Section field, or a CLI
+    --section flag) may pass e.g. "Intro" rather than "intro" - without
+    this, pydantic's case-sensitive Literal rejects an otherwise-valid
+    section name.
+    """
+    return v.strip().lower() if isinstance(v, str) else v
 
 
 class PatternGenerationRequest(BaseModel):
@@ -30,6 +41,10 @@ class PatternGenerationRequest(BaseModel):
     ] = Field(
         default="verse",
         description="Song section for the pattern",
+    )
+
+    _normalize_section = field_validator("section", mode="before")(
+        _normalize_section_str
     )
 
     tempo: int = Field(
@@ -56,6 +71,16 @@ class PatternGenerationRequest(BaseModel):
     drummer_style: str | None = Field(
         default=None,
         description="Optional drummer style to apply (bonham, porcaro, etc.)",
+    )
+
+    drummer_intensity: float = Field(
+        default=1.0,
+        ge=0.0,
+        le=1.0,
+        description=(
+            "How strongly the drummer style overrides the genre pattern "
+            "(1.0=full drummer character, 0.0=genre pattern unchanged)"
+        ),
     )
 
 
@@ -255,6 +280,10 @@ class AudioAnalysisRequest(BaseModel):
         default="verse",
         description="What section type this audio represents",
     )
+
+    _normalize_target_section = field_validator(
+        "target_section", mode="before"
+    )(_normalize_section_str)
 
     genre_hint: str | None = Field(
         default=None,

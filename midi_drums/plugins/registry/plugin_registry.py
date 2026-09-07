@@ -125,16 +125,23 @@ class PluginManager:
             return None
 
     def apply_drummer_style(
-        self, pattern: Pattern, drummer: str
+        self, pattern: Pattern, drummer: str, intensity: float = 1.0
     ) -> Pattern | None:
-        """Apply drummer style to a pattern."""
+        """Apply drummer style to a pattern.
+
+        Args:
+            pattern: Base pattern to modify
+            drummer: Registered drummer plugin name
+            intensity: 0.0-1.0 blend of the drummer's modifications against
+                the unmodified pattern (see DrummerPlugin.apply_style).
+        """
         plugin = self.registry.get_drummer_plugin(drummer)
         if not plugin:
             logger.error(f"No plugin found for drummer: {drummer}")
             return None
 
         try:
-            return plugin.apply_style(pattern)
+            return plugin.apply_style(pattern, intensity=intensity)
         except Exception as e:
             logger.error(f"Error applying drummer style {drummer}: {e}")
             return None
@@ -196,6 +203,41 @@ class PluginManager:
             ).apply(pattern, intensity=intensity)
         except Exception as e:
             logger.error(f"Error applying riff snare accents: {e}")
+            return None
+
+    def apply_riff_cymbal_accents(
+        self,
+        pattern: Pattern,
+        riff_accents: RiffAccentMap,
+        kit_piece: str,
+        mode: str,
+        stab_threshold: float = 0.85,
+        intensity: float = 1.0,
+    ) -> Pattern | None:
+        """React a pattern's hi-hat/crash/ride to riff accents (reinforce
+        or stab).
+
+        Thin pass-through to
+        ``midi_drums.modifications.cymbal_accent_reaction.CymbalAccentReaction``,
+        for the same domain-boundary reason ``apply_riff_snare_accents``
+        above delegates rather than being called directly from
+        ``midi_drums.generation``.
+        """
+        from midi_drums.modifications.cymbal_accent_reaction import (
+            CymbalAccentReaction,
+        )
+
+        try:
+            return CymbalAccentReaction(
+                riff_accents=riff_accents,
+                kit_piece=kit_piece,
+                mode=mode,
+                stab_threshold=stab_threshold,
+            ).apply(pattern, intensity=intensity)
+        except Exception as e:
+            logger.error(
+                f"Error applying riff cymbal accents ({kit_piece}): {e}"
+            )
             return None
 
     # Convenience methods for accessing registry data

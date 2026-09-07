@@ -22,11 +22,16 @@ class DrummerPlugin(ABC):
         pass
 
     @abstractmethod
-    def apply_style(self, pattern: Pattern) -> Pattern:
+    def apply_style(self, pattern: Pattern, intensity: float = 1.0) -> Pattern:
         """Apply drummer-specific style modifications to a pattern.
 
         Args:
             pattern: Base pattern to modify
+            intensity: 0.0-1.0 blend of the drummer's modifications against
+                the unmodified pattern. 1.0 (default) is full drummer
+                character, matching prior behavior; 0.0 leaves the pattern
+                untouched. Lets the genre plugin's own identity show
+                through even when a drummer style is applied.
 
         Returns:
             Modified pattern with drummer's style applied

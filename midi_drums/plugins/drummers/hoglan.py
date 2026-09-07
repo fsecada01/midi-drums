@@ -39,13 +39,13 @@ class HoglanPlugin(DrummerPlugin):
     def compatible_genres(self) -> list[str]:
         return ["metal", "death", "thrash", "progressive"]
 
-    def apply_style(self, pattern: Pattern) -> Pattern:
+    def apply_style(self, pattern: Pattern, intensity: float = 1.0) -> Pattern:
         """Apply Gene Hoglan's signature style to a pattern."""
         styled = pattern.copy()
         styled.name = f"{pattern.name}_hoglan"
 
-        styled = self.precision.apply(styled, intensity=1.0)
-        styled = self.accents.apply(styled, intensity=0.9)
+        styled = self.precision.apply(styled, intensity=1.0 * intensity)
+        styled = self.accents.apply(styled, intensity=0.9 * intensity)
 
         return styled
 

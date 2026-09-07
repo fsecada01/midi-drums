@@ -27,11 +27,14 @@ local job_runner = dofile(script_path .. "midi_drums/job_runner.lua")
 local sections = dofile(script_path .. "midi_drums/sections.lua")
 local riff_lock = dofile(script_path .. "midi_drums/riff_lock.lua")
 local additive_rhythm = dofile(script_path .. "midi_drums/additive_rhythm.lua")
+local options = dofile(script_path .. "midi_drums/options.lua")
 
 local ctx = reaper.ImGui_CreateContext("midi_drums Panel")
 
-local font_sans = reaper.ImGui_CreateFont("Segoe UI", 14)
-local font_mono = reaper.ImGui_CreateFont("Consolas", 13)
+local FONT_SANS_SIZE = 14
+local FONT_MONO_SIZE = 13
+local font_sans = reaper.ImGui_CreateFont("Segoe UI", FONT_SANS_SIZE)
+local font_mono = reaper.ImGui_CreateFont("Consolas", FONT_MONO_SIZE)
 if font_sans then reaper.ImGui_Attach(ctx, font_sans) end
 if font_mono then reaper.ImGui_Attach(ctx, font_mono) end
 
@@ -56,12 +59,87 @@ local function draw_help_button(id, lines)
   end
 end
 
+-- Generic string-preserving combo box (BeginCombo/Selectable) rather
+-- than the classic index-based ImGui_Combo - every backing state var
+-- here is a persisted string (from settings.get() or a plain local),
+-- and a string-preserving combo avoids index/string desync when the
+-- underlying option list changes out from under a stale index (e.g.
+-- after a Refresh Options click). `empty_label`, when given, adds a
+-- leading entry that displays as that label but stores/matches "" -
+-- used for the optional Drummer field.
+local function combo_from_list(label, current_value, items, empty_label)
+  local changed = false
+  local new_value = current_value
+  local preview = current_value
+  if preview == "" and empty_label then
+    preview = empty_label
+  end
+  if reaper.ImGui_BeginCombo(ctx, label, preview) then
+    if empty_label then
+      local is_selected = (current_value == "")
+      if reaper.ImGui_Selectable(ctx, empty_label, is_selected) then
+        new_value = ""
+        changed = true
+      end
+      if is_selected then reaper.ImGui_SetItemDefaultFocus(ctx) end
+    end
+    for _, item in ipairs(items) do
+      local is_selected = (item == current_value)
+      if reaper.ImGui_Selectable(ctx, item, is_selected) then
+        new_value = item
+        changed = true
+      end
+      if is_selected then reaper.ImGui_SetItemDefaultFocus(ctx) end
+    end
+    reaper.ImGui_EndCombo(ctx)
+  end
+  return changed, new_value
+end
+
+local GRID_VALUES = { "8th", "16th", "32nd", "8th_triplet", "16th_triplet" }
+
+-- Non-prompting python_exe lookup for the silent startup refresh below -
+-- unlike settings.resolve_python_exe(), this never opens the picker
+-- dialog; an unset/stale path just means the options cache stays empty
+-- until the user configures it and clicks Refresh Options.
+local function cached_python_exe()
+  local exe = settings.get("python_exe")
+  if exe == "" then return nil end
+  local f = io.open(exe, "rb")
+  if not f then return nil end
+  f:close()
+  return exe
+end
+
+local function refresh_options()
+  if job_runner.is_running() then return end
+  local python_exe = cached_python_exe()
+  if not python_exe then return end
+
+  local cmd = options.build_cmd(python_exe)
+  job_runner.start(cmd, "Load Options", function()
+    local content = table.concat(job_runner.state.log_lines, "\n")
+    local parsed, err = options.parse(content)
+    if parsed then
+      options.cache.genres = parsed.genres
+      options.cache.drummers = parsed.drummers
+      options.cache.mappings = parsed.mappings
+      options.cache.genre_styles = parsed.genre_styles
+      options.cache.loaded = true
+      options.cache.error = nil
+    else
+      options.cache.error = err or "Could not parse options JSON."
+    end
+  end)
+end
+
 -- ===== Song Sections tab state =====
 local ss_mode = 1 -- 1=REAPER, 2=Sidecar, 3=AI, 4=Song Map
 local ss_genre = settings.get("default_genre")
 local ss_style = settings.get("default_style")
 local ss_mapping = settings.get("default_mapping")
 local ss_drummer = ""
+local ss_drummer_intensity = 1.0
 local ss_ai_description = ""
 local ss_ai_tempo = settings.get("default_ai_tempo")
 local ss_ai_research_song = false
@@ -90,16 +168,35 @@ local SS_AI_RESEARCH_SONG_HELP = {
     .. "AI mode only. See claudedocs/design_song_research_grounding.md." },
 }
 
+local DRUMMER_INTENSITY_HELP = {
+  { title = "Drummer Intensity", body = "How strongly the drummer's "
+    .. "signature style overrides the genre pattern. 1.0 = full drummer "
+    .. "character (default). Lower it toward 0.0 to keep more of the "
+    .. "genre plugin's own identity - e.g. a low value gives a subtle "
+    .. "Porcaro feel over a Death Metal pattern instead of Porcaro fully "
+    .. "taking over." },
+}
+
 -- ===== Riff-Lock Beat tab state =====
 local rl_genre = settings.get("default_genre")
 local rl_style = settings.get("default_style")
 local rl_drummer = ""
+local rl_drummer_intensity = 1.0
 local rl_section = "verse"
 local rl_mapping = settings.get("default_mapping")
 local rl_grid = "16th"
 local rl_lock_strength = 1.0
 local rl_snare_mode = 1 -- 1=Off, 2=Reinforce, 3=Stab
 local rl_snare_threshold = 0.85
+local rl_hihat_mode = 1 -- 1=Off, 2=Reinforce, 3=Stab
+local rl_hihat_threshold = 0.85
+local rl_crash_mode = 1 -- 1=Off, 2=Reinforce, 3=Stab
+local rl_crash_threshold = 0.85
+local rl_ride_mode = 1 -- 1=Off, 2=Reinforce, 3=Stab
+local rl_ride_threshold = 0.85
+local rl_china_mode = 1 -- 1=Off, 2=Reinforce, 3=Stab
+local rl_china_threshold = 0.85
+local rl_notes = ""
 local rl_status = ""
 
 local RL_SNARE_HELP = {
@@ -110,6 +207,55 @@ local RL_SNARE_HELP = {
   { title = "Stab", body = "Inserts a unison snare hit at very strong "
     .. "accents where a kick was locked but no snare is nearby. "
     .. "Threshold below controls how strong an accent must be." },
+}
+
+local RL_HIHAT_HELP = {
+  { title = "Off", body = "Hi-hat is untouched by the riff — comes purely "
+    .. "from the genre plugin/drummer style." },
+  { title = "Reinforce", body = "Boosts velocity on existing hi-hat hits "
+    .. "that land near a strong riff accent." },
+  { title = "Stab", body = "Inserts a unison closed hi-hat hit at very "
+    .. "strong accents where a kick was locked but no hi-hat is nearby. "
+    .. "Threshold below controls how strong an accent must be." },
+}
+
+local RL_CRASH_HELP = {
+  { title = "Off", body = "Crash is untouched by the riff — comes purely "
+    .. "from the genre plugin/drummer style." },
+  { title = "Reinforce", body = "Boosts velocity on existing crash hits "
+    .. "that land near a strong riff accent." },
+  { title = "Stab", body = "Inserts a unison crash hit at very strong "
+    .. "accents where a kick was locked but no crash is nearby. "
+    .. "Threshold below controls how strong an accent must be." },
+}
+
+local RL_RIDE_HELP = {
+  { title = "Off", body = "Ride is untouched by the riff — comes purely "
+    .. "from the genre plugin/drummer style." },
+  { title = "Reinforce", body = "Boosts velocity on existing ride hits "
+    .. "that land near a strong riff accent." },
+  { title = "Stab", body = "Inserts a unison ride hit at very strong "
+    .. "accents where a kick was locked but no ride is nearby. "
+    .. "Threshold below controls how strong an accent must be." },
+}
+
+local RL_CHINA_HELP = {
+  { title = "Off", body = "China is untouched by the riff — comes purely "
+    .. "from the genre plugin/drummer style." },
+  { title = "Reinforce", body = "Boosts velocity on existing china hits "
+    .. "that land near a strong riff accent." },
+  { title = "Stab", body = "Inserts a unison china hit at very strong "
+    .. "accents where a kick was locked but no china is nearby. "
+    .. "Threshold below controls how strong an accent must be." },
+}
+
+local RL_NOTES_HELP = {
+  { title = "Notes (optional)", body = "When filled in, the AI pattern "
+    .. "generator infers genre/style/pattern from this text instead of "
+    .. "the Genre/Style fields above (e.g. 'aggressive death metal "
+    .. "breakdown with blast beats'). Drummer, Lock Strength, and every "
+    .. "reaction below still apply on top of the AI-generated pattern. "
+    .. "Requires 'uv sync --group ai' and an AI provider API key." },
 }
 
 -- ===== Additive Rhythm tab state =====
@@ -168,11 +314,30 @@ local function draw_song_sections_tab()
     )
     draw_help_button("ss_ai_research_song", SS_AI_RESEARCH_SONG_HELP)
   else
+    if not options.cache.loaded then
+      reaper.ImGui_TextColored(ctx, 0xfbbf24ff,
+        "Options not loaded - configure Python exe and click Refresh "
+        .. "Options on the Settings tab."
+      )
+    end
+
     local changed
-    changed, ss_genre = reaper.ImGui_InputText(ctx, "Genre", ss_genre)
-    changed, ss_style = reaper.ImGui_InputText(ctx, "Style", ss_style)
-    changed, ss_drummer = reaper.ImGui_InputText(ctx, "Drummer (optional)", ss_drummer)
-    changed, ss_mapping = reaper.ImGui_InputText(ctx, "Mapping", ss_mapping)
+    changed, ss_genre = combo_from_list("Genre", ss_genre, options.cache.genres)
+    local ss_styles = options.styles_for(ss_genre)
+    if changed then
+      local style_ok = false
+      for _, s in ipairs(ss_styles) do
+        if s == ss_style then style_ok = true end
+      end
+      if not style_ok then
+        ss_style = ss_styles[1] or ""
+      end
+    end
+    changed, ss_style = combo_from_list("Style", ss_style, ss_styles)
+    changed, ss_drummer = combo_from_list("Drummer (optional)", ss_drummer, options.cache.drummers, "(none)")
+    changed, ss_drummer_intensity = reaper.ImGui_SliderDouble(ctx, "Drummer Intensity", ss_drummer_intensity, 0.0, 1.0)
+    draw_help_button("ss_drummer_intensity", DRUMMER_INTENSITY_HELP)
+    changed, ss_mapping = combo_from_list("Mapping", ss_mapping, options.cache.mappings)
   end
 
   reaper.ImGui_Separator(ctx)
@@ -203,7 +368,7 @@ local function draw_song_sections_tab()
         local f = io.open(sc_path, "w")
         if f then f:write(json); f:close() end
 
-        local cmd = sections.build_template_cmd(python_exe, ss_genre, ss_style, ss_mapping, sc_path, midi_out, ss_drummer)
+        local cmd = sections.build_template_cmd(python_exe, ss_genre, ss_style, ss_mapping, sc_path, midi_out, ss_drummer, ss_drummer_intensity)
         job_runner.start(cmd, "Song Sections (REAPER)", function()
           sections.import_midi(midi_out)
           ss_status = "Done."
@@ -243,7 +408,7 @@ local function draw_song_sections_tab()
       elseif ss_mode == 4 then
         local map_path = sections.get_project_dir() .. "/midi_drums_song_map.json"
         local timeline_path = sections.get_project_dir() .. "/midi_drums_timeline.json"
-        local cmd = sections.build_songmap_cmd(python_exe, ss_genre, ss_style, ss_mapping, map_path, timeline_path, midi_out, ss_drummer)
+        local cmd = sections.build_songmap_cmd(python_exe, ss_genre, ss_style, ss_mapping, map_path, timeline_path, midi_out, ss_drummer, ss_drummer_intensity)
         job_runner.start(cmd, "Song Sections (Song Map)", function()
           local f = io.open(timeline_path, "rb")
           if f then
@@ -283,13 +448,35 @@ local function draw_riff_lock_tab()
 
   reaper.ImGui_Separator(ctx)
 
+  if not options.cache.loaded then
+    reaper.ImGui_TextColored(ctx, 0xfbbf24ff,
+      "Options not loaded - configure Python exe and click Refresh "
+      .. "Options on the Settings tab."
+    )
+  end
+
   local changed
-  changed, rl_genre = reaper.ImGui_InputText(ctx, "Genre", rl_genre)
-  changed, rl_style = reaper.ImGui_InputText(ctx, "Style", rl_style)
-  changed, rl_drummer = reaper.ImGui_InputText(ctx, "Drummer (optional)", rl_drummer)
+  changed, rl_genre = combo_from_list("Genre", rl_genre, options.cache.genres)
+  local rl_styles = options.styles_for(rl_genre)
+  if changed then
+    local style_ok = false
+    for _, s in ipairs(rl_styles) do
+      if s == rl_style then style_ok = true end
+    end
+    if not style_ok then
+      rl_style = rl_styles[1] or ""
+    end
+  end
+  changed, rl_style = combo_from_list("Style", rl_style, rl_styles)
+  changed, rl_drummer = combo_from_list("Drummer (optional)", rl_drummer, options.cache.drummers, "(none)")
+  changed, rl_drummer_intensity = reaper.ImGui_SliderDouble(ctx, "Drummer Intensity", rl_drummer_intensity, 0.0, 1.0)
+  draw_help_button("rl_drummer_intensity", DRUMMER_INTENSITY_HELP)
   changed, rl_section = reaper.ImGui_InputText(ctx, "Section", rl_section)
-  changed, rl_mapping = reaper.ImGui_InputText(ctx, "Mapping", rl_mapping)
-  changed, rl_grid = reaper.ImGui_InputText(ctx, "Grid", rl_grid)
+  changed, rl_mapping = combo_from_list("Mapping", rl_mapping, options.cache.mappings)
+  changed, rl_grid = combo_from_list("Grid", rl_grid, GRID_VALUES)
+
+  changed, rl_notes = reaper.ImGui_InputTextMultiline(ctx, "Notes (optional)", rl_notes, -1, 60)
+  draw_help_button("rl_notes", RL_NOTES_HELP)
 
   changed, rl_lock_strength = reaper.ImGui_SliderDouble(ctx, "Lock Strength", rl_lock_strength, 0.0, 1.0)
 
@@ -303,6 +490,54 @@ local function draw_riff_lock_tab()
 
   if rl_snare_mode == 3 then
     changed, rl_snare_threshold = reaper.ImGui_SliderDouble(ctx, "Stab Threshold", rl_snare_threshold, 0.0, 1.0)
+  end
+
+  reaper.ImGui_Text(ctx, "Hi-Hat Reaction:")
+  if reaper.ImGui_RadioButton(ctx, "Off##hihat", rl_hihat_mode == 1) then rl_hihat_mode = 1 end
+  reaper.ImGui_SameLine(ctx)
+  if reaper.ImGui_RadioButton(ctx, "Reinforce##hihat", rl_hihat_mode == 2) then rl_hihat_mode = 2 end
+  reaper.ImGui_SameLine(ctx)
+  if reaper.ImGui_RadioButton(ctx, "Stab##hihat", rl_hihat_mode == 3) then rl_hihat_mode = 3 end
+  draw_help_button("rl_hihat", RL_HIHAT_HELP)
+
+  if rl_hihat_mode == 3 then
+    changed, rl_hihat_threshold = reaper.ImGui_SliderDouble(ctx, "Stab Threshold##hihat", rl_hihat_threshold, 0.0, 1.0)
+  end
+
+  reaper.ImGui_Text(ctx, "Crash Reaction:")
+  if reaper.ImGui_RadioButton(ctx, "Off##crash", rl_crash_mode == 1) then rl_crash_mode = 1 end
+  reaper.ImGui_SameLine(ctx)
+  if reaper.ImGui_RadioButton(ctx, "Reinforce##crash", rl_crash_mode == 2) then rl_crash_mode = 2 end
+  reaper.ImGui_SameLine(ctx)
+  if reaper.ImGui_RadioButton(ctx, "Stab##crash", rl_crash_mode == 3) then rl_crash_mode = 3 end
+  draw_help_button("rl_crash", RL_CRASH_HELP)
+
+  if rl_crash_mode == 3 then
+    changed, rl_crash_threshold = reaper.ImGui_SliderDouble(ctx, "Stab Threshold##crash", rl_crash_threshold, 0.0, 1.0)
+  end
+
+  reaper.ImGui_Text(ctx, "Ride Reaction:")
+  if reaper.ImGui_RadioButton(ctx, "Off##ride", rl_ride_mode == 1) then rl_ride_mode = 1 end
+  reaper.ImGui_SameLine(ctx)
+  if reaper.ImGui_RadioButton(ctx, "Reinforce##ride", rl_ride_mode == 2) then rl_ride_mode = 2 end
+  reaper.ImGui_SameLine(ctx)
+  if reaper.ImGui_RadioButton(ctx, "Stab##ride", rl_ride_mode == 3) then rl_ride_mode = 3 end
+  draw_help_button("rl_ride", RL_RIDE_HELP)
+
+  if rl_ride_mode == 3 then
+    changed, rl_ride_threshold = reaper.ImGui_SliderDouble(ctx, "Stab Threshold##ride", rl_ride_threshold, 0.0, 1.0)
+  end
+
+  reaper.ImGui_Text(ctx, "China Reaction:")
+  if reaper.ImGui_RadioButton(ctx, "Off##china", rl_china_mode == 1) then rl_china_mode = 1 end
+  reaper.ImGui_SameLine(ctx)
+  if reaper.ImGui_RadioButton(ctx, "Reinforce##china", rl_china_mode == 2) then rl_china_mode = 2 end
+  reaper.ImGui_SameLine(ctx)
+  if reaper.ImGui_RadioButton(ctx, "Stab##china", rl_china_mode == 3) then rl_china_mode = 3 end
+  draw_help_button("rl_china", RL_CHINA_HELP)
+
+  if rl_china_mode == 3 then
+    changed, rl_china_threshold = reaper.ImGui_SliderDouble(ctx, "Stab Threshold##china", rl_china_threshold, 0.0, 1.0)
   end
 
   reaper.ImGui_Separator(ctx)
@@ -327,9 +562,16 @@ local function draw_riff_lock_tab()
         reaper.ShowMessageBox(err or "Could not resolve riff audio.", "midi_drums", 0)
         rl_status = "Error: " .. (err or "could not resolve riff audio")
       else
-        local snare_mode_str = "off"
-        if rl_snare_mode == 2 then snare_mode_str = "reinforce"
-        elseif rl_snare_mode == 3 then snare_mode_str = "stab" end
+        local function mode_str(mode_int)
+          if mode_int == 2 then return "reinforce"
+          elseif mode_int == 3 then return "stab"
+          else return "off" end
+        end
+        local snare_mode_str = mode_str(rl_snare_mode)
+        local hihat_mode_str = mode_str(rl_hihat_mode)
+        local crash_mode_str = mode_str(rl_crash_mode)
+        local ride_mode_str = mode_str(rl_ride_mode)
+        local china_mode_str = mode_str(rl_china_mode)
 
         local sc_path = sidecar_path()
         local midi_out = midi_out_path("midi_drums_riff.mid")
@@ -342,6 +584,7 @@ local function draw_riff_lock_tab()
           genre = rl_genre,
           style = rl_style,
           drummer = rl_drummer,
+          drummer_intensity = rl_drummer_intensity,
           bpm = bpm,
           section = rl_section,
           ts_num = ts_num,
@@ -352,6 +595,15 @@ local function draw_riff_lock_tab()
           mapping = rl_mapping,
           snare_mode = snare_mode_str,
           snare_threshold = rl_snare_threshold,
+          hihat_mode = hihat_mode_str,
+          hihat_threshold = rl_hihat_threshold,
+          crash_mode = crash_mode_str,
+          crash_threshold = rl_crash_threshold,
+          ride_mode = ride_mode_str,
+          ride_threshold = rl_ride_threshold,
+          china_mode = china_mode_str,
+          china_threshold = rl_china_threshold,
+          notes = rl_notes,
           offset_beats = offset_beats,
           midi_out = midi_out,
           sidecar_path = sc_path,
@@ -446,7 +698,43 @@ end
 
 local function draw_settings_tab()
   reaper.ImGui_Text(ctx, "Python interpreter")
-  settings_field("Python exe path", "python_exe")
+  local exe = settings.get("python_exe")
+  reaper.ImGui_SetNextItemWidth(ctx, -170)
+  local exe_changed, new_exe = reaper.ImGui_InputText(ctx, "##python_exe", exe)
+  if exe_changed then
+    settings.set("python_exe", new_exe)
+  end
+  reaper.ImGui_SameLine(ctx)
+  if reaper.ImGui_Button(ctx, "Browse...") then
+    local ok, picked = reaper.GetUserFileNameForRead(
+      exe, "Select midi_drums pythonw.exe", ""
+    )
+    if ok and picked ~= "" then
+      settings.set("python_exe", picked)
+    end
+  end
+  reaper.ImGui_SameLine(ctx)
+  reaper.ImGui_Text(ctx, "Python exe path")
+
+  local refresh_disabled = job_runner.is_running()
+  if refresh_disabled then reaper.ImGui_BeginDisabled(ctx) end
+  if reaper.ImGui_Button(ctx, "Refresh Options") then
+    refresh_options()
+  end
+  if refresh_disabled then reaper.ImGui_EndDisabled(ctx) end
+  reaper.ImGui_SameLine(ctx)
+  if options.cache.loaded then
+    reaper.ImGui_TextColored(ctx, 0x4ade80ff,
+      string.format(
+        "Loaded: %d genres, %d drummers, %d mappings",
+        #options.cache.genres, #options.cache.drummers, #options.cache.mappings
+      )
+    )
+  elseif options.cache.error then
+    reaper.ImGui_TextColored(ctx, 0xfb7185ff, "Error: " .. options.cache.error)
+  else
+    reaper.ImGui_TextColored(ctx, 0x778ca6ff, "Not loaded yet.")
+  end
 
   reaper.ImGui_Separator(ctx)
   reaper.ImGui_Text(ctx, "Defaults")
@@ -482,7 +770,7 @@ local function draw_log_tab()
 
   reaper.ImGui_Separator(ctx)
 
-  if font_mono then reaper.ImGui_PushFont(ctx, font_mono) end
+  if font_mono then reaper.ImGui_PushFont(ctx, font_mono, FONT_MONO_SIZE) end
   if reaper.ImGui_BeginChild(ctx, "log_box", 0, 300) then
     if #st.log_lines == 0 then
       reaper.ImGui_TextDisabled(ctx, "No job run yet.")
@@ -505,7 +793,7 @@ local function loop()
   reaper.ImGui_SetNextWindowSize(ctx, 640, 520, reaper.ImGui_Cond_FirstUseEver())
   local visible, open = reaper.ImGui_Begin(ctx, "MIDI Drums", true)
   if visible then
-    if font_sans then reaper.ImGui_PushFont(ctx, font_sans) end
+    if font_sans then reaper.ImGui_PushFont(ctx, font_sans, FONT_SANS_SIZE) end
 
     if reaper.ImGui_BeginTabBar(ctx, "midi_drums_tabs") then
       if reaper.ImGui_BeginTabItem(ctx, "Song Sections") then
@@ -542,5 +830,10 @@ local function loop()
     reaper.ImGui_DestroyContext(ctx)
   end
 end
+
+-- Silent, non-prompting startup refresh: only fires if a python_exe is
+-- already configured and opens successfully - never triggers the
+-- python-exe picker dialog on script load (see cached_python_exe()).
+refresh_options()
 
 reaper.defer(loop)

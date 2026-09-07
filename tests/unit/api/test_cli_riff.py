@@ -64,8 +64,12 @@ class TestRiffArgParsing:
         assert args.humanization == 0.0
         assert args.mapping == "ezdrummer3"
         assert args.write_sidecar is None
+        assert args.drummer_intensity == 1.0
         assert args.snare_mode == "off"
         assert args.snare_stab_threshold == 0.85
+        assert args.china_mode == "off"
+        assert args.china_stab_threshold == 0.85
+        assert args.notes is None
 
     def test_riff_grid_rejects_unknown_value(self):
         parser = create_parser()
@@ -99,6 +103,8 @@ class TestRiffArgParsing:
                 "death",
                 "--drummer",
                 "hoglan",
+                "--drummer-intensity",
+                "0.4",
                 "--tempo",
                 "180",
                 "--output",
@@ -123,10 +129,17 @@ class TestRiffArgParsing:
                 "stab",
                 "--snare-stab-threshold",
                 "0.7",
+                "--china-mode",
+                "stab",
+                "--china-stab-threshold",
+                "0.6",
+                "--notes",
+                "aggressive death metal breakdown",
             ]
         )
         assert args.style == "death"
         assert args.drummer == "hoglan"
+        assert args.drummer_intensity == 0.4
         assert args.time_signature == "7/8"
         assert args.bars == 8
         assert args.grid == "8th_triplet"
@@ -137,6 +150,9 @@ class TestRiffArgParsing:
         assert args.write_sidecar == "sidecar.json"
         assert args.snare_mode == "stab"
         assert args.snare_stab_threshold == 0.7
+        assert args.china_mode == "stab"
+        assert args.china_stab_threshold == 0.6
+        assert args.notes == "aggressive death metal breakdown"
 
     def test_riff_snare_mode_rejects_unknown_value(self):
         parser = create_parser()
@@ -156,6 +172,46 @@ class TestRiffArgParsing:
                     "bogus",
                 ]
             )
+
+    def test_riff_china_mode_rejects_unknown_value(self):
+        parser = create_parser()
+        with pytest.raises(SystemExit):
+            parser.parse_args(
+                [
+                    "riff",
+                    "--audio",
+                    "riff.wav",
+                    "--genre",
+                    "metal",
+                    "--tempo",
+                    "180",
+                    "--output",
+                    "out.mid",
+                    "--china-mode",
+                    "bogus",
+                ]
+            )
+
+    def test_riff_genre_is_optional_at_parse_time(self):
+        # --genre is only required at runtime unless --notes is given (see
+        # TestRiffCommandBehavior below) - argparse itself must accept its
+        # absence so --notes-only invocations can parse.
+        parser = create_parser()
+        args = parser.parse_args(
+            [
+                "riff",
+                "--audio",
+                "riff.wav",
+                "--tempo",
+                "180",
+                "--output",
+                "out.mid",
+                "--notes",
+                "funky groove",
+            ]
+        )
+        assert args.genre is None
+        assert args.notes == "funky groove"
 
 
 class TestRiffCommandBehavior:
@@ -197,6 +253,31 @@ class TestRiffCommandBehavior:
         assert exc_info.value.code == 1
         captured = capsys.readouterr()
         assert "uv sync --group audio" in captured.err
+
+    def test_riff_command_requires_genre_or_notes(self, capsys):
+        # Fails before the audio is ever analyzed, same fail-fast shape as
+        # test_riff_command_rejects_invalid_time_signature below.
+        pytest.importorskip("librosa")
+
+        parser = create_parser()
+        args = parser.parse_args(
+            [
+                "riff",
+                "--audio",
+                "riff.wav",
+                "--tempo",
+                "180",
+                "--output",
+                "out.mid",
+            ]
+        )
+
+        with pytest.raises(SystemExit) as exc_info:
+            handle_riff_command(args)
+
+        assert exc_info.value.code == 1
+        captured = capsys.readouterr()
+        assert "Either --genre or --notes is required" in captured.err
 
     def test_riff_command_rejects_invalid_time_signature(
         self, monkeypatch, capsys

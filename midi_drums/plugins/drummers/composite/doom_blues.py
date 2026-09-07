@@ -45,7 +45,7 @@ class CompositeDoomBluesPlugin(DrummerPlugin):
         """Compatible with doom metal and blues-influenced genres."""
         return ["metal", "rock", "blues"]
 
-    def apply_style(self, pattern: Pattern) -> Pattern:
+    def apply_style(self, pattern: Pattern, intensity: float = 1.0) -> Pattern:
         """
         Apply layered modifications from all three drummers.
 
@@ -56,6 +56,7 @@ class CompositeDoomBluesPlugin(DrummerPlugin):
 
         Args:
             pattern: Base pattern to modify
+            intensity: 0.0-1.0 blend applied uniformly to all three layers
 
         Returns:
             Pattern with all three styles blended
@@ -66,7 +67,9 @@ class CompositeDoomBluesPlugin(DrummerPlugin):
 
         # Layer 1: Roeder - Atmospheric foundation
         # Applies minimal, crushing weight with lots of space
-        styled_pattern = self.roeder.apply_style(styled_pattern)
+        styled_pattern = self.roeder.apply_style(
+            styled_pattern, intensity=intensity
+        )
         # Clamp after each layer to prevent negative positions
         for beat in styled_pattern.beats:
             if beat.position < 0.0:
@@ -74,7 +77,9 @@ class CompositeDoomBluesPlugin(DrummerPlugin):
 
         # Layer 2: Porcaro - Blues shuffle and ghost notes
         # Adds shuffle feel and subtle ghost note work
-        styled_pattern = self.porcaro.apply_style(styled_pattern)
+        styled_pattern = self.porcaro.apply_style(
+            styled_pattern, intensity=intensity
+        )
         # Clamp after each layer to prevent negative positions
         for beat in styled_pattern.beats:
             if beat.position < 0.0:
@@ -82,7 +87,9 @@ class CompositeDoomBluesPlugin(DrummerPlugin):
 
         # Layer 3: Chambers - Funk pocket and dynamics
         # Final layer adds deep pocket and dynamic control
-        styled_pattern = self.chambers.apply_style(styled_pattern)
+        styled_pattern = self.chambers.apply_style(
+            styled_pattern, intensity=intensity
+        )
         # Final clamp before validation
         for beat in styled_pattern.beats:
             if beat.position < 0.0:

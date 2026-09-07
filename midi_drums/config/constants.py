@@ -64,6 +64,7 @@ class VelocityRanges:
     CRASH_ACCENT: Final[int] = 120
     CRASH_HEAVY: Final[int] = 127
 
+    CHINA_LIGHT: Final[int] = 95
     CHINA_NORMAL: Final[int] = 105
     CHINA_ACCENT: Final[int] = 115
 

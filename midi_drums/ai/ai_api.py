@@ -109,6 +109,7 @@ class DrumGeneratorAI:
         bars: int = 4,
         complexity: float = 0.5,
         drummer_style: str | None = None,
+        drummer_intensity: float = 1.0,
     ) -> tuple[Pattern, PatternGenerationResponse]:
         """Generate drum pattern from natural language using Pydantic AI.
 
@@ -122,6 +123,8 @@ class DrumGeneratorAI:
             bars: Number of bars
             complexity: Pattern complexity (0.0-1.0)
             drummer_style: Optional drummer style to apply
+            drummer_intensity: How strongly the drummer style overrides
+                the genre pattern (0.0-1.0, default 1.0)
 
         Returns:
             Tuple of (Pattern, PatternGenerationResponse with metadata)
@@ -143,6 +146,7 @@ class DrumGeneratorAI:
             bars=bars,
             complexity=complexity,
             drummer_style=drummer_style,
+            drummer_intensity=drummer_intensity,
         )
 
         return await self.pydantic_generator.generate_pattern_async(request)
@@ -155,6 +159,7 @@ class DrumGeneratorAI:
         bars: int = 4,
         complexity: float = 0.5,
         drummer_style: str | None = None,
+        drummer_intensity: float = 1.0,
     ) -> tuple[Pattern, PatternGenerationResponse]:
         """Synchronous version of generate_pattern_from_text.
 
@@ -167,13 +172,21 @@ class DrumGeneratorAI:
             bars: Number of bars
             complexity: Pattern complexity (0.0-1.0)
             drummer_style: Optional drummer style to apply
+            drummer_intensity: How strongly the drummer style overrides
+                the genre pattern (0.0-1.0, default 1.0)
 
         Returns:
             Tuple of (Pattern, PatternGenerationResponse with metadata)
         """
         return asyncio.run(
             self.generate_pattern_from_text(
-                description, section, tempo, bars, complexity, drummer_style
+                description,
+                section,
+                tempo,
+                bars,
+                complexity,
+                drummer_style,
+                drummer_intensity,
             )
         )
 

@@ -46,15 +46,15 @@ class ChambersPlugin(DrummerPlugin):
     def compatible_genres(self) -> list[str]:
         return ["funk", "jazz", "fusion", "rock", "r&b"]
 
-    def apply_style(self, pattern: Pattern) -> Pattern:
+    def apply_style(self, pattern: Pattern, intensity: float = 1.0) -> Pattern:
         """Apply Dennis Chambers' signature style to a pattern."""
         styled = pattern.copy()
         styled.name = f"{pattern.name}_chambers"
 
-        styled = self.behind_beat.apply(styled, intensity=0.5)
-        styled = self.fast_chops.apply(styled, intensity=0.7)
-        styled = self.ghost_notes.apply(styled, intensity=0.8)
-        styled = self.pocket.apply(styled, intensity=0.6)
+        styled = self.behind_beat.apply(styled, intensity=0.5 * intensity)
+        styled = self.fast_chops.apply(styled, intensity=0.7 * intensity)
+        styled = self.ghost_notes.apply(styled, intensity=0.8 * intensity)
+        styled = self.pocket.apply(styled, intensity=0.6 * intensity)
 
         return styled
 

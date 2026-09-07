@@ -229,9 +229,13 @@ python -m midi_drums pattern --genre rock --section verse --style blues --drumme
 python -m midi_drums pattern --genre jazz --section bridge --style fusion --drummer weckl --output bridge.mid
 
 # List available options
-python -m midi_drums list genres  # metal, rock, jazz, funk
-python -m midi_drums list styles --genre jazz  # 7 jazz styles
-python -m midi_drums list drummers  # 7 drummer personalities
+python -m midi_drums list genres     # all discovered genre plugins
+python -m midi_drums list styles --genre jazz  # styles for one genre
+python -m midi_drums list drummers   # all discovered drummer plugins
+python -m midi_drums list options    # genres/drummers/mappings/genre-style
+                                      # pairs as one line of JSON, for
+                                      # tooling (e.g. the REAPER panel's
+                                      # dropdowns) rather than human reading
 python -m midi_drums info
 
 # Get help
@@ -760,6 +764,29 @@ generation tabs lives in `reaper/midi_drums/sections.lua` and
 `reaper/midi_drums/settings.lua`. Contextual "?" help popovers inside the
 panel replaced the old standalone help script.
 
+Genre/Style/Drummer/Mapping are entered via combo-box dropdowns, not free
+text — `reaper/midi_drums/options.lua` shells out to
+`python -m midi_drums list options` (via the same `job_runner` async path)
+to live-query the plugin-discovered genre/drummer/mapping lists, since
+Genre/Drummer/Style are runtime plugin-discovered rather than a fixed set
+(see "Available Genres and Styles" below) and a hardcoded Lua list would go
+stale the same way a hand-maintained doc does. The panel triggers a silent,
+non-prompting refresh on load (if a `python_exe` is already configured) plus
+a "Refresh Options" button on the Settings tab. The Grid field's values
+*are* a true fixed set (`cli.py`'s `--grid` choices), so it stays a
+hardcoded combo rather than round-tripping through the options cache.
+
+Wherever a Drummer combo appears (Song Sections tab's non-AI modes, and the
+Riff-Lock Beat tab) it's followed by a "Drummer Intensity" slider (0.0-1.0,
+default 1.0) plus its own "?" popover — the mix knob for how strongly the
+selected drummer's signature style overrides the genre plugin's own pattern
+versus leaving it mostly untouched (e.g. a subtle Porcaro touch on a Death
+Metal pattern rather than Porcaro fully taking over). Threaded through to
+`--drummer-intensity` in both `sections.lua:build_template_cmd`/
+`build_songmap_cmd` and `riff_lock.lua:build_cmd`; see
+`GenerationParameters.drummer_intensity` and the "New CLI Flags" table below
+for the full Python-side plumbing.
+
 ### Modes
 
 | Mode | Selected via | Python command | Regions source |
@@ -784,13 +811,28 @@ one colored region per song-map region, mirroring song_creator's own
 
 Select a recorded/rendered guitar or bass riff item, switch to the
 panel's Riff-Lock Beat tab, and click Generate. It generates a drum pattern
-whose **kick hits lock to the riff's rhythmic accents**, while snare,
-hi-hat, cymbals, and drummer styling still come from the normal
-genre-plugin pipeline (`python -m midi_drums riff`, routed through
-`PluginManager.apply_riff_lock` → `RiffLockTransform`, see
-`midi_drums/modifications/riff_lock.py`). v1 scope: the riff is analyzed as
-**one representative bar** and tiled to fill `--bars` — a multi-bar riff
-with an evolving groove still only locks bar 1.
+whose **kick hits lock to the riff's rhythmic accents**, while drummer
+styling still comes from the normal genre-plugin pipeline
+(`python -m midi_drums riff`, routed through `PluginManager.apply_riff_lock`
+→ `RiffLockTransform`, see `midi_drums/modifications/riff_lock.py`). v1
+scope: the riff is analyzed as **one representative bar** and tiled to fill
+`--bars` — a multi-bar riff with an evolving groove still only locks bar 1.
+
+Snare, hi-hat, crash, ride, and china can each optionally *react* to the
+same riff accents — independently off/reinforce/stab per kit piece
+(`--snare-mode`/`--hihat-mode`/`--crash-mode`/`--ride-mode`/`--china-mode`,
+each with its own `--*-stab-threshold`; see
+`midi_drums/modifications/snare_accent_reaction.py` and
+`cymbal_accent_reaction.py`, routed through
+`PluginManager.apply_riff_snare_accents`/`apply_riff_cymbal_accents`). All
+off by default — a plain riff-lock run touches only the kick.
+
+`--notes "TEXT"` swaps `--genre`/`--style` for an AI-inferred pattern (same
+Pydantic AI path as the `prompt` command, requires `uv sync --group ai` and
+an AI provider key) — riff-lock and every reaction above still apply
+deterministically on top of the AI-generated pattern, applied manually via
+`PluginManager` since the AI path bypasses `DrumGenerator.generate_pattern`'s
+own pipeline (see `handle_riff_command` in `midi_drums/api/cli.py`).
 
 Requires `uv sync --group audio` (librosa) inside the `midi_drums`
 virtualenv — a separate extras group from `--group ai`, since onset
@@ -902,8 +944,10 @@ Added to `midi_drums/api/python_api.py`:
 | `prompt` | `--write-sidecar JSON` | Write sidecar after AI generation |
 | `prompt` | `--research-song` | Experimental: give the `--song` AI agent path the `research_song` tool (verified tempo/genre/date/drummer-credit lookup via MusicBrainz/AcousticBrainz — see `midi_drums/ai/song_research.py` and `claudedocs/design_song_research_grounding.md`). No effect without `--song`; ignored (with a stderr note) for single-pattern generation. Surfaced in the REAPER panel as the Song Sections tab's AI-mode "Research Song" checkbox, threaded through `sections.lua:build_ai_cmd`. |
 | `riff` | *(new subcommand)* | Analyze `--audio` for accents, generate a pattern via `generate_pattern` with `riff_accents`/`riff_lock_strength` set, optionally `--write-sidecar` |
-| `riff` | `--snare-mode {off,reinforce,stab}` | Reacts snare hits to riff accents after kick riff-lock runs: `reinforce` boosts velocity on existing non-ghost snares near a strong accent; `stab` inserts a unison snare hit at a very-strong accent where a locked kick exists (collapses to reinforce if a snare is already nearby). Default `off` — pipeline behavior is byte-identical to pre-feature when unset. Not yet exposed in the REAPER panel's Riff-Lock Beat tab (deferred follow-up) |
-| `riff` | `--snare-stab-threshold FLOAT` | Accent-strength threshold (0.0-1.0, default `0.85`) above which `--snare-mode stab` inserts a new snare hit instead of just reinforcing |
+| `riff` | `--snare-mode {off,reinforce,stab}` | Reacts snare hits to riff accents after kick riff-lock runs: `reinforce` boosts velocity on existing non-ghost snares near a strong accent; `stab` inserts a unison snare hit at a very-strong accent where a locked kick exists (collapses to reinforce if a snare is already nearby). Default `off` — pipeline behavior is byte-identical to pre-feature when unset. Also exposed for hi-hat/crash/ride/china via `--hihat-mode`/`--crash-mode`/`--ride-mode`/`--china-mode` (see `midi_drums/modifications/cymbal_accent_reaction.py`) |
+| `riff` | `--snare-stab-threshold FLOAT` | Accent-strength threshold (0.0-1.0, default `0.85`) above which `--snare-mode stab` inserts a new snare hit instead of just reinforcing. Mirrored per kit piece as `--hihat-stab-threshold`/`--crash-stab-threshold`/`--ride-stab-threshold`/`--china-stab-threshold` |
+| `generate`, `reaper export`, `prompt`, `riff` | `--drummer-intensity FLOAT` | 0.0-1.0 blend of the `--drummer` style against the unmodified genre pattern (default 1.0 = full drummer character). Lets a drummer's feel take a back seat to the genre plugin's own identity instead of fully overriding it (e.g. a subtle Porcaro touch on a Death Metal pattern). See `GenerationParameters.drummer_intensity`, `DrummerPlugin.apply_style`'s `intensity` param, and `PluginManager.apply_drummer_style`. Only meaningful alongside `--drummer`; `pattern` has no `--drummer` support to intensity-scale. |
+| `riff` | `--notes TEXT` | Swap `--genre`/`--style` for an AI-inferred pattern (same Pydantic AI path as the `prompt` command, requires `uv sync --group ai` and an AI provider key) — riff-lock and every reaction above still apply deterministically on top of the AI-generated pattern |
 
 ### Lua Config Block
 

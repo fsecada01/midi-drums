@@ -90,10 +90,14 @@ function M.parse_timeline(content)
   return tempo_points, regions, color_groups
 end
 
-function M.build_template_cmd(python_exe, genre, style, mapping, sidecar_path, midi_out, drummer)
+function M.build_template_cmd(python_exe, genre, style, mapping, sidecar_path, midi_out, drummer, drummer_intensity)
   local drummer_flag = ""
   if drummer and drummer ~= "" then
     drummer_flag = string.format(' --drummer "%s"', M.shell_escape(drummer))
+    if drummer_intensity then
+      drummer_flag = drummer_flag
+        .. string.format(' --drummer-intensity %g', drummer_intensity)
+    end
   end
   return string.format(
     '"%s" -m midi_drums generate --genre "%s" --style "%s" --mapping "%s"'
@@ -115,10 +119,14 @@ function M.build_ai_cmd(python_exe, description, tempo_str, midi_out, sidecar_pa
   )
 end
 
-function M.build_songmap_cmd(python_exe, genre, style, mapping, map_path, timeline_path, midi_out, drummer)
+function M.build_songmap_cmd(python_exe, genre, style, mapping, map_path, timeline_path, midi_out, drummer, drummer_intensity)
   local drummer_flag = ""
   if drummer and drummer ~= "" then
     drummer_flag = string.format(' --drummer "%s"', M.shell_escape(drummer))
+    if drummer_intensity then
+      drummer_flag = drummer_flag
+        .. string.format(' --drummer-intensity %g', drummer_intensity)
+    end
   end
   return string.format(
     '"%s" -m midi_drums generate --genre "%s" --style "%s" --mapping "%s"'

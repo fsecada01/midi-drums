@@ -50,14 +50,14 @@ class CopelandPlugin(DrummerPlugin):
     def compatible_genres(self) -> list[str]:
         return ["rock", "funk"]
 
-    def apply_style(self, pattern: Pattern) -> Pattern:
+    def apply_style(self, pattern: Pattern, intensity: float = 1.0) -> Pattern:
         """Apply Stewart Copeland's signature style to a pattern."""
         styled = pattern.copy()
         styled.name = f"{pattern.name}_copeland"
 
-        styled = self.ghost_notes.apply(styled, intensity=0.5)
-        styled = self.pocket_stretch.apply(styled, intensity=0.7)
-        styled = self.twisted_accents.apply(styled, intensity=0.8)
+        styled = self.ghost_notes.apply(styled, intensity=0.5 * intensity)
+        styled = self.pocket_stretch.apply(styled, intensity=0.7 * intensity)
+        styled = self.twisted_accents.apply(styled, intensity=0.8 * intensity)
 
         return styled
 

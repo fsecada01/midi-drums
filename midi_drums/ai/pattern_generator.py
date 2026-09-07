@@ -215,7 +215,7 @@ description context.
         if request.drummer_style:
             logger.info(f"Applying {request.drummer_style} drummer style")
             pattern = self.drum_generator.apply_drummer_style(
-                pattern, request.drummer_style
+                pattern, request.drummer_style, request.drummer_intensity
             )
             logger.debug(f"Drummer style applied: {len(pattern.beats)} beats")
 

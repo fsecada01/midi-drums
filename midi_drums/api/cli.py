@@ -99,6 +99,15 @@ Examples:
     )
     gen_parser.add_argument("--drummer", help="Drummer style to apply")
     gen_parser.add_argument(
+        "--drummer-intensity",
+        type=float,
+        default=1.0,
+        help=(
+            "How strongly the drummer's style overrides the genre "
+            "pattern, 0.0-1.0 (default: 1.0 = full drummer character)"
+        ),
+    )
+    gen_parser.add_argument(
         "--sidecar",
         metavar="JSON",
         help=(
@@ -216,6 +225,15 @@ Examples:
     )
     styles_parser.add_argument("--genre", required=True, help="Genre name")
 
+    list_subparsers.add_parser(
+        "options",
+        help=(
+            "Print genres/drummers/mappings/genre-style pairs as a single "
+            "line of JSON, for tooling (e.g. the REAPER panel's dropdowns) "
+            "rather than human reading"
+        ),
+    )
+
     # Info command
     subparsers.add_parser("info", help="Get information about the system")
 
@@ -255,6 +273,15 @@ Examples:
         help="Humanization level (0.0-1.0)",
     )
     reaper_export.add_argument("--drummer", help="Drummer style to apply")
+    reaper_export.add_argument(
+        "--drummer-intensity",
+        type=float,
+        default=1.0,
+        help=(
+            "How strongly the drummer's style overrides the genre "
+            "pattern, 0.0-1.0 (default: 1.0 = full drummer character)"
+        ),
+    )
     reaper_export.add_argument(
         "--template", help="Input Reaper template (.rpp) to use as base"
     )
@@ -382,6 +409,17 @@ Examples:
         "--drummer", help="Drummer style (bonham, weckl, …)"
     )
     prompt_parser.add_argument(
+        "--drummer-intensity",
+        type=float,
+        default=1.0,
+        help=(
+            "How strongly the drummer's style overrides the genre "
+            "pattern, 0.0-1.0 (default: 1.0 = full drummer character). "
+            "Only applies to single-pattern generation (--song uses the "
+            "AI agent's own drummer tool call)."
+        ),
+    )
+    prompt_parser.add_argument(
         "--song",
         action="store_true",
         help=(
@@ -435,7 +473,12 @@ Examples:
         "--audio", required=True, metavar="WAV", help="Path to riff audio"
     )
     riff_parser.add_argument(
-        "--genre", required=True, help="Genre (e.g., metal, rock, jazz)"
+        "--genre",
+        help=(
+            "Genre (e.g., metal, rock, jazz). Required unless --notes is "
+            "given, in which case the AI pattern generator infers genre/"
+            "style from --notes instead"
+        ),
     )
     riff_parser.add_argument(
         "--tempo",
@@ -450,6 +493,28 @@ Examples:
         "--style", default="default", help="Style within genre"
     )
     riff_parser.add_argument("--drummer", help="Drummer style to apply")
+    riff_parser.add_argument(
+        "--drummer-intensity",
+        type=float,
+        default=1.0,
+        help=(
+            "How strongly the drummer's style overrides the genre "
+            "pattern, 0.0-1.0 (default: 1.0 = full drummer character)"
+        ),
+    )
+    riff_parser.add_argument(
+        "--notes",
+        metavar="TEXT",
+        help=(
+            "Natural-language notes fed to the AI pattern generator "
+            "instead of --genre/--style (e.g. 'aggressive death metal "
+            "breakdown with blast beats'). --drummer, if given, still "
+            "applies on top of the AI-chosen pattern. Riff-lock and any "
+            "snare/cymbal reactions still apply deterministically to the "
+            "AI-generated pattern. Requires 'uv sync --group ai' and an "
+            "AI provider API key"
+        ),
+    )
     riff_parser.add_argument(
         "--section",
         default="verse",
@@ -500,6 +565,66 @@ Examples:
         type=float,
         default=0.85,
         help="Accent strength required to trigger a snare stab (default: 0.85)",
+    )
+    riff_parser.add_argument(
+        "--hihat-mode",
+        default="off",
+        choices=["off", "reinforce", "stab"],
+        help=(
+            "How the hi-hat reacts to the same riff accents (default: "
+            "off). Same reinforce/stab semantics as --snare-mode"
+        ),
+    )
+    riff_parser.add_argument(
+        "--hihat-stab-threshold",
+        type=float,
+        default=0.85,
+        help="Accent strength required to trigger a hi-hat stab (default: 0.85)",
+    )
+    riff_parser.add_argument(
+        "--crash-mode",
+        default="off",
+        choices=["off", "reinforce", "stab"],
+        help=(
+            "How the crash reacts to the same riff accents (default: "
+            "off). Same reinforce/stab semantics as --snare-mode"
+        ),
+    )
+    riff_parser.add_argument(
+        "--crash-stab-threshold",
+        type=float,
+        default=0.85,
+        help="Accent strength required to trigger a crash stab (default: 0.85)",
+    )
+    riff_parser.add_argument(
+        "--ride-mode",
+        default="off",
+        choices=["off", "reinforce", "stab"],
+        help=(
+            "How the ride reacts to the same riff accents (default: "
+            "off). Same reinforce/stab semantics as --snare-mode"
+        ),
+    )
+    riff_parser.add_argument(
+        "--ride-stab-threshold",
+        type=float,
+        default=0.85,
+        help="Accent strength required to trigger a ride stab (default: 0.85)",
+    )
+    riff_parser.add_argument(
+        "--china-mode",
+        default="off",
+        choices=["off", "reinforce", "stab"],
+        help=(
+            "How the china cymbal reacts to the same riff accents "
+            "(default: off). Same reinforce/stab semantics as --snare-mode"
+        ),
+    )
+    riff_parser.add_argument(
+        "--china-stab-threshold",
+        type=float,
+        default=0.85,
+        help="Accent strength required to trigger a china stab (default: 0.85)",
     )
     riff_parser.add_argument(
         "--offset-beats",
@@ -643,6 +768,8 @@ def handle_generate_command(args, generator: DrumGenerator) -> None:
                 extra["humanization"] = args.humanization
             if args.drummer:
                 extra["drummer"] = args.drummer
+            if getattr(args, "drummer_intensity", None) is not None:
+                extra["drummer_intensity"] = args.drummer_intensity
             if args.tempo is not None:
                 extra["tempo"] = args.tempo
             return extra
@@ -673,6 +800,7 @@ def handle_generate_command(args, generator: DrumGenerator) -> None:
                 complexity=args.complexity,
                 humanization=args.humanization,
                 drummer=args.drummer,
+                drummer_intensity=args.drummer_intensity,
                 drum_kit=drum_kit,
             )
 
@@ -773,6 +901,35 @@ def handle_list_command(args, generator: DrumGenerator) -> None:
             for preset_name, description in mappings.items():
                 print(f"  {preset_name:<18} - {description}")
 
+        elif args.list_type == "options":
+            import json  # noqa: PLC0415
+
+            genres = sorted(generator.get_available_genres())
+            drummers = sorted(generator.get_available_drummers())
+            mappings = sorted(DrumKit.list_presets().keys())
+            # Flat {genre, style} pairs rather than a genre -> [styles]
+            # nested map - same "no JSON objects nested inside other
+            # objects" convention as the song-map timeline JSON (see
+            # DrumGeneratorAPI.export_song_timeline_json), so a caller
+            # with no JSON library (e.g. the REAPER panel's Lua, which
+            # parses this with plain string patterns) can gmatch a single
+            # repeated shape instead of walking nested structures.
+            genre_styles = [
+                {"genre": genre, "style": style}
+                for genre in genres
+                for style in sorted(generator.get_styles_for_genre(genre))
+            ]
+            print(
+                json.dumps(
+                    {
+                        "genres": genres,
+                        "drummers": drummers,
+                        "mappings": mappings,
+                        "genre_styles": genre_styles,
+                    }
+                )
+            )
+
     except Exception as e:
         print(f"Error listing options: {e}", file=sys.stderr)
         sys.exit(1)
@@ -868,6 +1025,7 @@ def handle_reaper_export_command(args, generator: DrumGenerator) -> None:
                 complexity=args.complexity,
                 humanization=args.humanization,
                 drummer=args.drummer,
+                drummer_intensity=args.drummer_intensity,
                 drum_kit=drum_kit,
             )
 
@@ -1328,6 +1486,7 @@ def handle_prompt_command(args) -> None:
                 bars=args.bars,
                 complexity=args.complexity,
                 drummer_style=args.drummer,
+                drummer_intensity=args.drummer_intensity,
             )
 
             success = ai.export_pattern(pattern, output_path, tempo=args.tempo)
@@ -1429,6 +1588,10 @@ def handle_riff_command(args) -> None:
         )
         sys.exit(1)
 
+    if not args.notes and not args.genre:
+        print("Either --genre or --notes is required.", file=sys.stderr)
+        sys.exit(1)
+
     from midi_drums.core.value_objects.time_signature import TimeSignature
 
     try:
@@ -1456,30 +1619,140 @@ def handle_riff_command(args) -> None:
 
     print(f"  Accents  : {len(riff_accents)} detected")
 
-    generator = DrumGenerator()
-    try:
-        pattern = generator.generate_pattern(
-            genre=args.genre,
-            section=args.section,
-            bars=args.bars,
-            style=args.style,
-            drummer=args.drummer,
-            complexity=args.complexity,
-            humanization=args.humanization,
-            riff_accents=riff_accents,
-            riff_lock_strength=args.lock_strength,
-            riff_snare_mode=args.snare_mode,
-            riff_snare_stab_threshold=args.snare_stab_threshold,
+    # Independent per-kit-piece reactions applied identically on both the
+    # deterministic and AI-notes paths - see cymbal_accent_reaction.py.
+    cymbal_reactions = (
+        ("hihat", args.hihat_mode, args.hihat_stab_threshold),
+        ("crash", args.crash_mode, args.crash_stab_threshold),
+        ("ride", args.ride_mode, args.ride_stab_threshold),
+        ("china", args.china_mode, args.china_stab_threshold),
+    )
+
+    if args.notes:
+        # ── AI-notes path: an AI-inferred genre/style/pattern instead of
+        # --genre/--style, with the same riff-lock/reaction/humanization
+        # machinery applied manually afterward (this path bypasses
+        # DrumGenerator.generate_pattern()'s pipeline entirely - see
+        # GenerationParameters' riff_accents docstring). ─────────────────
+        try:
+            from midi_drums.ai.ai_api import DrumGeneratorAI  # noqa: PLC0415
+            from midi_drums.ai.backends import (  # noqa: PLC0415
+                AIBackendConfig,
+            )
+        except ImportError:
+            print(
+                "\nAI dependencies are not installed.\n"
+                "Install them with:\n"
+                "  uv sync --group ai\n"
+                "  # or: pip install 'midi-drums[ai]'\n",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
+        config = AIBackendConfig.from_env()
+        if not config.api_key:
+            _print_ai_setup_help(config.provider.value)
+
+        print(f"Generating from notes: {args.notes!r}")
+        print(f"Provider : {config.provider.value}/{config.model}")
+
+        ai = DrumGeneratorAI(backend_config=config)
+        try:
+            pattern, info = ai.generate_pattern_from_text_sync(
+                description=args.notes,
+                section=args.section,
+                tempo=int(args.tempo),
+                bars=args.bars,
+                complexity=args.complexity,
+                drummer_style=args.drummer,
+                drummer_intensity=args.drummer_intensity,
+            )
+        except Exception as e:
+            print(f"AI pattern generation failed: {e}", file=sys.stderr)
+            sys.exit(1)
+
+        chars = info.characteristics
+        resolved_genre = chars.genre
+        resolved_style = chars.style
+        print(f"  Inferred : {resolved_genre}/{resolved_style}")
+        print(f"  Reasoning: {chars.reasoning}")
+
+        # Reuse the DrumGenerator already constructed inside the Pydantic
+        # generator (plugin discovery already ran) instead of building a
+        # second one just for its plugin_manager.
+        generator = ai.pydantic_generator.drum_generator
+
+        locked = generator.plugin_manager.apply_riff_lock(
+            pattern, riff_accents, args.lock_strength
         )
-    except ValueError as e:
-        print(f"Invalid generation parameters: {e}", file=sys.stderr)
-        sys.exit(1)
-    if pattern is None:
-        print(
-            f"Failed to generate pattern for {args.genre}/{args.section}",
-            file=sys.stderr,
-        )
-        sys.exit(1)
+        if locked is not None:
+            pattern = locked
+
+        if args.snare_mode != "off":
+            reacted = generator.plugin_manager.apply_riff_snare_accents(
+                pattern,
+                riff_accents,
+                args.snare_mode,
+                args.snare_stab_threshold,
+            )
+            if reacted is not None:
+                pattern = reacted
+
+        for kit_piece, mode, stab_threshold in cymbal_reactions:
+            if mode == "off":
+                continue
+            reacted = generator.plugin_manager.apply_riff_cymbal_accents(
+                pattern, riff_accents, kit_piece, mode, stab_threshold
+            )
+            if reacted is not None:
+                pattern = reacted
+
+        # generate_pattern_from_text_sync doesn't humanize on its own
+        # (unlike the deterministic path's own pipeline) - apply it here
+        # with the same formula as
+        # midi_drums.generation.engines.drum_generator so both `riff`
+        # paths behave consistently.
+        if args.humanization > 0:
+            timing_var = args.humanization * 0.05
+            velocity_var = int(args.humanization * 20)
+            pattern = pattern.humanize(timing_var, velocity_var)
+    else:
+        resolved_genre = args.genre
+        resolved_style = args.style
+
+        generator = DrumGenerator()
+        try:
+            pattern = generator.generate_pattern(
+                genre=args.genre,
+                section=args.section,
+                bars=args.bars,
+                style=args.style,
+                drummer=args.drummer,
+                drummer_intensity=args.drummer_intensity,
+                complexity=args.complexity,
+                humanization=args.humanization,
+                riff_accents=riff_accents,
+                riff_lock_strength=args.lock_strength,
+                riff_snare_mode=args.snare_mode,
+                riff_snare_stab_threshold=args.snare_stab_threshold,
+                riff_hihat_mode=args.hihat_mode,
+                riff_hihat_stab_threshold=args.hihat_stab_threshold,
+                riff_crash_mode=args.crash_mode,
+                riff_crash_stab_threshold=args.crash_stab_threshold,
+                riff_ride_mode=args.ride_mode,
+                riff_ride_stab_threshold=args.ride_stab_threshold,
+                riff_china_mode=args.china_mode,
+                riff_china_stab_threshold=args.china_stab_threshold,
+            )
+        except ValueError as e:
+            print(f"Invalid generation parameters: {e}", file=sys.stderr)
+            sys.exit(1)
+        if pattern is None:
+            print(
+                f"Failed to generate pattern for {args.genre}/{args.section}",
+                file=sys.stderr,
+            )
+            sys.exit(1)
 
     drum_kit = DrumKit.from_preset(args.mapping)
     output_path = Path(args.output)
@@ -1502,14 +1775,14 @@ def handle_riff_command(args) -> None:
             sections=[
                 Section(name=args.section, pattern=pattern, bars=args.bars)
             ],
-            metadata={"genre": args.genre, "style": args.style},
+            metadata={"genre": resolved_genre, "style": resolved_style},
         )
         DrumGeneratorAPI().export_sections_json(song, args.write_sidecar)
         print(f"  Sidecar  : {args.write_sidecar}")
 
     print("\nDone!")
     print(f"  Output   : {output_path}")
-    print(f"  Genre    : {args.genre} / {args.style}")
+    print(f"  Genre    : {resolved_genre} / {resolved_style}")
     print(f"  Tempo    : {args.tempo} BPM  |  Bars: {args.bars}")
 
 
@@ -1537,15 +1810,11 @@ def handle_additive_rhythm_command(args) -> None:
         # Each bar is its own single-bar Pattern (see
         # build_pattern_for_bar), so the drummer style is applied
         # per-bar rather than once across the whole sequence.
-        # PluginManager.apply_drummer_style() takes no intensity param -
-        # --drummer-intensity is parsed but not yet wired to an effect
-        # here, matching the rest of the CLI's current state (see
-        # design_additive_rhythm_grouping.md).
         generator = DrumGenerator()
         styled_patterns = []
         for pattern in patterns:
             styled = generator.plugin_manager.apply_drummer_style(
-                pattern, args.drummer
+                pattern, args.drummer, intensity=args.drummer_intensity
             )
             styled_patterns.append(styled if styled is not None else pattern)
         patterns = styled_patterns
