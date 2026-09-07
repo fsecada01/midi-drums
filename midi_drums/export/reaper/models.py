@@ -78,7 +78,10 @@ class Marker:
             ['MARKER', '2', '8.0', 'Verse', '0', '0']
         """
         # Convert hex color to integer if needed (simplified for now)
-        color_int = "0"  # TODO: Convert hex to Reaper format (0x01BBGGRR)
+        # TODO(#64): hex is not converted to Reaper's 0x01BBGGRR format yet —
+        # every marker renders with Reaper's default color regardless of
+        # `self.color`. See issue for impact/fix plan.
+        color_int = "0"
 
         return [
             "MARKER",

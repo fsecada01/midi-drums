@@ -1,23 +1,20 @@
-"""Test refactored Funk genre plugin."""
+"""Test the Funk genre plugin."""
 
 from midi_drums.core.value_objects.drum_instrument import DrumInstrument
 from midi_drums.core.value_objects.generation_parameters import (
     GenerationParameters,
 )
 from midi_drums.plugins.genres.funk import FunkGenrePlugin
-from midi_drums.plugins.genres.funk_refactored import FunkGenrePluginRefactored
 
 
 def test_funk_basic_structure():
-    """Test basic structure matches."""
+    """Test basic plugin structure."""
     print("Testing Funk plugin basic structure...")
 
-    original = FunkGenrePlugin()
-    refactored = FunkGenrePluginRefactored()
+    refactored = FunkGenrePlugin()
 
-    assert original.genre_name == refactored.genre_name
-    assert set(original.supported_styles) == set(refactored.supported_styles)
-    assert original.intensity_profile == refactored.intensity_profile
+    assert refactored.genre_name == "funk"
+    assert len(refactored.supported_styles) == 7
 
     print(f"  [OK] Genre: {refactored.genre_name}")
     print(f"  [OK] Styles: {len(refactored.supported_styles)}")
@@ -27,7 +24,7 @@ def test_funk_all_combinations():
     """Test all style/section combinations."""
     print("Testing all Funk combinations...")
 
-    refactored = FunkGenrePluginRefactored()
+    refactored = FunkGenrePlugin()
     styles = refactored.supported_styles
     sections = ["intro", "verse", "chorus", "breakdown", "bridge", "outro"]
 
@@ -50,7 +47,7 @@ def test_funk_classic_ghost_notes():
     """Test classic funk ghost notes."""
     print("Testing classic funk ghost notes...")
 
-    refactored = FunkGenrePluginRefactored()
+    refactored = FunkGenrePlugin()
     params = GenerationParameters(
         genre="funk", style="classic", complexity=0.7, humanization=0.3
     )
@@ -81,7 +78,7 @@ def test_funk_shuffle_style():
     """Test shuffle funk style."""
     print("Testing shuffle funk style...")
 
-    refactored = FunkGenrePluginRefactored()
+    refactored = FunkGenrePlugin()
     params = GenerationParameters(
         genre="funk", style="shuffle", complexity=0.7, humanization=0.3
     )
@@ -99,7 +96,7 @@ def test_funk_the_one():
     """Test 'the one' emphasis in classic funk."""
     print("Testing 'the one' emphasis...")
 
-    refactored = FunkGenrePluginRefactored()
+    refactored = FunkGenrePlugin()
     params = GenerationParameters(
         genre="funk", style="classic", complexity=0.7, humanization=0.3
     )
@@ -120,7 +117,7 @@ def test_funk_pfunk_syncopation():
     """Test P-Funk syncopation."""
     print("Testing P-Funk syncopation...")
 
-    refactored = FunkGenrePluginRefactored()
+    refactored = FunkGenrePlugin()
     params = GenerationParameters(
         genre="funk", style="pfunk", complexity=0.7, humanization=0.3
     )
@@ -142,7 +139,7 @@ def test_funk_minimal_pocket():
     """Test minimal funk pocket."""
     print("Testing minimal funk pocket...")
 
-    refactored = FunkGenrePluginRefactored()
+    refactored = FunkGenrePlugin()
     params = GenerationParameters(
         genre="funk", style="minimal", complexity=0.7, humanization=0.3
     )
@@ -162,7 +159,7 @@ def test_funk_fills():
     """Test fill generation."""
     print("Testing Funk fills...")
 
-    refactored = FunkGenrePluginRefactored()
+    refactored = FunkGenrePlugin()
     fills = refactored.get_common_fills()
 
     assert len(fills) >= 2
@@ -171,21 +168,6 @@ def test_funk_fills():
         assert len(fill.pattern.beats) > 0
 
     print(f"  [OK] Fills: {len(fills)} fills generated")
-
-
-def compare_results():
-    """Display comparison."""
-    print("\n" + "=" * 60)
-    print("Funk Genre Refactoring Results")
-    print("=" * 60)
-    print("Original funk.py:              561 lines")
-    print("Refactored funk_refactored.py: 330 lines")
-    print("Reduction:                     231 lines (41% reduction)")
-    print(
-        "\nAnother excellent reduction! "
-        "(Metal 22%, Rock 35%, Jazz 44%, Funk 41%)"
-    )
-    print("=" * 60)
 
 
 if __name__ == "__main__":
@@ -203,7 +185,5 @@ if __name__ == "__main__":
     test_funk_fills()
 
     print("=" * 60)
-    print("All Funk refactoring tests passed!")
+    print("All Funk tests passed!")
     print("=" * 60)
-
-    compare_results()

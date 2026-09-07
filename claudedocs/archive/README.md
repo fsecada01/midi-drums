@@ -17,7 +17,10 @@ Historical development documentation for the MIDI Drums Generator project.
 2. **Genre Context Adaptation** (Sep 30)
    - Designed and implemented genre blending system
    - Allows patterns to adapt to overall song context
-   - Files: `GENRE_CONTEXT_ADAPTATION_DESIGN.md`, `GENRE_CONTEXT_ADAPTATION_COMPLETE.md`
+   - Decision now recorded in [ADR 0005](../../docs/adr/0005-genre-context-blending.md);
+     the source files (`GENRE_CONTEXT_ADAPTATION_DESIGN.md`,
+     `GENRE_CONTEXT_ADAPTATION_COMPLETE.md`) were removed rather than kept
+     here — see git history for the original text
 
 3. **Critical Bug Fixes** (Sep 30)
    - Fixed empty pattern bug in bridge generation
@@ -54,19 +57,18 @@ superseded by their shipped features or migrated into
 - `2026-08-10-system-prompt-update-design.md`, `2026-08-10-system-prompt-update-plan.md`, `research_subagent_token_reduction_20260810.md` -> [ADR 0003](../../docs/adr/0003-claude-code-workflow-policy.md)
 - `REFACTORING_PLAN.md`, `REFACTORING_PROGRESS.md` - superseded by `CLAUDE.md`'s own "Refactoring Achievement" section (same content, kept current there instead)
 - `AI_GENERATION_SUCCESS.md` - a single dated manual test log, pure point-in-time record
-- `AI_BACKEND_MIGRATION.md` - Langchain backend migration, now complete (see `docs/AI_INTEGRATION.md` for the current architecture)
-- `research_vendor_drum_midi_maps_20260812.md` - vendor MIDI note-map research for issue #47 (EZDrummer 3 confirmed; Superior Drummer 3/BFD3/Addictive Drums 2 remain unresolved if that follow-up research is picked back up)
-- `REAPER_INTEGRATION.md`, `REAPER_TASKS.md` - the original single-workflow REAPER export feature, superseded by the unified panel (ADR 0001) and current `midi_drums/export/reaper/` module layout
+- `AI_BACKEND_MIGRATION.md` -> [ADR 0006](../../docs/adr/0006-ai-backend-provider-abstraction.md) (source file removed; see `docs/AI_INTEGRATION.md` for the current architecture)
+- `research_vendor_drum_midi_maps_20260812.md` -> [ADR 0008](../../docs/adr/0008-vendor-midi-note-map-corrections.md) (source file removed)
+- `REAPER_INTEGRATION.md` -> [ADR 0007](../../docs/adr/0007-reaper-rpp-export-engine.md) (source file removed); `REAPER_TASKS.md` remains, superseded by the unified panel (ADR 0001) and current `midi_drums/export/reaper/` module layout
 
 ---
 
 ## Document Index by Topic
 
 ### Architecture & Design
-- `2025-09-september/GENRE_CONTEXT_ADAPTATION_DESIGN.md` - Genre blending architecture
+- Genre blending architecture -> [ADR 0005](../../docs/adr/0005-genre-context-blending.md) (source files removed)
 
 ### Implementation Reports
-- `2025-09-september/GENRE_CONTEXT_ADAPTATION_COMPLETE.md` - Genre blending implementation
 - `2025-09-september/memo.md` - Genre plugin expansion summary
 
 ### Bug Fixes

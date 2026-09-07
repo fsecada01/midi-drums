@@ -586,6 +586,14 @@ styled_pattern = accents.apply(styled_pattern, intensity=0.9)
 
 ### Refactored File Structure
 
+The table below records the original line-count reduction achieved by the
+template-based rewrite. The pre-refactoring "traditional" files (`metal.py`,
+`bonham.py`, etc.) and their `_refactored.py` companions coexisted
+side-by-side for a time so both implementations could be validated for
+equivalence; issue #62 later deleted the traditional files and renamed each
+`_refactored.py` to drop the suffix, so today each genre/drummer has exactly
+one file — the template-based implementation — under its plain name.
+
 ```
 midi_drums/
 ├── config/
@@ -599,29 +607,18 @@ midi_drums/
 │   └── drummer_mods.py           # 732 lines - 12 drummer modifications
 ├── plugins/
 │   ├── genres/
-│   │   ├── metal.py              # Original: 373 lines
-│   │   ├── metal_refactored.py   # Refactored: 290 lines (22% reduction)
-│   │   ├── rock.py               # Original: 513 lines
-│   │   ├── rock_refactored.py    # Refactored: 332 lines (35% reduction)
-│   │   ├── jazz.py               # Original: 599 lines
-│   │   ├── jazz_refactored.py    # Refactored: 337 lines (44% reduction!)
-│   │   ├── funk.py               # Original: 561 lines
-│   │   └── funk_refactored.py    # Refactored: 330 lines (41% reduction)
+│   │   ├── metal.py              # 290 lines (was 373, 22% reduction)
+│   │   ├── rock.py               # 332 lines (was 513, 35% reduction)
+│   │   ├── jazz.py               # 337 lines (was 599, 44% reduction!)
+│   │   └── funk.py               # 330 lines (was 561, 41% reduction)
 │   └── drummers/
-│       ├── bonham.py             # Original: 339 lines
-│       ├── bonham_refactored.py  # Refactored: 66 lines (80% reduction!)
-│       ├── porcaro.py            # Original: 369 lines
-│       ├── porcaro_refactored.py # Refactored: 63 lines (83% reduction!)
-│       ├── weckl.py              # Original: 383 lines
-│       ├── weckl_refactored.py   # Refactored: 63 lines (84% reduction!)
-│       ├── chambers.py           # Original: 381 lines
-│       ├── chambers_refactored.py # Refactored: 70 lines (82% reduction!)
-│       ├── roeder.py             # Original: 371 lines
-│       ├── roeder_refactored.py  # Refactored: 63 lines (83% reduction!)
-│       ├── dee.py                # Original: 360 lines
-│       ├── dee_refactored.py     # Refactored: 63 lines (82% reduction!)
-│       ├── hoglan.py             # Original: 389 lines
-│       └── hoglan_refactored.py  # Refactored: 63 lines (84% reduction!)
+│       ├── bonham.py             # 66 lines (was 339, 80% reduction!)
+│       ├── porcaro.py            # 63 lines (was 369, 83% reduction!)
+│       ├── weckl.py              # 63 lines (was 383, 84% reduction!)
+│       ├── chambers.py           # 70 lines (was 381, 82% reduction!)
+│       ├── roeder.py             # 63 lines (was 371, 83% reduction!)
+│       ├── dee.py                # 63 lines (was 360, 82% reduction!)
+│       └── hoglan.py             # 63 lines (was 389, 84% reduction!)
 └── claudedocs/archive/2026-08-21_docs-cleanup/
     └── REFACTORING_PROGRESS.md   # Complete refactoring documentation (archived; this section is the current copy)
 ```
@@ -682,9 +679,10 @@ class BonhamPlugin(DrummerPlugin):
         return styled_pattern
 ```
 
-**After** (composable modifications, ~66 lines):
+**After** (composable modifications, ~66 lines — this is `bonham.py` as it
+exists today; the "Before" version above was deleted by issue #62):
 ```python
-class BonhamPluginRefactored(DrummerPlugin):
+class BonhamPlugin(DrummerPlugin):
     def __init__(self):
         self.behind_beat = BehindBeatTiming(max_delay_ms=25.0)
         self.triplets = TripletVocabulary(triplet_probability=0.4)
@@ -904,6 +902,8 @@ Added to `midi_drums/api/python_api.py`:
 | `prompt` | `--write-sidecar JSON` | Write sidecar after AI generation |
 | `prompt` | `--research-song` | Experimental: give the `--song` AI agent path the `research_song` tool (verified tempo/genre/date/drummer-credit lookup via MusicBrainz/AcousticBrainz — see `midi_drums/ai/song_research.py` and `claudedocs/design_song_research_grounding.md`). No effect without `--song`; ignored (with a stderr note) for single-pattern generation. Surfaced in the REAPER panel as the Song Sections tab's AI-mode "Research Song" checkbox, threaded through `sections.lua:build_ai_cmd`. |
 | `riff` | *(new subcommand)* | Analyze `--audio` for accents, generate a pattern via `generate_pattern` with `riff_accents`/`riff_lock_strength` set, optionally `--write-sidecar` |
+| `riff` | `--snare-mode {off,reinforce,stab}` | Reacts snare hits to riff accents after kick riff-lock runs: `reinforce` boosts velocity on existing non-ghost snares near a strong accent; `stab` inserts a unison snare hit at a very-strong accent where a locked kick exists (collapses to reinforce if a snare is already nearby). Default `off` — pipeline behavior is byte-identical to pre-feature when unset. Not yet exposed in the REAPER panel's Riff-Lock Beat tab (deferred follow-up) |
+| `riff` | `--snare-stab-threshold FLOAT` | Accent-strength threshold (0.0-1.0, default `0.85`) above which `--snare-mode stab` inserts a new snare hit instead of just reinforcing |
 
 ### Lua Config Block
 

@@ -116,7 +116,7 @@ line-length = 80
 
 [tool.ruff.lint]
 select = ["E", "F", "B"]
-ignore = ["B008", "E501"]  # E501 temporarily ignored - to be fixed
+ignore = ["B008", "E501"]  # E501: repo-wide backlog (28+ files), tracked in #66
 ignore-init-module-imports = true
 unfixable = []
 

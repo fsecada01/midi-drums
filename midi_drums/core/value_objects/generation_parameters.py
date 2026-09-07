@@ -52,6 +52,11 @@ class GenerationParameters:
 
     def __post_init__(self):
         """Validate parameters."""
+        if self.riff_snare_mode not in ("off", "reinforce", "stab"):
+            raise ValueError(
+                "riff_snare_mode must be 'off', 'reinforce', or 'stab', "
+                f"got {self.riff_snare_mode!r}"
+            )
         for param_name, value in [
             ("complexity", self.complexity),
             ("dynamics", self.dynamics),

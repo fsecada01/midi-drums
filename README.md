@@ -702,7 +702,7 @@ all identical:
 - **`studio_drummer3`**, **`addictive_drums`**, **`bfd3`**, **`modo_drums`**,
   **`ml_drums`** — use the same GM-collapsed note table as `gm_drums`
   (no vendor-specific note research has been done for these yet — see
-  `claudedocs/archive/2026-08-21_docs-cleanup/research_vendor_drum_midi_maps_20260812.md`);
+  [`docs/adr/0008-vendor-midi-note-map-corrections.md`](docs/adr/0008-vendor-midi-note-map-corrections.md));
   safe to use
   with any GM-compatible sampler today, but not yet verified against each
   vendor's own default map, which may differ from strict GM.

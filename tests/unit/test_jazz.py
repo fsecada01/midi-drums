@@ -1,23 +1,20 @@
-"""Test refactored Jazz genre plugin."""
+"""Test the Jazz genre plugin."""
 
 from midi_drums.core.value_objects.drum_instrument import DrumInstrument
 from midi_drums.core.value_objects.generation_parameters import (
     GenerationParameters,
 )
 from midi_drums.plugins.genres.jazz import JazzGenrePlugin
-from midi_drums.plugins.genres.jazz_refactored import JazzGenrePluginRefactored
 
 
 def test_jazz_basic_structure():
-    """Test basic structure matches."""
+    """Test basic plugin structure."""
     print("Testing Jazz plugin basic structure...")
 
-    original = JazzGenrePlugin()
-    refactored = JazzGenrePluginRefactored()
+    refactored = JazzGenrePlugin()
 
-    assert original.genre_name == refactored.genre_name
-    assert set(original.supported_styles) == set(refactored.supported_styles)
-    assert original.intensity_profile == refactored.intensity_profile
+    assert refactored.genre_name == "jazz"
+    assert len(refactored.supported_styles) == 7
 
     print(f"  [OK] Genre: {refactored.genre_name}")
     print(f"  [OK] Styles: {len(refactored.supported_styles)}")
@@ -27,7 +24,7 @@ def test_jazz_all_combinations():
     """Test all style/section combinations."""
     print("Testing all Jazz combinations...")
 
-    refactored = JazzGenrePluginRefactored()
+    refactored = JazzGenrePlugin()
     styles = refactored.supported_styles
     sections = ["intro", "verse", "chorus", "breakdown", "bridge", "outro"]
 
@@ -50,7 +47,7 @@ def test_jazz_swing_style():
     """Test swing jazz style."""
     print("Testing swing jazz style...")
 
-    refactored = JazzGenrePluginRefactored()
+    refactored = JazzGenrePlugin()
     params = GenerationParameters(
         genre="jazz", style="swing", complexity=0.7, humanization=0.3
     )
@@ -68,7 +65,7 @@ def test_jazz_bebop_complexity():
     """Test bebop complexity."""
     print("Testing bebop complexity...")
 
-    refactored = JazzGenrePluginRefactored()
+    refactored = JazzGenrePlugin()
     params = GenerationParameters(
         genre="jazz", style="bebop", complexity=0.7, humanization=0.3
     )
@@ -94,7 +91,7 @@ def test_jazz_fusion_energy():
     """Test fusion jazz energy."""
     print("Testing fusion jazz energy...")
 
-    refactored = JazzGenrePluginRefactored()
+    refactored = JazzGenrePlugin()
     params = GenerationParameters(
         genre="jazz", style="fusion", complexity=0.7, humanization=0.3
     )
@@ -123,7 +120,7 @@ def test_jazz_ballad_softness():
     """Test ballad softness."""
     print("Testing ballad softness...")
 
-    refactored = JazzGenrePluginRefactored()
+    refactored = JazzGenrePlugin()
     params = GenerationParameters(
         genre="jazz", style="ballad", complexity=0.7, humanization=0.3
     )
@@ -147,7 +144,7 @@ def test_jazz_fills():
     """Test fill generation."""
     print("Testing Jazz fills...")
 
-    refactored = JazzGenrePluginRefactored()
+    refactored = JazzGenrePlugin()
     fills = refactored.get_common_fills()
 
     assert len(fills) >= 2
@@ -156,18 +153,6 @@ def test_jazz_fills():
         assert len(fill.pattern.beats) > 0
 
     print(f"  [OK] Fills: {len(fills)} fills generated")
-
-
-def compare_results():
-    """Display comparison."""
-    print("\n" + "=" * 60)
-    print("Jazz Genre Refactoring Results")
-    print("=" * 60)
-    print("Original jazz.py:              599 lines")
-    print("Refactored jazz_refactored.py: 337 lines")
-    print("Reduction:                     262 lines (44% reduction)")
-    print("\nBest reduction yet! (Metal 22%, Rock 35%, Jazz 44%)")
-    print("=" * 60)
 
 
 if __name__ == "__main__":
@@ -184,7 +169,5 @@ if __name__ == "__main__":
     test_jazz_fills()
 
     print("=" * 60)
-    print("All Jazz refactoring tests passed!")
+    print("All Jazz tests passed!")
     print("=" * 60)
-
-    compare_results()

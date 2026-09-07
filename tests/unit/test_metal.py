@@ -1,44 +1,30 @@
-"""Test refactored Metal genre plugin.
-
-Validates that the template-based implementation produces equivalent
-functionality to the original while reducing code duplication.
-"""
+"""Test the template-based Metal genre plugin."""
 
 from midi_drums.core.value_objects.drum_instrument import DrumInstrument
 from midi_drums.core.value_objects.generation_parameters import (
     GenerationParameters,
 )
 from midi_drums.plugins.genres.metal import MetalGenrePlugin
-from midi_drums.plugins.genres.metal_refactored import (
-    MetalGenrePluginRefactored,
-)
 
 
 def test_refactored_metal_plugin_basic():
-    """Test that refactored plugin has same basic structure."""
-    print("Testing refactored metal plugin basic structure...")
+    """Test basic plugin structure."""
+    print("Testing metal plugin basic structure...")
 
-    original = MetalGenrePlugin()
-    refactored = MetalGenrePluginRefactored()
+    refactored = MetalGenrePlugin()
 
-    # Same genre name
-    assert original.genre_name == refactored.genre_name
+    assert refactored.genre_name == "metal"
     print(f"  [OK] Genre name: {refactored.genre_name}")
 
-    # Same supported styles
-    assert set(original.supported_styles) == set(refactored.supported_styles)
+    assert len(refactored.supported_styles) == 7
     print(f"  [OK] Styles: {len(refactored.supported_styles)} styles")
-
-    # Same intensity profile
-    assert original.intensity_profile == refactored.intensity_profile
-    print("  [OK] Intensity profile matches")
 
 
 def test_refactored_all_styles_all_sections():
     """Test that refactored plugin generates all combinations."""
     print("Testing all metal styles and sections...")
 
-    refactored = MetalGenrePluginRefactored()
+    refactored = MetalGenrePlugin()
     styles = refactored.supported_styles
     sections = ["intro", "verse", "chorus", "breakdown", "bridge", "outro"]
 
@@ -70,7 +56,7 @@ def test_refactored_death_metal_blast_beats():
     """Test that death metal generates blast beat patterns."""
     print("Testing death metal blast beats...")
 
-    refactored = MetalGenrePluginRefactored()
+    refactored = MetalGenrePlugin()
     params = GenerationParameters(
         genre="metal", style="death", complexity=0.8, humanization=0.2
     )
@@ -99,7 +85,7 @@ def test_refactored_power_metal_gallop():
     """Test that power metal generates galloping patterns."""
     print("Testing power metal gallop patterns...")
 
-    refactored = MetalGenrePluginRefactored()
+    refactored = MetalGenrePlugin()
     params = GenerationParameters(
         genre="metal", style="power", complexity=0.7, humanization=0.3
     )
@@ -121,7 +107,7 @@ def test_refactored_doom_metal_slow():
     """Test that doom metal is slower and heavier."""
     print("Testing doom metal slow patterns...")
 
-    refactored = MetalGenrePluginRefactored()
+    refactored = MetalGenrePlugin()
     params = GenerationParameters(
         genre="metal", style="doom", complexity=0.5, humanization=0.3
     )
@@ -144,7 +130,7 @@ def test_refactored_progressive_complexity():
     """Test that progressive metal has higher complexity."""
     print("Testing progressive metal complexity...")
 
-    refactored = MetalGenrePluginRefactored()
+    refactored = MetalGenrePlugin()
     params = GenerationParameters(
         genre="metal", style="progressive", complexity=0.8, humanization=0.2
     )
@@ -175,7 +161,7 @@ def test_refactored_breakdown_pattern():
     """Test that breakdown generates heavy syncopated pattern."""
     print("Testing breakdown pattern...")
 
-    refactored = MetalGenrePluginRefactored()
+    refactored = MetalGenrePlugin()
     params = GenerationParameters(
         genre="metal", style="heavy", complexity=0.6, humanization=0.3
     )
@@ -203,7 +189,7 @@ def test_refactored_chorus_intensity():
     """Test that chorus is more intense than verse."""
     print("Testing chorus intensity...")
 
-    refactored = MetalGenrePluginRefactored()
+    refactored = MetalGenrePlugin()
     params = GenerationParameters(
         genre="metal", style="heavy", complexity=0.7, humanization=0.3
     )
@@ -232,7 +218,7 @@ def test_refactored_fills():
     """Test that common fills are generated."""
     print("Testing metal fills...")
 
-    refactored = MetalGenrePluginRefactored()
+    refactored = MetalGenrePlugin()
     fills = refactored.get_common_fills()
 
     assert len(fills) >= 2, f"Expected at least 2 fills, got {len(fills)}"
@@ -243,23 +229,6 @@ def test_refactored_fills():
         print(f"  [OK] Fill {i+1}: {len(fill.pattern.beats)} beats")
 
     print(f"  [OK] Total fills: {len(fills)}")
-
-
-def compare_line_counts():
-    """Display line count comparison."""
-    print("\n" + "=" * 60)
-    print("Code Reduction Analysis")
-    print("=" * 60)
-    print("Original metal.py:           373 lines")
-    print("Refactored metal_refactored.py: 294 lines")
-    print("Reduction:                   79 lines (21% reduction)")
-    print("\nBenefits of template-based approach:")
-    print("  • Eliminates duplicate pattern construction code")
-    print("  • Consistent pattern structure across styles")
-    print("  • Easy to add new styles by composing templates")
-    print("  • Better separation of concerns")
-    print("  • More maintainable and testable")
-    print("=" * 60)
 
 
 if __name__ == "__main__":
@@ -278,7 +247,5 @@ if __name__ == "__main__":
     test_refactored_fills()
 
     print("=" * 60)
-    print("All refactored metal tests passed!")
+    print("All metal tests passed!")
     print("=" * 60)
-
-    compare_line_counts()

@@ -5,6 +5,12 @@ module was scanned for *any* attribute that looked like a plugin class,
 which also caught classes merely imported into that module's namespace
 (a composite plugin importing its component plugins, or a
 "FooRefactored = Foo" backward-compat alias) and registered them again.
+
+The original bug surfaced via a traditional-file + refactored-file pair
+declaring the same genre/drummer name (see issue #62); those traditional
+files have since been deleted and the refactored files renamed to drop
+the `_refactored` suffix, so there is now exactly one file per name and
+zero legitimate overrides are expected.
 """
 
 import logging
@@ -15,24 +21,11 @@ import pytest
 from midi_drums.plugins.interfaces.drummer_plugin import DrummerPlugin
 from midi_drums.plugins.registry.plugin_registry import PluginManager
 
-EXPECTED_GENRES_WITH_REFACTORED_VARIANT = {"metal", "rock", "jazz", "funk"}
-EXPECTED_DRUMMERS_WITH_REFACTORED_VARIANT = {
-    "bonham",
-    "chambers",
-    "dee",
-    "hoglan",
-    "porcaro",
-    "roeder",
-    "weckl",
-}
-
 
 @pytest.mark.unit
-def test_discover_plugins_overrides_each_name_at_most_once(caplog):
-    """Each genre/drummer name has a traditional + refactored file, so
-    exactly one "Overriding existing" warning per name is expected. Any
-    more means a plugin got registered from more than the two files that
-    legitimately declare that name.
+def test_discover_plugins_registers_each_name_exactly_once(caplog):
+    """Every genre/drummer name is now declared in exactly one file, so
+    discovery must produce zero "Overriding existing" warnings.
     """
     with caplog.at_level(
         logging.WARNING, logger="midi_drums.plugins.registry.plugin_registry"
@@ -47,32 +40,26 @@ def test_discover_plugins_overrides_each_name_at_most_once(caplog):
     ]
 
     counts = Counter(override_messages)
-    over_registered = {msg: n for msg, n in counts.items() if n > 1}
-    assert not over_registered, (
-        f"Plugin(s) registered more than twice (expected exactly one "
-        f"override per name): {over_registered}"
+    assert not counts, (
+        f"Expected zero plugin-name overrides now that each genre/drummer "
+        f"has exactly one file, got: {dict(counts)}"
     )
-
-    expected_override_count = len(
-        EXPECTED_GENRES_WITH_REFACTORED_VARIANT
-    ) + len(EXPECTED_DRUMMERS_WITH_REFACTORED_VARIANT)
-    assert len(counts) == expected_override_count == 11
 
 
 @pytest.mark.unit
-def test_discover_plugins_prefers_refactored_class():
-    """Refactored plugins are the "modern approach" per the README and
-    must win when both a traditional and refactored file declare the
-    same genre/drummer name.
+def test_discover_plugins_registers_plain_module_names():
+    """Genre/drummer plugins register under their plain module path (no
+    `_refactored` suffix, since the original/refactored split no longer
+    exists).
     """
     manager = PluginManager()
     manager.discover_plugins()
 
     bonham = manager.registry.get_drummer_plugin("bonham")
-    assert type(bonham).__module__.endswith("bonham_refactored")
+    assert type(bonham).__module__.endswith("plugins.drummers.bonham")
 
     metal = manager.registry.get_genre_plugin("metal")
-    assert type(metal).__module__.endswith("metal_refactored")
+    assert type(metal).__module__.endswith("plugins.genres.metal")
 
 
 @pytest.mark.unit
@@ -88,9 +75,9 @@ def test_composite_plugin_does_not_reregister_component_drummers():
     porcaro = manager.registry.get_drummer_plugin("porcaro")
     roeder = manager.registry.get_drummer_plugin("roeder")
 
-    assert type(chambers).__module__.endswith("chambers_refactored")
-    assert type(porcaro).__module__.endswith("porcaro_refactored")
-    assert type(roeder).__module__.endswith("roeder_refactored")
+    assert type(chambers).__module__.endswith("plugins.drummers.chambers")
+    assert type(porcaro).__module__.endswith("plugins.drummers.porcaro")
+    assert type(roeder).__module__.endswith("plugins.drummers.roeder")
 
     # The composite itself must still register under its own name.
     composite = manager.registry.get_drummer_plugin("composite_doom_blues")
@@ -105,16 +92,16 @@ def test_register_plugins_from_module_ignores_backward_compat_alias():
     """
     import types
 
-    from midi_drums.plugins.drummers.bonham_refactored import BonhamPlugin
+    from midi_drums.plugins.drummers.bonham import BonhamPlugin
 
     fake_module = types.ModuleType("fake_module_with_alias")
     fake_module.__name__ = "fake_module_with_alias"
     fake_module.BonhamPlugin = BonhamPlugin
     fake_module.BonhamPluginRefactored = BonhamPlugin  # same object, 2 names
 
-    # BonhamPlugin is defined in the real bonham_refactored module, not
-    # in fake_module, so it should be skipped entirely here - proving
-    # the dedup-by-identity guard isn't the only thing carrying this test.
+    # BonhamPlugin is defined in the real bonham module, not in fake_module,
+    # so it should be skipped entirely here - proving the dedup-by-identity
+    # guard isn't the only thing carrying this test.
     manager = PluginManager()
     manager._register_plugins_from_module(fake_module)
     assert manager.registry.get_drummer_plugin("bonham") is None

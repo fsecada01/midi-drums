@@ -101,10 +101,10 @@ class ReaperExporter:
 
         self.reaper_engine.add_markers(project, markers)
 
-        # TODO: Add MIDI track if requested (Phase 2)
+        # TODO(#65): this does not insert a MIDI track into the .rpp
+        # project — it only saves a standalone .mid alongside it. See issue
+        # for the real track-insertion implementation plan.
         if add_midi_track:
-            # This would require implementing MIDI track creation in RPP
-            # For now, we'll just save the MIDI file separately
             midi_path = str(Path(output_rpp).with_suffix(".mid"))
             self.midi_engine.save_song_midi(song, midi_path)
 
