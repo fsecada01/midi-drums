@@ -10,6 +10,10 @@ def kicks(pattern):
     return [b for b in pattern.beats if b.instrument == DrumInstrument.KICK]
 
 
+def snares(pattern):
+    return [b for b in pattern.beats if b.instrument == DrumInstrument.SNARE]
+
+
 def hihats(pattern):
     return [b for b in pattern.beats if b.instrument == DrumInstrument.CLOSED_HH]
 
@@ -23,11 +27,19 @@ class TestBuildAdditiveRhythmBars:
         assert str(bar_1.time_signature) == "6/8"
         assert str(bar_2.time_signature) == "2/8"
 
-    def test_kick_count_matches_group_count_per_bar(self):
+    def test_kick_and_snare_alternate_across_group_starts(self):
+        """Even-indexed groups get kick, odd-indexed groups get snare -
+        a backbeat-style default groove instead of an all-kick click
+        track."""
         patterns = build_additive_rhythm_bars("3-3-3-3-2-2", grid_denominator=16)
 
-        assert len(kicks(patterns[0])) == 4  # four groups of 3
-        assert len(kicks(patterns[1])) == 2  # two groups of 2
+        # Bar 1: four groups of 3 -> kick, snare, kick, snare.
+        assert len(kicks(patterns[0])) == 2
+        assert len(snares(patterns[0])) == 2
+
+        # Bar 2: two groups of 2 -> kick, snare.
+        assert len(kicks(patterns[1])) == 1
+        assert len(snares(patterns[1])) == 1
 
     def test_hihat_count_matches_total_grid_units_per_bar(self):
         patterns = build_additive_rhythm_bars("3-3-3-3-2-2", grid_denominator=16)
@@ -43,13 +55,15 @@ class TestBuildAdditiveRhythmBars:
             for beat in pattern.beats:
                 assert 0.0 <= beat.position < beats_per_bar
 
-    def test_kick_positions_land_on_group_starts(self):
+    def test_kick_and_snare_positions_land_on_group_starts(self):
         patterns = build_additive_rhythm_bars("3-3-3-3-2-2", grid_denominator=16)
 
         # First bar: groups of 3 sixteenths -> 0.75 beats apart.
-        kick_positions = sorted(b.position for b in kicks(patterns[0]))
-        assert kick_positions == [0.0, 0.75, 1.5, 2.25]
+        # Group starts 0, 0.75, 1.5, 2.25 -> kick, snare, kick, snare.
+        assert sorted(b.position for b in kicks(patterns[0])) == [0.0, 1.5]
+        assert sorted(b.position for b in snares(patterns[0])) == [0.75, 2.25]
 
         # Second bar: groups of 2 sixteenths -> 0.5 beats apart.
-        kick_positions_2 = sorted(b.position for b in kicks(patterns[1]))
-        assert kick_positions_2 == [0.0, 0.5]
+        # Group starts 0, 0.5 -> kick, snare.
+        assert sorted(b.position for b in kicks(patterns[1])) == [0.0]
+        assert sorted(b.position for b in snares(patterns[1])) == [0.5]

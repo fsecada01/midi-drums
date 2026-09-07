@@ -590,6 +590,19 @@ Examples:
         "--tempo", type=float, default=120, help="Tempo in BPM (default: 120)"
     )
     additive_parser.add_argument(
+        "--drummer", help="Drummer style to apply to each bar"
+    )
+    additive_parser.add_argument(
+        "--drummer-intensity",
+        type=float,
+        default=1.0,
+        help=(
+            "How strongly the drummer's style overrides the plain "
+            "kick/snare/hihat skeleton, 0.0-1.0 (default: 1.0 = full "
+            "drummer character)"
+        ),
+    )
+    additive_parser.add_argument(
         "--output", "-o", required=True, help="Output MIDI file"
     )
 
@@ -1504,10 +1517,28 @@ def handle_additive_rhythm_command(args) -> None:
         print(f"  Bar {i + 1}: {bar.time_signature} (groups: {groups_str})")
 
     patterns = build_additive_rhythm_bars(args.grouping, args.grid)
+
+    if args.drummer:
+        # Each bar is its own single-bar Pattern (see
+        # build_pattern_for_bar), so the drummer style is applied
+        # per-bar rather than once across the whole sequence.
+        generator = DrumGenerator()
+        styled_patterns = []
+        for pattern in patterns:
+            styled = generator.plugin_manager.apply_drummer_style(
+                pattern, args.drummer, intensity=args.drummer_intensity
+            )
+            styled_patterns.append(styled if styled is not None else pattern)
+        patterns = styled_patterns
+
     output_path = Path(args.output)
     MIDIEngine().save_bars_midi(patterns, output_path, tempo=int(args.tempo))
 
     print(f"\nSaved {len(patterns)} bar(s) to {output_path}")
+    if args.drummer:
+        print(
+            f"  Drummer  : {args.drummer} (intensity {args.drummer_intensity})"
+        )
 
 
 def main():

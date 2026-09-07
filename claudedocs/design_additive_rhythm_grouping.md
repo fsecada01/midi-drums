@@ -1,9 +1,11 @@
 # Design: Additive Rhythmic Grouping → Time Signature
 
-**Status**: spike / proposed, standalone prototype not wired into any
-genre plugin or AI agent tool yet. New modules only; nothing existing is
-modified except `MIDIEngine` gaining one new, additive method
-(`bars_to_midi`/`save_bars_midi`) alongside its existing ones.
+**Status**: spike, built up with genre/drummer styling; still not wired
+into any genre plugin or AI agent tool. New modules, plus `MIDIEngine`
+gaining one new, additive method (`bars_to_midi`/`save_bars_midi`)
+alongside its existing ones, and a pre-existing meter-hardcoding bug
+fixed in `midi_drums/modifications/drummer_mods.py` (see "Built up past
+the spike").
 
 ## Context
 
@@ -102,13 +104,16 @@ beat), so nothing downstream needs to know the grid was ever involved.
 
 `midi_drums/generation/builders/additive_rhythm_builder.py`:
 `build_additive_rhythm_bars(spec, grid_denominator) -> list[Pattern]`.
-For each resolved bar: a kick at every group's start position
-(`VELOCITY.KICK_ACCENT`), plus a closed hi-hat on every grid unit
-(`VELOCITY.HIHAT_LIGHT`) as a plain timekeeping layer so the result is
-audible/legible on its own, not just a skeleton of kicks. Deliberately
-minimal — no snare, no genre character, no drummer styling. This is a
-standalone builder, not a genre-plugin method, since no genre plugin
-supports non-4/4 generation today (see Non-goals).
+For each resolved bar: kick and snare alternate across group start
+positions (even-indexed groups get `VELOCITY.KICK_ACCENT`, odd-indexed
+groups get `VELOCITY.SNARE_ACCENT` — see "Built up past the spike"),
+plus a closed hi-hat on every grid unit (`VELOCITY.HIHAT_LIGHT`) as a
+plain timekeeping layer so the result is audible/legible on its own.
+Still deliberately minimal — no genre character beyond the backbeat
+default, though a `DrummerPlugin` can now be layered on top per-bar via
+the CLI's `--drummer` flag. This is a standalone builder, not a
+genre-plugin method, since no genre plugin supports non-4/4 generation
+today (see Non-goals).
 
 ## MIDI export: a new standalone path, not `Song`/`Section` reuse
 
@@ -158,11 +163,59 @@ is validating the grouping→meter conversion, not song structure.
 
 `python -m midi_drums additive-rhythm "3-3-3-3-2-2" --grid 16 --output out.mid`
 — standalone subcommand (`handle_additive_rhythm_command` in
-`midi_drums/api/cli.py`), dispatched before `DrumGenerator()`
-initialization like `prompt`/`riff`, since it doesn't touch the
-plugin/genre system at all. Prints the resolved per-bar time signatures
-before writing the MIDI file, so the conversion is visible without
-opening a DAW.
+`midi_drums/api/cli.py`), dispatched before the module-level
+`DrumGenerator()` initialization like `prompt`/`riff`, since building the
+bars themselves doesn't touch the plugin/genre system at all. Prints the
+resolved per-bar time signatures before writing the MIDI file, so the
+conversion is visible without opening a DAW. An optional
+`--drummer NAME [--drummer-intensity 0.0-1.0]` (added past the spike —
+see "Built up past the spike") instantiates its own `DrumGenerator()`
+only when a drummer is requested, to apply that drummer's style to each
+bar.
+
+## Built up past the spike
+
+The bare kick+hihat skeleton was replaced with a genre-informed default
+groove, and drummer styling was wired on top:
+
+- **Snare backbeat by default**: `build_pattern_for_bar` now alternates
+  kick and snare across group starts (even-indexed groups get kick,
+  odd-indexed groups get snare — `VELOCITY.KICK_ACCENT`/
+  `VELOCITY.SNARE_ACCENT`) instead of a kick at every group. The hi-hat
+  timekeeping layer is unchanged. This is still a plain, un-humanized
+  groove, not genre-styled — it's the same kind of fixed default the
+  bare skeleton was, just with a backbeat instead of an all-kick pulse.
+- **`--drummer`/`--drummer-intensity` CLI flags** (matching the rest of
+  the CLI's convention, e.g. `generate`/`riff`): `handle_additive_rhythm_command`
+  applies the selected `DrummerPlugin` to each bar's `Pattern`
+  independently via `DrumGenerator().plugin_manager.apply_drummer_style`,
+  since each bar is already its own single-bar `Pattern` object. An
+  unrecognized `--drummer` name logs an error (via `PluginManager`) and
+  falls back to the unstyled bar rather than aborting, matching
+  `generate`/`riff`'s existing behavior for the same case.
+- **Fixed a pre-existing meter-hardcoding bug this surfaced**: three of
+  the twelve `DrummerModification` classes in
+  `midi_drums/modifications/drummer_mods.py` -
+  `TripletVocabulary`, `GhostNoteLayer`, `FastChopsTriplets` - computed
+  each bar's start as `bar * 4.0` and, for `GhostNoteLayer`, iterated a
+  hardcoded `range(16)` steps/bar. Both assume exactly 4 beats/bar, which
+  is false for any bar this spike produces with `beats_per_bar != 4.0`
+  (e.g. a 6/8 bar has `beats_per_bar == 3.0`) - applying Bonham,
+  Chambers, Porcaro, or Weckl (the four drummers built on these three
+  modifications) to such a bar previously misplaced fills/ghost notes
+  using the wrong bar boundaries. This was a real, pre-existing bug in
+  the whole codebase, not something the spike introduced - irregular
+  meters already exist elsewhere (7/8 `SongSegment` inserts) and would
+  have hit the same bug. Fixed by deriving each bar's start and grid
+  step count from `pattern.time_signature.beats_per_bar` instead of the
+  hardcoded `4.0`/`16`, with the replacement formulas chosen to be
+  algebraically identical to the old hardcoded values for existing 4/4
+  patterns (verified in
+  `tests/unit/test_drummer_modifications.py`'s
+  `test_triplet_vocabulary_4_4_fill_position_unchanged`/
+  `test_fast_chops_triplets_4_4_chop_position_unchanged`) - no behavior
+  change for any existing 4/4 pattern, only newly-correct behavior for
+  non-4/4 ones.
 
 ## Non-goals (explicitly out of scope for this spike)
 
@@ -174,11 +227,11 @@ opening a DAW.
   code already does correctly. Wiring a `parse_additive_rhythm` tool onto
   `PatternCompositionAgent` is a natural follow-up, not part of this
   spike.
-- **Genre-plugin / drummer-style integration.** The generated pattern is
-  a bare kick+hihat skeleton, not a genre-styled groove. Every genre
-  plugin hardcodes `TimeSignature(4, 4)`; teaching even one to accept an
-  externally-supplied per-bar meter sequence is a larger, separate
-  change.
+- **Full genre-plugin integration.** Every genre plugin still hardcodes
+  `TimeSignature(4, 4)`; teaching one to accept an externally-supplied
+  per-bar meter sequence remains a larger, separate change. Drummer-style
+  layering was built up past the spike, though — see "Built up past the
+  spike" below.
 - **`Song`/`Section`/region support** (fills, variations, REAPER export,
   sidecar JSON). This spike only proves the grouping→meter→MIDI path in
   isolation.
@@ -207,13 +260,27 @@ opening a DAW.
 `tests/unit/generation/test_additive_rhythm_builder.py`:
 - Built patterns' beat positions land inside `[0, beats_per_bar)` for
   each bar.
-- Kick count per bar equals the number of groups in that bar; hi-hat
-  count equals the bar's total grid-unit count.
+- Kick/snare alternate across group starts (even index kick, odd index
+  snare) and hi-hat count equals the bar's total grid-unit count.
 
 `tests/unit/export/midi/test_bars_to_midi.py`:
 - `bars_to_midi` on a `[6/8-pattern, 2/8-pattern]` sequence emits exactly
   two `addTimeSignature` events (initial 6/8, then the change to 2/8) and
   places the second bar's notes starting at `time_cursor == 3.0`.
+
+`tests/unit/test_drummer_modifications.py`:
+- `TripletVocabulary`/`GhostNoteLayer`/`FastChopsTriplets` produce
+  byte-identical fill/chop positions for existing 4/4 patterns after the
+  `beats_per_bar` generalization (regression).
+- The same three classes place fills/ghost notes at the musically
+  correct positions for non-4/4 patterns (6/8, 2/8), instead of the
+  pre-fix hardcoded-4.0-beats/bar positions.
+
+`tests/unit/api/test_cli_additive_rhythm.py`:
+- `--drummer`/`--drummer-intensity` arg-parsing and defaults.
+- `handle_additive_rhythm_command` produces an output file with a valid
+  drummer, an unrecognized drummer name (fallback path), and no
+  `--drummer` at all.
 
 ## References
 

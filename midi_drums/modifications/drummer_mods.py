@@ -173,21 +173,24 @@ class TripletVocabulary(DrummerModification):
         """Add triplet-based rhythmic vocabulary."""
         modified_beats = list(pattern.beats)
 
-        # Look for opportunities to add triplets (beat 4 of each bar)
+        # Look for opportunities to add triplets (last beat of each bar)
+        beats_per_bar = pattern.time_signature.beats_per_bar
         duration = pattern.duration_bars()
         for bar in range(int(duration)):
-            bar_start = bar * 4.0
+            bar_start = bar * beats_per_bar
+            bar_end = bar_start + beats_per_bar
 
-            # Probabilistically add triplet fill on beat 4
+            # Probabilistically add triplet fill on the last beat
             if random.random() < (self.triplet_probability * intensity):
-                # Add descending triplet fill starting at beat 3.5
-                fill_start = bar_start + 3.5
+                # Add descending triplet fill starting half a beat before
+                # the bar ends (bar_start + 3.5 when beats_per_bar == 4.0)
+                fill_start = bar_end - 0.5
 
                 # Remove any existing beats in this space
                 modified_beats = [
                     b
                     for b in modified_beats
-                    if not (fill_start <= b.position < bar_start + 4.0)
+                    if not (fill_start <= b.position < bar_end)
                 ]
 
                 # Add triplet fill (6 notes = 2 triplets)
@@ -255,11 +258,13 @@ class GhostNoteLayer(DrummerModification):
         }
 
         # Add ghost notes on 16ths that don't have main snares
+        beats_per_bar = pattern.time_signature.beats_per_bar
+        steps_per_bar = round(beats_per_bar / TIMING.SIXTEENTH)
         duration = pattern.duration_bars()
         for bar in range(int(duration)):
-            bar_start = bar * 4.0
+            bar_start = bar * beats_per_bar
 
-            for i in range(16):
+            for i in range(steps_per_bar):
                 pos = bar_start + (i * TIMING.SIXTEENTH)
 
                 # Skip if main snare already exists
@@ -491,13 +496,15 @@ class FastChopsTriplets(DrummerModification):
         """Add fast triplet-based technical fills."""
         modified_beats = list(pattern.beats)
 
+        beats_per_bar = pattern.time_signature.beats_per_bar
         duration = pattern.duration_bars()
         for bar in range(int(duration)):
-            bar_start = bar * 4.0
+            bar_start = bar * beats_per_bar
 
-            # Add fast chops on beat 3 occasionally
+            # Add fast chops five-eighths through the bar occasionally
+            # (bar_start + 2.5 when beats_per_bar == 4.0)
             if random.random() < (self.probability * intensity):
-                chop_start = bar_start + 2.5
+                chop_start = bar_start + beats_per_bar * 0.625
 
                 # Fast triplet snare roll
                 for i in range(6):

@@ -3,9 +3,13 @@
 Standalone builder for the additive-rhythm-grouping spike (see
 claudedocs/design_additive_rhythm_grouping.md) - not a genre-plugin
 method, since no genre plugin supports non-4/4 generation today. Each
-bar gets a minimal, deliberately un-styled kick+hihat skeleton: a kick
-accent at every group's start, and a closed hi-hat on every grid unit as
-a plain timekeeping layer.
+bar gets a minimal default groove: kick and snare alternate across
+group starts (even-indexed groups get kick, odd-indexed groups get
+snare, giving a backbeat-style accent rather than an all-kick click
+track), plus a closed hi-hat on every grid unit as a plain timekeeping
+layer. A `DrummerPlugin` can be layered on top via
+`PluginManager.apply_drummer_style` (see the `--drummer` CLI flag) for
+authentic per-drummer phrasing.
 """
 
 from midi_drums.config import VELOCITY
@@ -25,7 +29,8 @@ def _unit_beats(grid_denominator: int) -> float:
 def build_pattern_for_bar(
     bar: GroupedBar, grid_denominator: int, bar_index: int
 ) -> Pattern:
-    """Build one bar's Pattern: kick per group start, hihat per grid unit."""
+    """Build one bar's Pattern: kick/snare alternating per group start,
+    hihat per grid unit."""
     unit_beats = _unit_beats(grid_denominator)
     builder = PatternBuilder(
         f"additive_bar_{bar_index}", time_signature=bar.time_signature
@@ -36,8 +41,12 @@ def build_pattern_for_bar(
         builder.hihat(unit * unit_beats, VELOCITY.HIHAT_LIGHT)
 
     cursor = 0
-    for group in bar.groups:
-        builder.kick(cursor * unit_beats, VELOCITY.KICK_ACCENT)
+    for group_index, group in enumerate(bar.groups):
+        position = cursor * unit_beats
+        if group_index % 2 == 0:
+            builder.kick(position, VELOCITY.KICK_ACCENT)
+        else:
+            builder.snare(position, VELOCITY.SNARE_ACCENT)
         cursor += group
 
     return builder.build()

@@ -10,6 +10,7 @@ This test suite validates the drummer modification system including:
 from midi_drums.config import TIMING, VELOCITY
 from midi_drums.core.models.pattern import Pattern
 from midi_drums.core.value_objects.drum_instrument import DrumInstrument
+from midi_drums.core.value_objects.time_signature import TimeSignature
 from midi_drums.generation.builders.pattern_builder import PatternBuilder
 from midi_drums.modifications import (
     BehindBeatTiming,
@@ -717,6 +718,127 @@ def test_immutability():
     print("  [OK] Immutability: original pattern unchanged after modifications")
 
 
+def test_triplet_vocabulary_second_bar_uses_actual_beats_per_bar():
+    """TripletVocabulary must not assume 4 beats/bar when locating a
+    later bar's fill (issue found while building genre/drummer styling
+    for the additive-rhythm-grouping spike - a 6/8 bar has
+    beats_per_bar == 3.0, not 4.0, so bar index 1 starts at beat 3.0,
+    not 4.0).
+
+    The fill deliberately resolves half a beat before the *next* bar's
+    downbeat, so a single-bar boundary check isn't meaningful here -
+    what must be verified is that bar indexing itself scales with the
+    pattern's own meter instead of a hardcoded 4.0.
+    """
+    print("Testing TripletVocabulary bar-2 indexing on a 6/8 pattern...")
+
+    builder = PatternBuilder(
+        "six_eight_test", time_signature=TimeSignature(6, 8)
+    )
+    # Force duration_bars() to report 2 bars: (5.0 + 1.0) / 3.0 == 2.0.
+    builder.kick(5.0, VELOCITY.KICK_NORMAL)
+    pattern = builder.build()
+    assert pattern.time_signature.beats_per_bar == 3.0
+    assert pattern.duration_bars() == 2.0
+
+    mod = TripletVocabulary(triplet_probability=1.0)
+    modified = mod.apply(pattern, intensity=1.0)
+
+    fill_positions = {
+        b.position for b in modified.beats if b.position not in (0.0, 5.0)
+    }
+    # Correct: bar 1 starts at beat 3.0 (bar_start=3.0), fill at
+    # bar_end(6.0) - 0.5 == 5.5. The pre-fix hardcoded bar_start=4.0
+    # would have placed it at 7.5 instead.
+    assert 5.5 in fill_positions, (
+        f"Expected a bar-2 fill starting at beat 5.5, got {sorted(fill_positions)} - "
+        "TripletVocabulary is still assuming 4 beats/bar"
+    )
+    assert 7.5 not in fill_positions, (
+        "Found a fill at 7.5 - TripletVocabulary is using a hardcoded "
+        "4.0 beats/bar instead of the pattern's actual 3.0"
+    )
+
+    print("  [OK] TripletVocabulary: bar-2 fill correctly starts at beat 5.5")
+
+
+def test_ghost_note_layer_uses_correct_step_count_for_non_4_4_meter():
+    """GhostNoteLayer's ghost-note grid must scale with beats_per_bar
+    instead of assuming a fixed 16 sixteenths/bar (2/8 has beats_per_bar
+    == 1.0, i.e. 4 sixteenths).
+    """
+    print("Testing GhostNoteLayer on a 2/8 pattern...")
+
+    builder = PatternBuilder("two_eight_test", time_signature=TimeSignature(2, 8))
+    pattern = builder.build()
+    assert pattern.time_signature.beats_per_bar == 1.0
+
+    # density=1.0 * intensity=1.0 makes placement deterministic.
+    mod = GhostNoteLayer(density=1.0)
+    modified = mod.apply(pattern, intensity=1.0)
+
+    ghost_positions = sorted(b.position for b in modified.beats if b.ghost_note)
+    assert ghost_positions == [0.0, 0.25, 0.5, 0.75], (
+        f"Expected 4 ghost notes on the 2/8 bar's 16th grid, got "
+        f"{ghost_positions}"
+    )
+
+    print(f"  [OK] GhostNoteLayer: 2/8 grid -> {ghost_positions}")
+
+
+def test_fast_chops_triplets_stays_in_bounds_for_non_4_4_meter():
+    """FastChopsTriplets must not assume 4 beats/bar - a 6/8 bar's chop
+    fill should land within its own 3.0-beat length, not spill into
+    territory that assumes a 4.0-beat bar.
+    """
+    print("Testing FastChopsTriplets on a 6/8 pattern...")
+
+    builder = PatternBuilder(
+        "six_eight_chops_test", time_signature=TimeSignature(6, 8)
+    )
+    pattern = builder.build()
+    assert pattern.time_signature.beats_per_bar == 3.0
+
+    mod = FastChopsTriplets(probability=1.0)
+    modified = mod.apply(pattern, intensity=1.0)
+
+    assert len(modified.beats) > 0, "No chops added"
+    for beat in modified.beats:
+        assert beat.position < 3.0, (
+            f"Beat at {beat.position} spilled past the 6/8 bar - "
+            "FastChopsTriplets is still assuming 4 beats/bar"
+        )
+
+    print("  [OK] FastChopsTriplets: 6/8 chops stay within the bar")
+
+
+def test_triplet_vocabulary_4_4_fill_position_unchanged():
+    """Regression: the beats_per_bar generalization must reproduce the
+    exact 4/4 fill_start (bar_start + 3.5) it replaced.
+    """
+    builder = PatternBuilder("four_four_test")
+    pattern = builder.build()
+    assert pattern.time_signature.beats_per_bar == 4.0
+
+    mod = TripletVocabulary(triplet_probability=1.0)
+    modified = mod.apply(pattern, intensity=1.0)
+
+    assert min(b.position for b in modified.beats) == 3.5
+
+
+def test_fast_chops_triplets_4_4_chop_position_unchanged():
+    """Regression: the beats_per_bar generalization must reproduce the
+    exact 4/4 chop_start (bar_start + 2.5) it replaced.
+    """
+    builder = PatternBuilder("four_four_chops_test")
+    pattern = builder.build()
+
+    mod = FastChopsTriplets(probability=1.0)
+    modified = mod.apply(pattern, intensity=1.0)
+
+    assert min(b.position for b in modified.beats) == 2.5
+
+
 if __name__ == "__main__":
     print("=" * 60)
     print("Drummer Modification System Tests")
@@ -738,6 +860,11 @@ if __name__ == "__main__":
     test_modification_registry()
     test_intensity_parameter()
     test_immutability()
+    test_triplet_vocabulary_second_bar_uses_actual_beats_per_bar()
+    test_ghost_note_layer_uses_correct_step_count_for_non_4_4_meter()
+    test_fast_chops_triplets_stays_in_bounds_for_non_4_4_meter()
+    test_triplet_vocabulary_4_4_fill_position_unchanged()
+    test_fast_chops_triplets_4_4_chop_position_unchanged()
 
     print("=" * 60)
     print("All drummer modification tests passed!")
