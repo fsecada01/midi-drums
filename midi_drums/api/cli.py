@@ -1537,11 +1537,15 @@ def handle_additive_rhythm_command(args) -> None:
         # Each bar is its own single-bar Pattern (see
         # build_pattern_for_bar), so the drummer style is applied
         # per-bar rather than once across the whole sequence.
+        # PluginManager.apply_drummer_style() takes no intensity param -
+        # --drummer-intensity is parsed but not yet wired to an effect
+        # here, matching the rest of the CLI's current state (see
+        # design_additive_rhythm_grouping.md).
         generator = DrumGenerator()
         styled_patterns = []
         for pattern in patterns:
             styled = generator.plugin_manager.apply_drummer_style(
-                pattern, args.drummer, intensity=args.drummer_intensity
+                pattern, args.drummer
             )
             styled_patterns.append(styled if styled is not None else pattern)
         patterns = styled_patterns

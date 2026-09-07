@@ -197,6 +197,13 @@ groove, and drummer styling was wired on top:
   unrecognized `--drummer` name logs an error (via `PluginManager`) and
   falls back to the unstyled bar rather than aborting, matching
   `generate`/`riff`'s existing behavior for the same case.
+  **`--drummer-intensity` is parsed but currently has no effect**:
+  `PluginManager.apply_drummer_style`/`DrummerPlugin.apply_style` don't
+  accept an intensity parameter anywhere in this codebase today (an
+  earlier attempt to thread one through was local, uncommitted work that
+  never landed); the flag is kept for forward-compatibility with the
+  rest of the CLI's `--drummer-intensity` convention, but a real effect
+  requires that separate, larger change first.
 - **Fixed a pre-existing meter-hardcoding bug this surfaced**: three of
   the twelve `DrummerModification` classes in
   `midi_drums/modifications/drummer_mods.py` -
