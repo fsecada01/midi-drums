@@ -307,6 +307,71 @@ class MIDIEngine:
         with open(output_path, "wb") as f:
             midi.writeFile(f)
 
+    def bars_to_midi(
+        self, patterns: list[Pattern], tempo: int = 120
+    ) -> MIDIFile:
+        """Convert a sequence of independently-metered single-bar patterns to MIDI.
+
+        Unlike song_to_midi, each pattern carries its own time_signature
+        and is rendered at its own authored positions with no
+        proportional scaling. song_to_midi's segment path scales a
+        pattern's positions to fit whatever meter a bar's segment
+        override calls for because that pattern is authored against one
+        Song-wide meter (see the "Pattern content isn't segment-aware
+        yet" comment in _add_section_to_midi - issue #53 Group 5's
+        follow-up note). Bars built for a genuinely mixed-meter phrase
+        (e.g. additive-rhythm-grouping) are each already authored against
+        their own correct meter, so that scaling would only distort them.
+        """
+        midi = MIDIFile(1)  # 1 track
+        track = 0
+        channel = self.drum_kit.channel
+        midi.addTempo(track, 0, tempo)
+
+        time_cursor = 0.0
+        last_time_signature = None
+        for pattern in patterns:
+            if pattern.time_signature != last_time_signature:
+                denominator_power = int(
+                    round(math.log2(pattern.time_signature.denominator))
+                )
+                midi.addTimeSignature(
+                    track,
+                    time_cursor,
+                    pattern.time_signature.numerator,
+                    denominator_power,
+                    24,
+                )
+                last_time_signature = pattern.time_signature
+
+            sorted_beats = sorted(
+                _dedupe_by_instrument_position(pattern.beats),
+                key=lambda b: (b.position, b.instrument.value),
+            )
+            for beat in sorted_beats:
+                midi_note = self.drum_kit.get_midi_note(beat.instrument)
+                safe_duration = min(beat.duration, 0.2)
+                midi.addNote(
+                    track=track,
+                    channel=channel,
+                    pitch=midi_note,
+                    time=time_cursor + beat.position,
+                    duration=safe_duration,
+                    volume=beat.velocity,
+                )
+
+            time_cursor += pattern.time_signature.beats_per_bar
+
+        return midi
+
+    def save_bars_midi(
+        self, patterns: list[Pattern], output_path: Path, tempo: int = 120
+    ) -> None:
+        """Save a sequence of independently-metered bars as a MIDI file."""
+        midi = self.bars_to_midi(patterns, tempo)
+        with open(output_path, "wb") as f:
+            midi.writeFile(f)
+
     def save_song_midi(self, song: Song, output_path: Path) -> None:
         """Save a complete song as a MIDI file."""
         midi = self.song_to_midi(song)

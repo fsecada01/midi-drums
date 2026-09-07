@@ -562,6 +562,37 @@ Examples:
         ),
     )
 
+    additive_parser = subparsers.add_parser(
+        "additive-rhythm",
+        help=(
+            "Experimental spike: convert an additive rhythmic-grouping "
+            "string (box notation, e.g. '3-3-3-3-2-2') into per-bar "
+            "time signatures and a kick+hihat pattern, exported as MIDI"
+        ),
+    )
+    additive_parser.add_argument(
+        "grouping",
+        help=(
+            "Additive grouping spec, e.g. '3-3-3-3-2-2' (auto-split "
+            "into bars by runs of identical group sizes) or "
+            "'2+2+3' / '3+3+3+3|2+2' (explicit '|' bar separators for "
+            "a heterogeneous additive bar, e.g. a 7/8 Balkan bar)"
+        ),
+    )
+    additive_parser.add_argument(
+        "--grid",
+        type=int,
+        choices=[4, 8, 16, 32],
+        default=16,
+        help="Grid denominator the groups are counted in (default: 16)",
+    )
+    additive_parser.add_argument(
+        "--tempo", type=float, default=120, help="Tempo in BPM (default: 120)"
+    )
+    additive_parser.add_argument(
+        "--output", "-o", required=True, help="Output MIDI file"
+    )
+
     return parser
 
 
@@ -1454,6 +1485,31 @@ def handle_riff_command(args) -> None:
     print(f"  Tempo    : {args.tempo} BPM  |  Bars: {args.bars}")
 
 
+def handle_additive_rhythm_command(args) -> None:
+    """Handle the 'additive-rhythm' command (see design_additive_rhythm_grouping.md)."""
+    from midi_drums.core.value_objects.rhythmic_grouping import resolve_grouping
+    from midi_drums.export.midi.engine import MIDIEngine
+    from midi_drums.generation.builders.additive_rhythm_builder import (
+        build_additive_rhythm_bars,
+    )
+
+    try:
+        bars = resolve_grouping(args.grouping, args.grid)
+    except ValueError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    for i, bar in enumerate(bars):
+        groups_str = "-".join(str(g) for g in bar.groups)
+        print(f"  Bar {i + 1}: {bar.time_signature} (groups: {groups_str})")
+
+    patterns = build_additive_rhythm_bars(args.grouping, args.grid)
+    output_path = Path(args.output)
+    MIDIEngine().save_bars_midi(patterns, output_path, tempo=int(args.tempo))
+
+    print(f"\nSaved {len(patterns)} bar(s) to {output_path}")
+
+
 def main():
     """Main CLI entry point."""
     # On Windows, stdout/stderr default to the console's ANSI codepage
@@ -1478,6 +1534,10 @@ def main():
 
     if args.command == "riff":
         handle_riff_command(args)
+        return
+
+    if args.command == "additive-rhythm":
+        handle_additive_rhythm_command(args)
         return
 
     # Initialize generator
