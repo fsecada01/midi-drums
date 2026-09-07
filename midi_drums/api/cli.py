@@ -605,6 +605,17 @@ Examples:
     additive_parser.add_argument(
         "--output", "-o", required=True, help="Output MIDI file"
     )
+    additive_parser.add_argument(
+        "--write-timeline",
+        metavar="JSON",
+        help=(
+            "Write a flat {tempo, bars: [{start_time, num, denom}, ...]} "
+            "JSON after generation - each bar's start time in seconds and "
+            "its resolved time signature, for the REAPER panel's Additive "
+            "Rhythm tab to place per-bar tempo/time-signature markers "
+            "before importing the MIDI"
+        ),
+    )
 
     return parser
 
@@ -1535,6 +1546,26 @@ def handle_additive_rhythm_command(args) -> None:
     MIDIEngine().save_bars_midi(patterns, output_path, tempo=int(args.tempo))
 
     print(f"\nSaved {len(patterns)} bar(s) to {output_path}")
+
+    if args.write_timeline:
+        import json  # noqa: PLC0415
+
+        seconds_per_beat = 60.0 / args.tempo
+        cumulative_beats = 0.0
+        bar_entries = []
+        for bar in bars:
+            bar_entries.append(
+                {
+                    "start_time": cumulative_beats * seconds_per_beat,
+                    "num": bar.time_signature.numerator,
+                    "denom": bar.time_signature.denominator,
+                }
+            )
+            cumulative_beats += bar.time_signature.beats_per_bar
+
+        timeline = {"tempo": args.tempo, "bars": bar_entries}
+        Path(args.write_timeline).write_text(json.dumps(timeline, indent=2))
+        print(f"  Timeline : {args.write_timeline}")
     if args.drummer:
         print(
             f"  Drummer  : {args.drummer} (intensity {args.drummer_intensity})"

@@ -26,6 +26,7 @@ local settings = dofile(script_path .. "midi_drums/settings.lua")
 local job_runner = dofile(script_path .. "midi_drums/job_runner.lua")
 local sections = dofile(script_path .. "midi_drums/sections.lua")
 local riff_lock = dofile(script_path .. "midi_drums/riff_lock.lua")
+local additive_rhythm = dofile(script_path .. "midi_drums/additive_rhythm.lua")
 
 local ctx = reaper.ImGui_CreateContext("midi_drums Panel")
 
@@ -109,6 +110,26 @@ local RL_SNARE_HELP = {
   { title = "Stab", body = "Inserts a unison snare hit at very strong "
     .. "accents where a kick was locked but no snare is nearby. "
     .. "Threshold below controls how strong an accent must be." },
+}
+
+-- ===== Additive Rhythm tab state =====
+local AR_GRID_VALUES = { "4", "8", "16", "32" }
+local ar_grouping = "3-3-3-3-2-2"
+local ar_grid = "16"
+local ar_tempo = "120"
+local ar_drummer = ""
+local ar_drummer_intensity = 1.0
+local ar_status = ""
+
+local AR_GROUPING_HELP = {
+  { title = "Additive Rhythm (experimental)", body = "Converts an "
+    .. "additive rhythmic-grouping string (box notation) into per-bar "
+    .. "time signatures and a kick/snare/hihat pattern - e.g. "
+    .. "'3-3-3-3-2-2' at a 16th-note grid resolves to a 6/8 bar "
+    .. "followed by a 2/8 bar. A run of identical group sizes auto-"
+    .. "splits into one bar each; '|' marks an explicit heterogeneous "
+    .. "bar instead (e.g. '2+2+3|' for a single 7/8 bar). See "
+    .. "claudedocs/design_additive_rhythm_grouping.md." },
 }
 
 local function sidecar_path()
@@ -353,6 +374,66 @@ local function draw_riff_lock_tab()
   reaper.ImGui_TextWrapped(ctx, rl_status)
 end
 
+local function draw_additive_rhythm_tab()
+  reaper.ImGui_TextColored(ctx, 0xfbbf24ff, "Experimental spike - not yet part of the main generation pipeline.")
+
+  local changed
+  changed, ar_grouping = reaper.ImGui_InputText(ctx, "Grouping", ar_grouping)
+  draw_help_button("ar_grouping", AR_GROUPING_HELP)
+
+  changed, ar_grid = combo_from_list("Grid", ar_grid, AR_GRID_VALUES)
+  changed, ar_tempo = reaper.ImGui_InputText(ctx, "Tempo (BPM)", ar_tempo)
+
+  if not options.cache.loaded then
+    reaper.ImGui_TextColored(ctx, 0xfbbf24ff,
+      "Options not loaded - configure Python exe and click Refresh "
+      .. "Options on the Settings tab."
+    )
+  end
+  changed, ar_drummer = combo_from_list("Drummer (optional)", ar_drummer, options.cache.drummers, "(none)")
+  changed, ar_drummer_intensity = reaper.ImGui_SliderDouble(ctx, "Drummer Intensity", ar_drummer_intensity, 0.0, 1.0)
+  draw_help_button("ar_drummer_intensity", DRUMMER_INTENSITY_HELP)
+
+  reaper.ImGui_Separator(ctx)
+
+  local disabled = job_runner.is_running()
+  if disabled then reaper.ImGui_BeginDisabled(ctx) end
+  if reaper.ImGui_Button(ctx, "Generate") then
+    local python_exe = settings.resolve_python_exe()
+    if not python_exe then
+      ar_status = "Cancelled: no Python interpreter configured."
+    elseif ar_grouping == "" then
+      ar_status = "Cancelled: Grouping is required."
+    else
+      local tempo = tonumber(ar_tempo) or 120
+      local midi_out = midi_out_path("midi_drums_additive_rhythm.mid")
+      local timeline_path = additive_rhythm.get_project_dir() .. "/midi_drums_additive_rhythm_timeline.json"
+
+      local cmd = additive_rhythm.build_cmd(python_exe, {
+        grouping = ar_grouping,
+        grid = tonumber(ar_grid) or 16,
+        tempo = tempo,
+        drummer = ar_drummer,
+        drummer_intensity = ar_drummer_intensity,
+        midi_out = midi_out,
+        timeline_path = timeline_path,
+      })
+
+      job_runner.start(cmd, "Additive Rhythm", function()
+        additive_rhythm.on_job_complete({
+          timeline_path = timeline_path,
+          midi_out = midi_out,
+        })
+        ar_status = "Done."
+      end)
+      ar_status = "Running..."
+    end
+  end
+  if disabled then reaper.ImGui_EndDisabled(ctx) end
+
+  reaper.ImGui_TextWrapped(ctx, ar_status)
+end
+
 -- Auto-saving text field bound directly to an ExtState key — no
 -- separate Save button, matches every other tab's "just works" feel.
 local function settings_field(label, key)
@@ -433,6 +514,10 @@ local function loop()
       end
       if reaper.ImGui_BeginTabItem(ctx, "Riff-Lock Beat") then
         draw_riff_lock_tab()
+        reaper.ImGui_EndTabItem(ctx)
+      end
+      if reaper.ImGui_BeginTabItem(ctx, "Additive Rhythm") then
+        draw_additive_rhythm_tab()
         reaper.ImGui_EndTabItem(ctx)
       end
       if reaper.ImGui_BeginTabItem(ctx, "Settings") then

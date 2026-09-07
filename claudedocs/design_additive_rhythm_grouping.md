@@ -1,11 +1,12 @@
 # Design: Additive Rhythmic Grouping → Time Signature
 
-**Status**: spike, built up with genre/drummer styling; still not wired
-into any genre plugin or AI agent tool. New modules, plus `MIDIEngine`
-gaining one new, additive method (`bars_to_midi`/`save_bars_midi`)
-alongside its existing ones, and a pre-existing meter-hardcoding bug
-fixed in `midi_drums/modifications/drummer_mods.py` (see "Built up past
-the spike").
+**Status**: spike, built up with genre/drummer styling and a REAPER panel
+tab; still not wired into any genre plugin or AI agent tool. New
+modules, plus `MIDIEngine` gaining one new, additive method
+(`bars_to_midi`/`save_bars_midi`) alongside its existing ones, and a
+pre-existing meter-hardcoding bug fixed in
+`midi_drums/modifications/drummer_mods.py` (see "Built up past the
+spike").
 
 ## Context
 
@@ -171,7 +172,10 @@ conversion is visible without opening a DAW. An optional
 `--drummer NAME [--drummer-intensity 0.0-1.0]` (added past the spike —
 see "Built up past the spike") instantiates its own `DrumGenerator()`
 only when a drummer is requested, to apply that drummer's style to each
-bar.
+bar. An optional `--write-timeline JSON` (also added past the spike)
+writes a flat `{tempo, bars: [{start_time, num, denom}, ...]}` JSON
+after generation, consumed by the REAPER panel's Additive Rhythm tab —
+see "Built up past the spike".
 
 ## Built up past the spike
 
@@ -216,6 +220,29 @@ groove, and drummer styling was wired on top:
   `test_fast_chops_triplets_4_4_chop_position_unchanged`) - no behavior
   change for any existing 4/4 pattern, only newly-correct behavior for
   non-4/4 ones.
+- **`--write-timeline JSON` CLI flag + REAPER panel "Additive Rhythm" tab**:
+  `handle_additive_rhythm_command` optionally writes a flat
+  `{tempo, bars: [{start_time, num, denom}, ...]}` JSON alongside the
+  MIDI output - each resolved bar's start time in seconds (derived from
+  the already-computed `list[GroupedBar]` and `--tempo`, via
+  `beats_per_bar * 60/tempo` accumulated across bars) and its resolved
+  time signature. This follows the same file-sidecar convention as every
+  other REAPER-panel-facing command (`--sidecar`, `--write-sidecar`,
+  `--write-timeline` on `generate`) rather than having the panel scrape
+  human-readable stdout. The panel's new Additive Rhythm tab
+  (`reaper/midi_drums_panel.lua:draw_additive_rhythm_tab`, business logic
+  in `reaper/midi_drums/additive_rhythm.lua`) mirrors the Song Sections
+  and Riff-Lock Beat tabs' pattern: build the CLI command
+  (`additive_rhythm.build_cmd`), run it via `job_runner.start`, then in
+  the completion callback (`additive_rhythm.on_job_complete`) parse the
+  timeline (`additive_rhythm.parse_timeline` - a dedicated parser rather
+  than reusing `sections.lua`'s, which requires a non-empty `regions`
+  array that additive-rhythm bars have no equivalent of), place one
+  `SetTempoTimeSigMarker` per bar starting at project time `0.0`
+  (matching `sections.create_regions_from_sections`'s own start-at-zero
+  convention for REAPER-mode Song Sections), and import the rendered
+  MIDI via `reaper.InsertMedia`. No region/section support is added -
+  consistent with this spike's Non-goals below.
 
 ## Non-goals (explicitly out of scope for this spike)
 
@@ -281,6 +308,8 @@ groove, and drummer styling was wired on top:
 - `handle_additive_rhythm_command` produces an output file with a valid
   drummer, an unrecognized drummer name (fallback path), and no
   `--drummer` at all.
+- `--write-timeline` defaults to `None` and, when given, writes the
+  expected bar start times/meters; omitting it writes no extra file.
 
 ## References
 
@@ -290,6 +319,8 @@ groove, and drummer styling was wired on top:
   (`midi_drums/export/midi/engine.py`)
 - CLI: `additive-rhythm` subcommand, `handle_additive_rhythm_command`
   (`midi_drums/api/cli.py`)
+- New module: `reaper/midi_drums/additive_rhythm.lua` (panel business
+  logic); panel wiring in `reaper/midi_drums_panel.lua`
 - Prior art in this codebase: `RiffAccentMap`/`RiffAccent`
   (`midi_drums/core/value_objects/riff_accent.py`) — the closest existing
   genre-agnostic accent abstraction, not reused directly here since
