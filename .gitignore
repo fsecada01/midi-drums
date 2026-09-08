@@ -197,6 +197,10 @@ ai_requirements.txt
 # Local settings
 .claude/
 !.claude/system-prompt.md
+.serena/
 memo.txt
 memo.md
 .worktrees/
+
+# Generated docs site (docs/make.py -> docs/site/)
+docs/site/
