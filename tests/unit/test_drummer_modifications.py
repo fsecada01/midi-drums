@@ -769,7 +769,9 @@ def test_ghost_note_layer_uses_correct_step_count_for_non_4_4_meter():
     """
     print("Testing GhostNoteLayer on a 2/8 pattern...")
 
-    builder = PatternBuilder("two_eight_test", time_signature=TimeSignature(2, 8))
+    builder = PatternBuilder(
+        "two_eight_test", time_signature=TimeSignature(2, 8)
+    )
     pattern = builder.build()
     assert pattern.time_signature.beats_per_bar == 1.0
 

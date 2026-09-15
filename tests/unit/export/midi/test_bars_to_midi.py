@@ -16,7 +16,9 @@ def _events_by_name(midi, evtname: str) -> list:
 
 class TestBarsToMidi:
     def test_emits_one_time_signature_event_per_meter_change(self):
-        patterns = build_additive_rhythm_bars("3-3-3-3-2-2", grid_denominator=16)
+        patterns = build_additive_rhythm_bars(
+            "3-3-3-3-2-2", grid_denominator=16
+        )
 
         midi = MIDIEngine().bars_to_midi(patterns, tempo=120)
 
@@ -24,12 +26,16 @@ class TestBarsToMidi:
         assert len(sigs) == 2  # initial 6/8, then the change to 2/8
 
     def test_second_bar_time_signature_marker_at_first_bars_beats_per_bar(self):
-        patterns = build_additive_rhythm_bars("3-3-3-3-2-2", grid_denominator=16)
+        patterns = build_additive_rhythm_bars(
+            "3-3-3-3-2-2", grid_denominator=16
+        )
         assert patterns[0].time_signature.beats_per_bar == 3.0
 
         midi = MIDIEngine().bars_to_midi(patterns, tempo=120)
 
-        sigs = sorted(_events_by_name(midi, "TimeSignature"), key=lambda e: e.tick)
+        sigs = sorted(
+            _events_by_name(midi, "TimeSignature"), key=lambda e: e.tick
+        )
         # 3.0 beats * 960 ticks/quarter (MIDIFile(1) default TPQ) == 2880 -
         # the marker isn't squashed/stretched against some other meter.
         assert sigs[1].tick == 2880

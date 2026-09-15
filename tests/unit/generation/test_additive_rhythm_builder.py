@@ -15,12 +15,16 @@ def snares(pattern):
 
 
 def hihats(pattern):
-    return [b for b in pattern.beats if b.instrument == DrumInstrument.CLOSED_HH]
+    return [
+        b for b in pattern.beats if b.instrument == DrumInstrument.CLOSED_HH
+    ]
 
 
 class TestBuildAdditiveRhythmBars:
     def test_confirmed_worked_example_produces_two_bars(self):
-        patterns = build_additive_rhythm_bars("3-3-3-3-2-2", grid_denominator=16)
+        patterns = build_additive_rhythm_bars(
+            "3-3-3-3-2-2", grid_denominator=16
+        )
 
         assert len(patterns) == 2
         bar_1, bar_2 = patterns
@@ -31,7 +35,9 @@ class TestBuildAdditiveRhythmBars:
         """Even-indexed groups get kick, odd-indexed groups get snare -
         a backbeat-style default groove instead of an all-kick click
         track."""
-        patterns = build_additive_rhythm_bars("3-3-3-3-2-2", grid_denominator=16)
+        patterns = build_additive_rhythm_bars(
+            "3-3-3-3-2-2", grid_denominator=16
+        )
 
         # Bar 1: four groups of 3 -> kick, snare, kick, snare.
         assert len(kicks(patterns[0])) == 2
@@ -42,13 +48,17 @@ class TestBuildAdditiveRhythmBars:
         assert len(snares(patterns[1])) == 1
 
     def test_hihat_count_matches_total_grid_units_per_bar(self):
-        patterns = build_additive_rhythm_bars("3-3-3-3-2-2", grid_denominator=16)
+        patterns = build_additive_rhythm_bars(
+            "3-3-3-3-2-2", grid_denominator=16
+        )
 
         assert len(hihats(patterns[0])) == 12  # 4 groups * 3 units
         assert len(hihats(patterns[1])) == 4  # 2 groups * 2 units
 
     def test_beat_positions_fit_within_bar_span(self):
-        patterns = build_additive_rhythm_bars("3-3-3-3-2-2", grid_denominator=16)
+        patterns = build_additive_rhythm_bars(
+            "3-3-3-3-2-2", grid_denominator=16
+        )
 
         for pattern in patterns:
             beats_per_bar = pattern.time_signature.beats_per_bar
@@ -56,7 +66,9 @@ class TestBuildAdditiveRhythmBars:
                 assert 0.0 <= beat.position < beats_per_bar
 
     def test_kick_and_snare_positions_land_on_group_starts(self):
-        patterns = build_additive_rhythm_bars("3-3-3-3-2-2", grid_denominator=16)
+        patterns = build_additive_rhythm_bars(
+            "3-3-3-3-2-2", grid_denominator=16
+        )
 
         # First bar: groups of 3 sixteenths -> 0.75 beats apart.
         # Group starts 0, 0.75, 1.5, 2.25 -> kick, snare, kick, snare.
