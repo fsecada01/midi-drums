@@ -46,7 +46,15 @@ leaves the project half-mutated.
   every task in the implementation plan was verified by manual, exact
   REAPER steps rather than an automated suite. ReaImGui's exact function
   signatures could only be spot-checked against a live installed version,
-  not verified in CI.
+  not verified in CI. **Update (ADR 0009 follow-up):** `reaper/tests/`
+  now runs `step_editor.lua`'s data-model logic under a real Lua 5.4
+  interpreter against a fake in-memory REAPER environment
+  (`fake_reaper.lua`), giving that module genuine execution coverage
+  rather than syntax-only checks; see `reaper/tests/README.md`. The rest
+  of this ADR's caveat still stands — `midi_drums_panel.lua` and the
+  other business-logic modules render ImGui or launch real subprocesses,
+  neither of which the fake environment models, so they remain verified
+  only by `luac -p` syntax checks and manual REAPER steps.
 - The three retired scripts (including the still-present but
   intentionally unvendored `drum_midi_generator.lua`, which predates the
   sidecar bridge entirely) are documented as superseded in
