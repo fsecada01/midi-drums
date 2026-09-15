@@ -340,10 +340,11 @@ local SE_HELP = {
 }
 
 local SE_AMOUNT_HELP = {
-  { title = "Amount (not yet available)", body = "Density-style +/- "
+  { title = "Amount (not yet wired up)", body = "Density-style +/- "
     .. "control that adds or removes hits in a lane, mirroring "
-    .. "EZDrummer 3's Amount knob. Needs a new Python-side generative "
-    .. "module and CLI verb that don't exist yet - see ADR 0010 "
+    .. "EZDrummer 3's Amount knob. The Python side (adjust_density, the "
+    .. "'adjust-density' CLI verb) is implemented, but this slider isn't "
+    .. "wired to call it yet - see ADR 0010's Implementation note "
     .. "(docs/adr/0010-amount-density-control-python-roundtrip.md)." },
 }
 

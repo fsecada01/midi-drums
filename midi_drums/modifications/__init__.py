@@ -13,6 +13,7 @@ Usage:
 """
 
 from midi_drums.modifications.cymbal_accent_reaction import CymbalAccentReaction
+from midi_drums.modifications.density_control import adjust_density
 from midi_drums.modifications.drummer_mods import (
     BehindBeatTiming,
     DrummerModification,
@@ -64,6 +65,11 @@ __all__ = [
     # so it's intentionally NOT registered in MODIFICATION_REGISTRY.
     # Construct and call it directly.
     "CymbalAccentReaction",
+    # Density control (ADR 0010, Step Editor's Amount knob round-trip).
+    # A plain function, not a DrummerModification subclass - it operates
+    # on the Step Editor's flat per-note dict shape (bar/step/velocity),
+    # not Pattern/Beat, so it doesn't fit the class hierarchy above.
+    "adjust_density",
     # Registry
     "ModificationRegistry",
 ]

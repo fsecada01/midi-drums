@@ -757,6 +757,85 @@ Examples:
         ),
     )
 
+    density_parser = subparsers.add_parser(
+        "adjust-density",
+        help=(
+            "ADR 0010: add or remove hits in one Step Editor lane, biased "
+            "by --amount - the Python side of the Amount knob's round-trip"
+        ),
+    )
+    density_parser.add_argument(
+        "--input",
+        required=True,
+        metavar="JSON",
+        help=(
+            "JSON file: a flat array of note dicts for one lane "
+            "({bar, step, velocity, off_grid, _idx}), matching "
+            "reaper/midi_drums/step_editor.lua's lane.notes shape"
+        ),
+    )
+    density_parser.add_argument(
+        "--output",
+        required=True,
+        metavar="JSON",
+        help="Where to write the resulting note array (same shape as --input)",
+    )
+    density_parser.add_argument(
+        "--instrument",
+        required=True,
+        help="Lane/instrument key being adjusted (for logging only)",
+    )
+    density_parser.add_argument(
+        "--amount",
+        type=float,
+        required=True,
+        help="-1.0..1.0: negative removes hits, positive inserts hits",
+    )
+    density_parser.add_argument(
+        "--kind",
+        choices=["main", "ghost"],
+        default="main",
+        help="Insertion style for positive --amount (default: main)",
+    )
+    density_parser.add_argument(
+        "--grid",
+        choices=["8th", "16th", "32nd", "8th_triplet", "16th_triplet"],
+        required=True,
+        help="Grid resolution the lane's bar/step values are measured in",
+    )
+    density_parser.add_argument(
+        "--ts-num",
+        type=int,
+        default=4,
+        help="Time signature numerator (default: 4)",
+    )
+    density_parser.add_argument(
+        "--ts-denom",
+        type=int,
+        default=4,
+        help="Time signature denominator (default: 4)",
+    )
+    density_parser.add_argument(
+        "--bars",
+        type=int,
+        default=1,
+        help="Number of bars in the lane (default: 1)",
+    )
+    density_parser.add_argument(
+        "--genre", help="Provenance context: genre (optional)"
+    )
+    density_parser.add_argument(
+        "--style", help="Provenance context: style (optional)"
+    )
+    density_parser.add_argument(
+        "--drummer", help="Provenance context: drummer (optional)"
+    )
+    density_parser.add_argument(
+        "--complexity",
+        type=float,
+        help="Provenance context: complexity 0.0-1.0 (optional)",
+    )
+
     return parser
 
 
@@ -1870,6 +1949,51 @@ def handle_additive_rhythm_command(args) -> None:
         )
 
 
+def handle_adjust_density_command(args) -> None:
+    """Handle the 'adjust-density' command (ADR 0010)."""
+    import json  # noqa: PLC0415
+
+    from midi_drums.modifications.density_control import adjust_density
+
+    try:
+        notes = json.loads(Path(args.input).read_text())
+    except (OSError, json.JSONDecodeError) as e:
+        print(f"Error reading --input: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    context = {}
+    if args.genre:
+        context["genre"] = args.genre
+    if args.style:
+        context["style"] = args.style
+    if args.drummer:
+        context["drummer"] = args.drummer
+    if args.complexity is not None:
+        context["complexity"] = args.complexity
+
+    try:
+        result = adjust_density(
+            notes,
+            amount=args.amount,
+            kind=args.kind,
+            grid_resolution=args.grid,
+            ts_num=args.ts_num,
+            ts_denom=args.ts_denom,
+            bars=args.bars,
+            context=context or None,
+        )
+    except ValueError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    Path(args.output).write_text(json.dumps(result, indent=2))
+    print(
+        f"Adjusted '{args.instrument}' by {args.amount:+.2f} "
+        f"({len(notes)} -> {len(result)} note(s))"
+    )
+    print(f"  Output   : {args.output}")
+
+
 def main():
     """Main CLI entry point."""
     # On Windows, stdout/stderr default to the console's ANSI codepage
@@ -1898,6 +2022,10 @@ def main():
 
     if args.command == "additive-rhythm":
         handle_additive_rhythm_command(args)
+        return
+
+    if args.command == "adjust-density":
+        handle_adjust_density_command(args)
         return
 
     # Initialize generator

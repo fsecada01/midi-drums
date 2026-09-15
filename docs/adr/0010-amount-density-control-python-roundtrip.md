@@ -1,6 +1,6 @@
 # 0010. Amount/density control is new Python-side generative logic, routed through job_runner's single-job model
 
-> **Status**: Proposed
+> **Status**: Accepted (Python side implemented; Lua-side wiring still pending)
 > **Date**: 2026-09-14
 
 ## Context
@@ -90,6 +90,41 @@ rather than generalizing it.
   acceptable, load-bearing limitation for this tool rather than something
   every new async feature must design around — revisit only if usage
   demonstrates it's actually a nuisance, not preemptively.
+
+## Implementation note (2026-09-15)
+
+The Python side is implemented as designed above:
+`midi_drums/modifications/density_control.py`'s `adjust_density(notes,
+amount, kind, grid_resolution, ts_num=4, ts_denom=4, bars=1,
+context=None)` and the `adjust-density` CLI verb in `midi_drums/api/cli.py`
+(`--input`/`--output` JSON files, `--instrument`, `--amount`, `--kind`,
+`--grid`, `--ts-num`/`--ts-denom`, `--bars`, optional
+`--genre`/`--style`/`--drummer`/`--complexity`). Two deliberate deviations
+from the decision text above, both load-bearing rather than incidental:
+
+- `ts_num`/`ts_denom`/`bars` were added as explicit parameters (not just
+  `grid_resolution`) because `steps_per_bar` needs a full time signature,
+  and the insertion pass needs to know how many bars to walk — the
+  original signature undercounted what the function actually needs.
+- Notes round-trip **without `ppqpos`** — only `bar`/`step`/`velocity`/
+  `off_grid`/`_idx` (mirroring `reaper/midi_drums/step_editor.lua`'s
+  `lane.notes` shape minus the REAPER-only fields). This module has no way
+  to compute a real take-local tick position, so it stays in the abstract
+  bar/step grid; resolving new notes' `ppqpos` (via `step_to_ppq`) is the
+  Lua-side merge's job, not Python's.
+
+Tests: `tests/unit/modifications/test_density_control.py` (unit-level,
+100% coverage) and `tests/unit/api/test_cli_adjust_density.py`
+(arg-parsing + file round-trip).
+
+**Not yet done**: the Lua-side half described in the Decision section —
+wiring the Step Editor's Amount slider to serialize a lane, shell out
+through `job_runner`, and merge the result back via `step_editor.commit()`.
+The panel's Amount slider (`reaper/midi_drums_panel.lua`) is still the
+disabled placeholder added in ADR 0009; its help text was updated to
+reflect that the Python side now exists but the control itself doesn't
+call it yet. Status stays "Accepted" rather than fully "Shipped" until
+that wiring lands.
 
 ## References
 
