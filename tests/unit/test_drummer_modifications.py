@@ -775,14 +775,16 @@ def test_ghost_note_layer_uses_correct_step_count_for_non_4_4_meter():
     pattern = builder.build()
     assert pattern.time_signature.beats_per_bar == 1.0
 
-    # density=1.0 * intensity=1.0 makes placement deterministic.
+    # density=1.0 * intensity=1.0 makes placement deterministic. Every
+    # *other* 16th gets ghosted, not every one - GhostNoteLayer never
+    # places two consecutive ghost 16ths, even at full density.
     mod = GhostNoteLayer(density=1.0)
     modified = mod.apply(pattern, intensity=1.0)
 
     ghost_positions = sorted(b.position for b in modified.beats if b.ghost_note)
-    assert ghost_positions == [0.0, 0.25, 0.5, 0.75], (
-        f"Expected 4 ghost notes on the 2/8 bar's 16th grid, got "
-        f"{ghost_positions}"
+    assert ghost_positions == [0.0, 0.5], (
+        f"Expected alternating ghost notes on the 2/8 bar's 16th grid "
+        f"(no back-to-back placements), got {ghost_positions}"
     )
 
     print(f"  [OK] GhostNoteLayer: 2/8 grid -> {ghost_positions}")

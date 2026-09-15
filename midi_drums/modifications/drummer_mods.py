@@ -234,7 +234,9 @@ class GhostNoteLayer(DrummerModification):
     """Add ghost notes on snare (Porcaro, Chambers style).
 
     Adds subtle ghost notes between main snare hits for texture and groove.
-    Essential for funk, R&B, and sophisticated rock drumming.
+    Essential for funk, R&B, and sophisticated rock drumming. Never places
+    two ghost notes on consecutive 16ths - real ghost-note vocabulary
+    alternates rather than sustaining a run of independent hits.
 
     Example:
         GhostNoteLayer(density=0.6).apply(pattern, intensity=0.8)
@@ -257,10 +259,18 @@ class GhostNoteLayer(DrummerModification):
             if b.instrument == DrumInstrument.SNARE and not b.ghost_note
         }
 
-        # Add ghost notes on 16ths that don't have main snares
+        # Add ghost notes on 16ths that don't have main snares. Consecutive
+        # 16ths are never both ghosted - real ghost-note vocabulary
+        # alternates/breathes; independent-per-slot coin flips with no
+        # spacing rule instead produce runs of 2-3 back-to-back ghost hits
+        # that read as chaotic rather than a drummer's touch (issue
+        # surfaced via the Step Editor's Apply Drummer control, where the
+        # note grid makes every hit visible in a way a full generated
+        # pattern doesn't).
         beats_per_bar = pattern.time_signature.beats_per_bar
         steps_per_bar = round(beats_per_bar / TIMING.SIXTEENTH)
         duration = pattern.duration_bars()
+        prev_step_ghosted = False
         for bar in range(int(duration)):
             bar_start = bar * beats_per_bar
 
@@ -269,6 +279,12 @@ class GhostNoteLayer(DrummerModification):
 
                 # Skip if main snare already exists
                 if pos in main_snare_positions:
+                    prev_step_ghosted = False
+                    continue
+
+                # Never ghost two consecutive 16ths in a row
+                if prev_step_ghosted:
+                    prev_step_ghosted = False
                     continue
 
                 # Probabilistically add ghost note
@@ -283,6 +299,9 @@ class GhostNoteLayer(DrummerModification):
                             accent=False,
                         )
                     )
+                    prev_step_ghosted = True
+                else:
+                    prev_step_ghosted = False
 
         # Sort by position
         modified_beats.sort(key=lambda b: b.position)

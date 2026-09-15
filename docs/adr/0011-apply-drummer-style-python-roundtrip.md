@@ -169,6 +169,29 @@ serialize/parse round-trip, and `replace_pattern` (whole-pattern replace,
 on-demand lane creation, and silently dropping an instrument absent from
 the kit map).
 
+## Follow-up (2026-09-15): ghost-note density
+
+Real-world use surfaced a quality issue once a user actually listened to
+Porcaro's output on a plain pattern via this control (the Step Editor's
+note grid makes every inserted hit visible in a way a fully-generated
+song never did): `GhostNoteLayer`
+(`midi_drums/modifications/drummer_mods.py`), used by five drummer plugins
+(Porcaro, Chambers, Copeland, Rich, Weckl), rolled an independent
+probability check on every empty 16th slot with no spacing rule,
+frequently producing runs of 2-3 consecutive ghost hits - not how
+ghost-note vocabulary is actually played. Fixed at the modification level
+(not Porcaro-specific, not part of this round-trip's own code): it now
+never places two ghost notes on consecutive 16ths, confirmed via
+`apply_drummer()` directly against a reproduction pattern (8 backbeat
+snares -> 29 total after Porcaro before the fix, 23 after, with no more
+back-to-back runs). This is a pre-existing plugin-tuning issue the
+round-trip inherited and exposed, not a bug in the round-trip itself -
+`apply_drummer()` calls the exact same `PluginManager.apply_drummer_style`
+the normal generation pipeline already used.
+`test_ghost_note_layer_uses_correct_step_count_for_non_4_4_meter` was
+updated since it had locked in the old all-slots-filled-at-density=1.0
+behavior as an explicit invariant.
+
 ## References
 
 - [ADR 0009](0009-unified-step-editor-panel.md) — the Step Editor panel
