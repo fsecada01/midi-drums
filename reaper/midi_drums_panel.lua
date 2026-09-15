@@ -347,6 +347,14 @@ local SE_AMOUNT_HELP = {
     .. "(docs/adr/0010-amount-density-control-python-roundtrip.md)." },
 }
 
+local SE_DUPLICATE_HELP = {
+  { title = "Duplicate Bar -> Forward", body = "Overwrites every bar "
+    .. "after the one currently shown with its pattern, across every "
+    .. "lane - not just the next bar, all the way to the end of the "
+    .. "item. Whatever was in those later bars is replaced, not merged. "
+    .. "Disabled on the last bar (nothing after it to fill)." },
+}
+
 local function se_kit_map_entry(mapping)
   return options.cache.kit_maps[mapping]
 end
@@ -558,6 +566,24 @@ local function draw_step_editor_tab()
   if reaper.ImGui_Button(ctx, "Next >##se") then
     if se_current_bar < se_data.bars - 1 then se_current_bar = se_current_bar + 1 end
   end
+
+  -- ----- Bar Actions row -----
+  local dup_disabled = se_current_bar >= se_data.bars - 1
+  if dup_disabled then reaper.ImGui_BeginDisabled(ctx) end
+  if reaper.ImGui_Button(ctx, "Duplicate Bar " .. (se_current_bar + 1) .. " -> Forward##se") then
+    local ok, err = step_editor.duplicate_bar_forward(se_data, se_current_bar)
+    if ok then
+      step_editor.commit(se_item, se_data)
+      se_status = string.format(
+        "Duplicated bar %d into bars %d-%d.", se_current_bar + 1, se_current_bar + 2, se_data.bars
+      )
+    else
+      se_status = "Error: " .. (err or "duplicate failed.")
+    end
+  end
+  if dup_disabled then reaper.ImGui_EndDisabled(ctx) end
+  reaper.ImGui_SameLine(ctx)
+  draw_help_button("se_duplicate", SE_DUPLICATE_HELP)
 
   local steps_per_bar, spb_err = step_editor.steps_per_bar(
     se_data.grid_resolution, se_data.ts_num, se_data.ts_denom

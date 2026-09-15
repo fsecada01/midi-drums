@@ -232,6 +232,43 @@ t.case("swap_articulation: rejects a cross-family target", function()
   helpers.assert_true(err ~= nil, "cross-family swap should return an error message")
 end)
 
+t.case("duplicate_bar_forward: overwrites every later bar, all lanes", function()
+  local fx, data = build_fixture()
+
+  -- Give SNARE a bar-1 note distinct from bar 0's pattern, so we can
+  -- verify it gets replaced rather than merged with bar 0's content.
+  step_editor.toggle_step(data, "SNARE", 1, 15, 60)
+  step_editor.commit(fx.item, data)
+
+  local ok, err = step_editor.duplicate_bar_forward(data, 0)
+  helpers.assert_true(ok, "duplicate_bar_forward failed: " .. tostring(err))
+  step_editor.commit(fx.item, data)
+
+  -- Bar 0's KICK/SNARE/CLOSED_HH steps should now also appear at bar 1.
+  local function has_step(lane, bar, step)
+    for _, n in ipairs(lane.notes) do
+      if n.bar == bar and n.step == step then return true end
+    end
+    return false
+  end
+
+  helpers.assert_true(has_step(data.lanes.KICK, 1, 0), "bar1 kick step0 missing after duplicate")
+  helpers.assert_true(has_step(data.lanes.KICK, 1, 8), "bar1 kick step8 missing after duplicate")
+  helpers.assert_true(has_step(data.lanes.SNARE, 1, 4), "bar1 snare step4 missing after duplicate")
+  helpers.assert_true(has_step(data.lanes.SNARE, 1, 12), "bar1 snare step12 missing after duplicate")
+  helpers.assert_true(not has_step(data.lanes.SNARE, 1, 15), "bar1's own original note15 should have been replaced, not merged")
+
+  -- Bar 0 itself must be untouched.
+  helpers.assert_eq(count_notes(data.lanes.KICK), 4, "KICK should have 2 bar0 + 2 bar1 notes")
+end)
+
+t.case("duplicate_bar_forward: rejects the last bar as a source", function()
+  local _fx, data = build_fixture()
+  local ok, err = step_editor.duplicate_bar_forward(data, data.bars - 1)
+  helpers.assert_true(ok == false, "duplicating the last bar should fail")
+  helpers.assert_true(err ~= nil, "should return an error message")
+end)
+
 t.case("swap_articulation: accepts a same-family target and commits the new pitch", function()
   local fx, data = build_fixture()
   local closed_count = count_notes(data.lanes.CLOSED_HH)

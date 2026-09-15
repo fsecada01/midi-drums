@@ -343,6 +343,54 @@ function M.apply_velocity_style(data, lanes, preset_name)
   return true
 end
 
+-- Overwrites every bar after `source_bar` (through the end of the
+-- pattern) with `source_bar`'s pattern, across every lane - "establish a
+-- groove in bar 1, then repeat it" rather than a single-bar copy. Notes
+-- in a target bar are fully replaced (deleted if already committed, or
+-- simply dropped if still a pending "add"), not merged with whatever was
+-- already there.
+function M.duplicate_bar_forward(data, source_bar)
+  if source_bar < 0 or source_bar >= data.bars then
+    return false, "source_bar out of range: " .. tostring(source_bar)
+  end
+  if source_bar >= data.bars - 1 then
+    return false, "No bars after the source bar to duplicate into."
+  end
+
+  for _, lane in pairs(data.lanes) do
+    local template = {}
+    for _, note in ipairs(lane.notes) do
+      if note.bar == source_bar then
+        template[#template + 1] = { step = note.step, velocity = note.velocity }
+      end
+    end
+
+    for i = #lane.notes, 1, -1 do
+      local note = lane.notes[i]
+      if note.bar > source_bar then
+        table.remove(lane.notes, i)
+        mark_dirty(data, note, note._idx and "remove" or nil)
+      end
+    end
+
+    for target_bar = source_bar + 1, data.bars - 1 do
+      for _, t in ipairs(template) do
+        local note = {
+          bar = target_bar,
+          step = t.step,
+          ppqpos = step_to_ppq(data, target_bar, t.step),
+          velocity = t.velocity,
+          off_grid = false,
+        }
+        lane.notes[#lane.notes + 1] = note
+        mark_dirty(data, note, "add")
+      end
+    end
+  end
+
+  return true
+end
+
 -- Re-resolves each live note's `_idx` after a commit's inserts/deletes
 -- have shifted the take's event indices, by matching (pitch, ppqpos)
 -- against a fresh MIDI_GetNote scan. Known limitation: two notes sharing
