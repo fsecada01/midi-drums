@@ -1,0 +1,253 @@
+-- reaper/tests/test_step_editor.lua
+-- Real-interpreter regression suite for step_editor.lua (ADR 0009),
+-- run against fake_reaper.lua instead of a live REAPER install. See
+-- reaper/tests/README.md for how to run this.
+local script_dir = (arg[0] or ""):match("^(.*[/\\])") or "./"
+
+local fake_reaper = dofile(script_dir .. "fake_reaper.lua")
+local helpers = dofile(script_dir .. "test_helpers.lua")
+local step_editor = dofile(script_dir .. "../midi_drums/step_editor.lua")
+
+-- Small fixed kit-map, matching the shape of DrumKit.kit_map()/
+-- options.parse_kit_map's `notes` array. CLOSED_HH/PEDAL_HH share a
+-- family (for swap_articulation's sibling check); OPEN_HH doesn't.
+local KIT_MAP = {
+  { note = 36, instrument = "KICK", label = "Kick", group = "kick", family = "kick", default_velocity = 105 },
+  { note = 38, instrument = "SNARE", label = "Snare", group = "snare", family = "snare", default_velocity = 100 },
+  { note = 42, instrument = "CLOSED_HH", label = "Closed HH", group = "hihat", family = "hihat_closed", default_velocity = 90 },
+  { note = 44, instrument = "PEDAL_HH", label = "Pedal HH", group = "hihat", family = "hihat_closed", default_velocity = 80 },
+  { note = 46, instrument = "OPEN_HH", label = "Open HH", group = "hihat", family = "hihat_open", default_velocity = 90 },
+}
+
+local function seed_note_ppq(fx, pitch, ppq, chan)
+  fx.take.notes[#fx.take.notes + 1] = {
+    startppqpos = ppq, endppqpos = ppq + 100,
+    chan = chan or 9, pitch = pitch, vel = 100,
+  }
+end
+
+local function seed_note_qn(fx, pitch, qn, chan)
+  seed_note_ppq(fx, pitch, qn * fx.ppq_per_qn, chan)
+end
+
+-- Standard fixture: kick x2, snare x2, closed-hh x2 (all on-grid, 16th
+-- grid @ 4/4 @ 120bpm), one off-grid unmapped note, one wrong-channel
+-- note that read_pattern_from_item must filter out entirely.
+local function build_fixture()
+  local fx = fake_reaper.new({ bpm = 120, ts_num = 4, ts_denom = 4, item_length_bars = 2 })
+  seed_note_qn(fx, 36, 0.0) -- kick, bar0 step0
+  seed_note_qn(fx, 36, 2.0) -- kick, bar0 step8
+  seed_note_qn(fx, 38, 1.0) -- snare, bar0 step4
+  seed_note_qn(fx, 38, 3.0) -- snare, bar0 step12
+  seed_note_qn(fx, 42, 0.0) -- closed hh, bar0 step0
+  seed_note_qn(fx, 42, 0.5) -- closed hh, bar0 step2
+  seed_note_ppq(fx, 50, 100) -- unmapped pitch, deliberately off-grid
+  seed_note_qn(fx, 36, 5.0, 0) -- wrong channel - must be filtered out
+
+  local data, err = step_editor.read_pattern_from_item(fx.item, KIT_MAP, "16th")
+  assert(data, "fixture read_pattern_from_item failed: " .. tostring(err))
+  return fx, data
+end
+
+local function count_notes(lane)
+  return lane and #lane.notes or 0
+end
+
+-- Only channel 9 (DRUM_CHANNEL) notes - the fixture deliberately seeds a
+-- channel-0 note at pitch 36 that read_pattern_from_item/commit both
+-- ignore forever, so it must not count as "still has the old pitch".
+local function pitches_in_take(fx)
+  local out = {}
+  for _, n in ipairs(fx.take.notes) do
+    if n.chan == 9 then
+      out[#out + 1] = n.pitch
+    end
+  end
+  table.sort(out)
+  return out
+end
+
+local t = helpers.new()
+
+t.case("steps_per_bar: common grid resolutions", function()
+  helpers.assert_eq(step_editor.steps_per_bar("16th", 4, 4), 16, "16th in 4/4")
+  helpers.assert_eq(step_editor.steps_per_bar("8th", 4, 4), 8, "8th in 4/4")
+  helpers.assert_eq(step_editor.steps_per_bar("8th_triplet", 4, 4), 12, "8th_triplet in 4/4")
+  helpers.assert_eq(step_editor.steps_per_bar("16th_triplet", 4, 4), 24, "16th_triplet in 4/4")
+  helpers.assert_eq(step_editor.steps_per_bar("16th", 3, 4), 12, "16th in 3/4")
+end)
+
+t.case("steps_per_bar: unknown resolution returns nil + error", function()
+  local result, err = step_editor.steps_per_bar("bogus", 4, 4)
+  helpers.assert_nil(result, "steps_per_bar result")
+  helpers.assert_true(err ~= nil, "steps_per_bar error message")
+end)
+
+t.case("read_pattern_from_item: bars, lane counts, bar/step bucketing", function()
+  local fx, data = build_fixture()
+
+  helpers.assert_eq(data.bars, 2, "data.bars")
+  helpers.assert_eq(count_notes(data.lanes.KICK), 2, "KICK note count")
+  helpers.assert_eq(count_notes(data.lanes.SNARE), 2, "SNARE note count")
+  helpers.assert_eq(count_notes(data.lanes.CLOSED_HH), 2, "CLOSED_HH note count")
+
+  local total = count_notes(data.lanes.KICK) + count_notes(data.lanes.SNARE)
+    + count_notes(data.lanes.CLOSED_HH)
+  helpers.assert_eq(total, 6, "on-grid mapped note total (wrong-channel note must be excluded)")
+
+  helpers.assert_eq(data.lanes.KICK.notes[1].bar, 0, "kick[1].bar")
+  helpers.assert_eq(data.lanes.KICK.notes[1].step, 0, "kick[1].step")
+  helpers.assert_eq(data.lanes.KICK.notes[2].step, 8, "kick[2].step")
+  helpers.assert_eq(data.lanes.SNARE.notes[1].step, 4, "snare[1].step")
+  helpers.assert_eq(data.lanes.SNARE.notes[2].step, 12, "snare[2].step")
+
+  for _, n in ipairs(data.lanes.KICK.notes) do
+    helpers.assert_true(not n.off_grid, "on-grid kick note flagged off_grid")
+    helpers.assert_true(n._idx ~= nil, "on-grid kick note missing _idx")
+  end
+end)
+
+t.case("read_pattern_from_item: unmapped pitch becomes its own lane", function()
+  local _fx, data = build_fixture()
+
+  local lane = data.lanes.unmapped_50
+  helpers.assert_true(lane ~= nil, "unmapped_50 lane exists")
+  helpers.assert_eq(count_notes(lane), 1, "unmapped_50 note count")
+  helpers.assert_eq(lane.label, "Unmapped (note 50)", "unmapped_50 label")
+end)
+
+t.case("read_pattern_from_item: off-grid tolerance flags the misaligned note", function()
+  local _fx, data = build_fixture()
+
+  local note = data.lanes.unmapped_50.notes[1]
+  helpers.assert_true(note.off_grid, "deliberately off-grid note not flagged")
+end)
+
+t.case("toggle_step: add a new note, commit persists it and reindexes", function()
+  local fx, data = build_fixture()
+  local before_count = #fx.take.notes
+
+  local ok = step_editor.toggle_step(data, "CLOSED_HH", 1, 0, 77)
+  helpers.assert_true(ok, "toggle_step add returned false")
+
+  local ok2 = step_editor.commit(fx.item, data)
+  helpers.assert_true(ok2, "commit returned false")
+
+  helpers.assert_eq(#fx.take.notes, before_count + 1, "take note count after add+commit")
+  helpers.assert_eq(fx.calls.undo_begin, 1, "Undo_BeginBlock call count")
+  helpers.assert_eq(fx.calls.undo_end, 1, "Undo_EndBlock call count")
+
+  local new_note = data.lanes.CLOSED_HH.notes[#data.lanes.CLOSED_HH.notes]
+  helpers.assert_true(new_note._idx ~= nil, "newly committed note missing reindexed _idx")
+
+  local _fx2, reread = build_fixture() -- sanity: fixture helper itself still works
+  helpers.assert_true(reread ~= nil, "sanity re-read")
+end)
+
+t.case("toggle_step: remove an already-committed note, commit deletes it", function()
+  local fx, data = build_fixture()
+  local before_count = #fx.take.notes
+
+  -- kick's bar0/step0 note is a real, already-committed note (has _idx).
+  local ok = step_editor.toggle_step(data, "KICK", 0, 0, 105)
+  helpers.assert_true(ok, "toggle_step remove returned false")
+  step_editor.commit(fx.item, data)
+
+  helpers.assert_eq(#fx.take.notes, before_count - 1, "take note count after remove+commit")
+  helpers.assert_eq(count_notes(data.lanes.KICK), 1, "KICK lane note count after removal")
+end)
+
+t.case("toggle_step: add then remove before commit is a true no-op", function()
+  local fx, data = build_fixture()
+  local before_count = #fx.take.notes
+
+  step_editor.toggle_step(data, "SNARE", 1, 0, 100) -- add (uncommitted)
+  step_editor.toggle_step(data, "SNARE", 1, 0, 100) -- toggled back off
+  helpers.assert_eq(#data.dirty, 0, "dirty list should be empty after add+remove of the same cell")
+
+  step_editor.commit(fx.item, data)
+  helpers.assert_eq(#fx.take.notes, before_count, "take note count must be unchanged")
+  helpers.assert_eq(fx.calls.undo_begin, 0, "commit must not open an undo block for a no-op")
+end)
+
+t.case("reassign_lane: moves notes and pitch, one undo block", function()
+  local fx, data = build_fixture()
+  local kick_count = count_notes(data.lanes.KICK)
+  local snare_count_before = count_notes(data.lanes.SNARE)
+
+  local ok, err = step_editor.reassign_lane(data, { "KICK" }, "SNARE")
+  helpers.assert_true(ok, "reassign_lane failed: " .. tostring(err))
+  step_editor.commit(fx.item, data)
+
+  helpers.assert_eq(count_notes(data.lanes.KICK), 0, "KICK lane should be empty after reassign")
+  helpers.assert_eq(count_notes(data.lanes.SNARE), snare_count_before + kick_count, "SNARE lane grew by the reassigned count")
+  helpers.assert_eq(fx.calls.undo_begin, 1, "reassign_lane commit should be exactly one undo block")
+
+  local pitches = pitches_in_take(fx)
+  for _, p in ipairs(pitches) do
+    helpers.assert_true(p ~= 36, "no note should still have the old KICK pitch after reassign")
+  end
+end)
+
+t.case("scale_velocity: scales and clamps to the MIDI range", function()
+  local fx, data = build_fixture()
+
+  local ok = step_editor.scale_velocity(data, { "SNARE" }, 2.0)
+  helpers.assert_true(ok, "scale_velocity failed")
+  for _, note in ipairs(data.lanes.SNARE.notes) do
+    helpers.assert_eq(note.velocity, 127, "velocity should clamp to 127 (100 * 2.0)")
+  end
+
+  step_editor.commit(fx.item, data)
+  for _, n in ipairs(fx.take.notes) do
+    if n.pitch == 38 then
+      helpers.assert_eq(n.vel, 127, "committed velocity should reflect the clamp")
+    end
+  end
+end)
+
+t.case("apply_velocity_style: 'flat' is a no-op multiplier", function()
+  local _fx, data = build_fixture()
+
+  local ok = step_editor.apply_velocity_style(data, { "KICK" }, "flat")
+  helpers.assert_true(ok, "apply_velocity_style failed")
+  for _, note in ipairs(data.lanes.KICK.notes) do
+    helpers.assert_eq(note.velocity, 100, "flat style must not change velocity")
+  end
+end)
+
+t.case("apply_velocity_style: unknown preset returns an error", function()
+  local _fx, data = build_fixture()
+
+  local ok, err = step_editor.apply_velocity_style(data, { "KICK" }, "not_a_real_preset")
+  helpers.assert_true(ok == false, "unknown preset should return false")
+  helpers.assert_true(err ~= nil, "unknown preset should return an error message")
+end)
+
+t.case("swap_articulation: rejects a cross-family target", function()
+  local _fx, data = build_fixture()
+
+  local ok, err = step_editor.swap_articulation(data, { "CLOSED_HH" }, "OPEN_HH")
+  helpers.assert_true(ok == false, "cross-family swap should fail")
+  helpers.assert_true(err ~= nil, "cross-family swap should return an error message")
+end)
+
+t.case("swap_articulation: accepts a same-family target and commits the new pitch", function()
+  local fx, data = build_fixture()
+  local closed_count = count_notes(data.lanes.CLOSED_HH)
+
+  local ok, err = step_editor.swap_articulation(data, { "CLOSED_HH" }, "PEDAL_HH")
+  helpers.assert_true(ok, "same-family swap failed: " .. tostring(err))
+  step_editor.commit(fx.item, data)
+
+  helpers.assert_eq(count_notes(data.lanes.PEDAL_HH), closed_count, "PEDAL_HH should receive every swapped note")
+
+  local pitches = pitches_in_take(fx)
+  local has_44 = false
+  for _, p in ipairs(pitches) do
+    if p == 44 then has_44 = true end
+  end
+  helpers.assert_true(has_44, "committed take should contain the new PEDAL_HH pitch (44)")
+end)
+
+t.finish()
