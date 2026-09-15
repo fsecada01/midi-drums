@@ -836,6 +836,64 @@ Examples:
         help="Provenance context: complexity 0.0-1.0 (optional)",
     )
 
+    drummer_rt_parser = subparsers.add_parser(
+        "apply-drummer-style",
+        help=(
+            "ADR 0011: apply a drummer's style and/or humanization to a "
+            "whole Step Editor pattern - the Python side of the Apply "
+            "Drummer control's round-trip"
+        ),
+    )
+    drummer_rt_parser.add_argument(
+        "--input",
+        required=True,
+        metavar="JSON",
+        help=(
+            "JSON file: a flat array of note dicts across every lane "
+            "({instrument, position_qn, velocity, ghost_note, accent})"
+        ),
+    )
+    drummer_rt_parser.add_argument(
+        "--output",
+        required=True,
+        metavar="JSON",
+        help="Where to write the resulting note array (same shape as --input)",
+    )
+    drummer_rt_parser.add_argument(
+        "--drummer",
+        help="Drummer plugin name to apply (omit to skip style application)",
+    )
+    drummer_rt_parser.add_argument(
+        "--drummer-intensity",
+        type=float,
+        default=1.0,
+        help="0.0-1.0 blend of the drummer's style (default: 1.0)",
+    )
+    drummer_rt_parser.add_argument(
+        "--timing-variance",
+        type=float,
+        default=0.0,
+        help="Random timing jitter in beats, 0.0 = none (default: 0.0)",
+    )
+    drummer_rt_parser.add_argument(
+        "--velocity-variance",
+        type=float,
+        default=0.0,
+        help="Random velocity jitter +/-N, 0.0 = none (default: 0.0)",
+    )
+    drummer_rt_parser.add_argument(
+        "--ts-num",
+        type=int,
+        default=4,
+        help="Time signature numerator (default: 4)",
+    )
+    drummer_rt_parser.add_argument(
+        "--ts-denom",
+        type=int,
+        default=4,
+        help="Time signature denominator (default: 4)",
+    )
+
     return parser
 
 
@@ -1994,6 +2052,43 @@ def handle_adjust_density_command(args) -> None:
     print(f"  Output   : {args.output}")
 
 
+def handle_apply_drummer_style_command(args) -> None:
+    """Handle the 'apply-drummer-style' command (ADR 0011)."""
+    import json  # noqa: PLC0415
+
+    from midi_drums.modifications.apply_drummer import apply_drummer
+
+    try:
+        notes = json.loads(Path(args.input).read_text())
+    except (OSError, json.JSONDecodeError) as e:
+        print(f"Error reading --input: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    try:
+        result = apply_drummer(
+            notes,
+            drummer=args.drummer,
+            intensity=args.drummer_intensity,
+            timing_variance=args.timing_variance,
+            velocity_variance=args.velocity_variance,
+            ts_num=args.ts_num,
+            ts_denom=args.ts_denom,
+        )
+    except ValueError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    Path(args.output).write_text(json.dumps(result, indent=2))
+    print(
+        f"Applied drummer={args.drummer or '(none)'} "
+        f"intensity={args.drummer_intensity} "
+        f"timing_variance={args.timing_variance} "
+        f"velocity_variance={args.velocity_variance} "
+        f"({len(notes)} -> {len(result)} note(s))"
+    )
+    print(f"  Output   : {args.output}")
+
+
 def main():
     """Main CLI entry point."""
     # On Windows, stdout/stderr default to the console's ANSI codepage
@@ -2026,6 +2121,10 @@ def main():
 
     if args.command == "adjust-density":
         handle_adjust_density_command(args)
+        return
+
+    if args.command == "apply-drummer-style":
+        handle_apply_drummer_style_command(args)
         return
 
     # Initialize generator

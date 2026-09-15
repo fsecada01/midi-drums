@@ -12,6 +12,7 @@ Usage:
     pattern = TripletVocabulary().apply(pattern, intensity=0.9)
 """
 
+from midi_drums.modifications.apply_drummer import apply_drummer
 from midi_drums.modifications.cymbal_accent_reaction import CymbalAccentReaction
 from midi_drums.modifications.density_control import adjust_density
 from midi_drums.modifications.drummer_mods import (
@@ -70,6 +71,12 @@ __all__ = [
     # on the Step Editor's flat per-note dict shape (bar/step/velocity),
     # not Pattern/Beat, so it doesn't fit the class hierarchy above.
     "adjust_density",
+    # Apply Drummer (ADR 0011, Step Editor humanization round-trip). A
+    # plain function like adjust_density above - it does build Pattern/
+    # Beat internally to reuse apply_drummer_style/Pattern.humanize, but
+    # its public contract is the flat per-note dict shape, not a
+    # DrummerModification.apply(pattern, intensity) interface.
+    "apply_drummer",
     # Registry
     "ModificationRegistry",
 ]

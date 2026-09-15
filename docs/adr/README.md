@@ -28,4 +28,4 @@ stays in `claudedocs/` (active) or its archive (historical) instead.
 | [0008](0008-vendor-midi-note-map-corrections.md) | GM preset note-map correction; other vendor kits left unresearched rather than guessed | Accepted |
 | [0009](0009-unified-step-editor-panel.md) | Unified Step Editor panel: one data model over the live REAPER MIDI item, no parallel pattern format | Accepted |
 | [0010](0010-amount-density-control-python-roundtrip.md) | Amount/density control is new Python-side generative logic, routed through job_runner's single-job model | Accepted (Python side; Lua wiring pending) |
-| [0011](0011-apply-drummer-style-python-roundtrip.md) | Apply Drummer (Step Editor humanization) is a whole-pattern Python round-trip, mirroring ADR 0010's shape | Proposed |
+| [0011](0011-apply-drummer-style-python-roundtrip.md) | Apply Drummer (Step Editor humanization) is a whole-pattern Python round-trip, mirroring ADR 0010's shape | Accepted (Python side; Lua wiring pending) |

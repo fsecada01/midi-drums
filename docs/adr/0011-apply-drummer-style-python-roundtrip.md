@@ -1,6 +1,6 @@
 # 0011. Apply Drummer (Step Editor humanization) is a whole-pattern Python round-trip, mirroring ADR 0010's shape
 
-> **Status**: Proposed
+> **Status**: Accepted (Python side implemented; Lua-side wiring still pending)
 > **Date**: 2026-09-15
 
 ## Context
@@ -47,7 +47,7 @@ strip, since it always acts on the whole loaded pattern).
   `M.qn_to_ppq(data, qn)`, factored out of the existing private
   `step_to_ppq`).
 - **`apply_drummer(notes, drummer, intensity, timing_variance,
-  velocity_variance, grid_resolution, ts_num=4, ts_denom=4)`**: converts
+  velocity_variance, ts_num=4, ts_denom=4)`**: converts
   the flat note list to `Beat`/`Pattern` objects (`DrumInstrument[lane_key]`
   for the instrument, `position_qn` for `Beat.position`), runs
   `PluginManager.apply_drummer_style` (skipped entirely if `drummer` is
@@ -116,6 +116,34 @@ strip, since it always acts on the whole loaded pattern).
 - Like Amount, this blocks every other tab's Generate button for the
   round-trip window (`job_runner`'s single-job constraint, reaffirmed in
   ADR 0010) — same accepted limitation, not re-litigated here.
+- `Pattern.duration_bars()` infers bar count from the highest beat
+  position present, not an explicit bar count — a pattern whose last
+  bar(s) are genuinely empty will under-count them, so `GhostNoteLayer`
+  (and any other bar-count-aware modification) won't consider inserting
+  into a trailing all-empty bar. Accepted as a pre-existing `Pattern`
+  limitation this feature inherits rather than one it introduces; fixing
+  it would mean extending `Pattern`'s own API, out of scope here.
+
+## Implementation note (2026-09-15)
+
+The Python round-trip shipped exactly as decided above:
+`midi_drums/modifications/apply_drummer.py`'s `apply_drummer(notes, drummer,
+intensity, timing_variance, velocity_variance, ts_num=4, ts_denom=4,
+plugin_manager=None)` and the `apply-drummer-style` CLI verb (`--input`,
+`--output`, `--drummer`, `--drummer-intensity`, `--timing-variance`,
+`--velocity-variance`, `--ts-num`, `--ts-denom`). `grid_resolution` was
+dropped from the signature during implementation (see Decision text above,
+already corrected) — it was never actually needed since `position_qn` plus
+`TimeSignature` fully determine the round-trip without any grid-stepping.
+25 tests across `tests/unit/modifications/test_apply_drummer.py` and
+`tests/unit/api/test_cli_apply_drummer_style.py` cover validation,
+passthrough of unmapped instruments, drummer styling (both a fake
+`PluginManager` and two real-plugin end-to-end checks), humanization, and
+the CLI's file round-trip/error paths.
+
+**Not yet done**: the Lua-side half — `step_editor.lua`'s `M.qn_to_ppq` and
+`M.replace_pattern`, and the Apply Drummer control row + `job_runner`
+wiring in `midi_drums_panel.lua`.
 
 ## References
 
