@@ -24,6 +24,82 @@ _GM_HIHAT_COLLAPSE: dict[DrumInstrument, int] = {
     DrumInstrument.OPEN_HH_MAX: DrumInstrument.OPEN_HH.value,
 }
 
+# Velocity-range category per instrument. Shared by get_velocity_range()
+# and kit_map() (ADR 0009) so both read one table instead of two drifting
+# copies. "toms" is the fallback category for any instrument not listed
+# here (see get_velocity_range()), though every current DrumInstrument
+# member is listed explicitly.
+_INSTRUMENT_CATEGORY: dict[DrumInstrument, str] = {
+    DrumInstrument.KICK: "kick",
+    DrumInstrument.SNARE: "snare",
+    DrumInstrument.RIM: "snare",
+    DrumInstrument.CLOSED_HH: "hihat",
+    DrumInstrument.CLOSED_HH_EDGE: "hihat",
+    DrumInstrument.CLOSED_HH_TIP: "hihat",
+    DrumInstrument.TIGHT_HH_EDGE: "hihat",
+    DrumInstrument.TIGHT_HH_TIP: "hihat",
+    DrumInstrument.PEDAL_HH: "hihat",
+    DrumInstrument.OPEN_HH: "hihat",
+    DrumInstrument.OPEN_HH_1: "hihat",
+    DrumInstrument.OPEN_HH_2: "hihat",
+    DrumInstrument.OPEN_HH_3: "hihat",
+    DrumInstrument.OPEN_HH_MAX: "hihat",
+    DrumInstrument.MID_TOM: "toms",
+    DrumInstrument.FLOOR_TOM: "toms",
+    DrumInstrument.CRASH: "cymbals",
+    DrumInstrument.SPLASH: "cymbals",
+    DrumInstrument.CHINA: "cymbals",
+    DrumInstrument.RIDE: "ride",
+    DrumInstrument.RIDE_BELL: "ride",
+}
+
+# Human-readable label per instrument, for kit_map() (ADR 0009) - the
+# REAPER Step Editor panel displays these directly rather than an enum
+# name, so this is UI-facing copy, not a mapping decision.
+_INSTRUMENT_LABEL: dict[DrumInstrument, str] = {
+    DrumInstrument.KICK: "Kick",
+    DrumInstrument.SNARE: "Snare",
+    DrumInstrument.RIM: "Rim",
+    DrumInstrument.CLOSED_HH: "Closed Hi-Hat",
+    DrumInstrument.CLOSED_HH_EDGE: "Closed Hi-Hat (Edge)",
+    DrumInstrument.CLOSED_HH_TIP: "Closed Hi-Hat (Tip)",
+    DrumInstrument.TIGHT_HH_EDGE: "Tight Hi-Hat (Edge)",
+    DrumInstrument.TIGHT_HH_TIP: "Tight Hi-Hat (Tip)",
+    DrumInstrument.PEDAL_HH: "Pedal Hi-Hat",
+    DrumInstrument.OPEN_HH: "Open Hi-Hat",
+    DrumInstrument.OPEN_HH_1: "Open Hi-Hat 1",
+    DrumInstrument.OPEN_HH_2: "Open Hi-Hat 2",
+    DrumInstrument.OPEN_HH_3: "Open Hi-Hat 3",
+    DrumInstrument.OPEN_HH_MAX: "Open Hi-Hat (Max)",
+    DrumInstrument.MID_TOM: "Mid Tom",
+    DrumInstrument.FLOOR_TOM: "Floor Tom",
+    DrumInstrument.CRASH: "Crash",
+    DrumInstrument.RIDE: "Ride",
+    DrumInstrument.RIDE_BELL: "Ride Bell",
+    DrumInstrument.SPLASH: "Splash",
+    DrumInstrument.CHINA: "China",
+}
+
+# Sibling-articulation family per instrument, for kit_map()'s "swap
+# articulation" grouping (ADR 0009): instruments that share a family are
+# alternate playing techniques on the same physical piece (e.g. closed
+# hi-hat played at the edge vs. the tip), and are the candidates offered
+# when swapping one articulation for another within a lane. Instruments
+# with no vendor-specific articulation siblings get a family of one,
+# keyed by their own enum name.
+_INSTRUMENT_FAMILY: dict[DrumInstrument, str] = {
+    DrumInstrument.CLOSED_HH: "closed_hihat",
+    DrumInstrument.CLOSED_HH_EDGE: "closed_hihat",
+    DrumInstrument.CLOSED_HH_TIP: "closed_hihat",
+    DrumInstrument.TIGHT_HH_EDGE: "closed_hihat",
+    DrumInstrument.TIGHT_HH_TIP: "closed_hihat",
+    DrumInstrument.OPEN_HH: "open_hihat",
+    DrumInstrument.OPEN_HH_1: "open_hihat",
+    DrumInstrument.OPEN_HH_2: "open_hihat",
+    DrumInstrument.OPEN_HH_3: "open_hihat",
+    DrumInstrument.OPEN_HH_MAX: "open_hihat",
+}
+
 
 @dataclass
 class VelocityRange:
@@ -74,32 +150,7 @@ class DrumKit:
 
     def get_velocity_range(self, instrument: DrumInstrument) -> VelocityRange:
         """Get velocity range for an instrument category."""
-        # Map instruments to velocity categories
-        category_map = {
-            DrumInstrument.KICK: "kick",
-            DrumInstrument.SNARE: "snare",
-            DrumInstrument.RIM: "snare",
-            DrumInstrument.CLOSED_HH: "hihat",
-            DrumInstrument.CLOSED_HH_EDGE: "hihat",
-            DrumInstrument.CLOSED_HH_TIP: "hihat",
-            DrumInstrument.TIGHT_HH_EDGE: "hihat",
-            DrumInstrument.TIGHT_HH_TIP: "hihat",
-            DrumInstrument.PEDAL_HH: "hihat",
-            DrumInstrument.OPEN_HH: "hihat",
-            DrumInstrument.OPEN_HH_1: "hihat",
-            DrumInstrument.OPEN_HH_2: "hihat",
-            DrumInstrument.OPEN_HH_3: "hihat",
-            DrumInstrument.OPEN_HH_MAX: "hihat",
-            DrumInstrument.MID_TOM: "toms",
-            DrumInstrument.FLOOR_TOM: "toms",
-            DrumInstrument.CRASH: "cymbals",
-            DrumInstrument.SPLASH: "cymbals",
-            DrumInstrument.CHINA: "cymbals",
-            DrumInstrument.RIDE: "ride",
-            DrumInstrument.RIDE_BELL: "ride",
-        }
-
-        category = category_map.get(instrument, "toms")
+        category = _INSTRUMENT_CATEGORY.get(instrument, "toms")
         return self.velocity_ranges.get(category, VelocityRange())
 
     def randomize_velocity(self, instrument: DrumInstrument) -> int:
@@ -110,6 +161,52 @@ class DrumKit:
         return random.randint(
             velocity_range.min_velocity, velocity_range.max_velocity
         )
+
+    def kit_map(self) -> list[dict]:
+        """Resolve this kit's note map for the REAPER Step Editor panel.
+
+        Per ADR 0009, the panel never hardcodes a Lua drum-note table -
+        it fetches this instead (via the `list kit-map` CLI verb), so a
+        change here or in `DrumInstrument`/`custom_mappings` can't drift
+        out of sync with what the panel displays.
+
+        Distinct `DrumInstrument` members that resolve to the same MIDI
+        note (e.g. every EZDrummer-specific hi-hat articulation on a
+        GM-collapsed preset) are deduped, keeping only the first one
+        encountered in `DrumInstrument` declaration order - which is
+        always the canonical GM-standard member (`CLOSED_HH`/`OPEN_HH`
+        are declared before the vendor-specific aliases that collapse
+        onto them), never a vendor alias.
+
+        Returns:
+            One dict per resolved note, each with `note`, `instrument`,
+            `label`, `group`, `family`, and `default_velocity` keys,
+            ordered by ascending MIDI note number.
+        """
+        seen_notes: set[int] = set()
+        entries: list[dict] = []
+        for instrument in DrumInstrument:
+            note = self.get_midi_note(instrument)
+            if note in seen_notes:
+                continue
+            seen_notes.add(note)
+            entries.append(
+                {
+                    "note": note,
+                    "instrument": instrument.name,
+                    "label": _INSTRUMENT_LABEL[instrument],
+                    "group": _INSTRUMENT_CATEGORY.get(instrument, "toms"),
+                    "family": _INSTRUMENT_FAMILY.get(
+                        instrument, instrument.name.lower()
+                    ),
+                    "default_velocity": self.get_velocity_range(
+                        instrument
+                    ).default_velocity,
+                }
+            )
+
+        entries.sort(key=lambda entry: entry["note"])
+        return entries
 
     @classmethod
     def create_ezdrummer3_kit(cls) -> "DrumKit":

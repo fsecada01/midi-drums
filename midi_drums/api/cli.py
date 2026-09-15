@@ -30,6 +30,7 @@ Examples:
   # List available options
   python -m midi_drums.api.cli list genres
   python -m midi_drums.api.cli list styles --genre metal
+  python -m midi_drums.api.cli list kit-map --mapping ezdrummer3
 
   # Reaper integration — full export with MIDI
   python -m midi_drums.api.cli reaper export --genre metal --style doom \\
@@ -224,6 +225,20 @@ Examples:
         "styles", help="List styles for a genre"
     )
     styles_parser.add_argument("--genre", required=True, help="Genre name")
+
+    kitmap_parser = list_subparsers.add_parser(
+        "kit-map",
+        help=(
+            "Print a mapping preset's resolved note map as JSON, for "
+            "tooling (e.g. the REAPER panel's Step Editor tab) rather "
+            "than human reading"
+        ),
+    )
+    kitmap_parser.add_argument(
+        "--mapping",
+        required=True,
+        help="MIDI mapping preset name (see `list mappings`)",
+    )
 
     list_subparsers.add_parser(
         "options",
@@ -900,6 +915,12 @@ def handle_list_command(args, generator: DrumGenerator) -> None:
             print("Available MIDI mapping presets:")
             for preset_name, description in mappings.items():
                 print(f"  {preset_name:<18} - {description}")
+
+        elif args.list_type == "kit-map":
+            import json  # noqa: PLC0415
+
+            kit = DrumKit.from_preset(args.mapping)
+            print(json.dumps({"mapping": args.mapping, "notes": kit.kit_map()}))
 
         elif args.list_type == "options":
             import json  # noqa: PLC0415

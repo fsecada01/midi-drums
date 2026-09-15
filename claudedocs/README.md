@@ -31,8 +31,18 @@ indexed home.
 
 ## Currently active (not yet archived)
 
-_None at present._ `design_riff_snare_accents.md` shipped and its decision
-is now recorded in [`docs/adr/0004-riff-driven-snare-accent-reaction.md`](../docs/adr/0004-riff-driven-snare-accent-reaction.md);
+- `design_step_editor_grid.md` (Revision 2) and
+  `research_ezdrummer3_editplaystyle_20260914.md` — the Step Editor panel
+  feature. Decisions recorded in
+  [`docs/adr/0009-unified-step-editor-panel.md`](../docs/adr/0009-unified-step-editor-panel.md)
+  and
+  [`docs/adr/0010-amount-density-control-python-roundtrip.md`](../docs/adr/0010-amount-density-control-python-roundtrip.md)
+  (both **Proposed**, not yet implemented); these two source docs stay
+  active here until the feature ships, at which point the ADRs move to
+  Accepted and these docs archive per the usual flow.
+
+`design_riff_snare_accents.md` shipped and its decision is now recorded in
+[`docs/adr/0004-riff-driven-snare-accent-reaction.md`](../docs/adr/0004-riff-driven-snare-accent-reaction.md);
 the source doc was removed outright rather than archived, since the ADR
 fully captures it (see git history for the original text).
 

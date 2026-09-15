@@ -21,10 +21,41 @@ M.cache = {
   genre_styles = {}, -- flat list of {genre = ..., style = ...}
   loaded = false,
   error = nil,
+
+  -- Per-mapping note map for the Step Editor panel (ADR 0009), keyed by
+  -- mapping name and lazily fetched on demand rather than eagerly for
+  -- every preset up front - unlike genres/drummers/mappings above,
+  -- there's no single combo box that needs every mapping's note table
+  -- loaded at once. Each entry is
+  -- {notes = {...}, loaded = true/false, error = nil}.
+  kit_maps = {},
 }
 
 function M.build_cmd(python_exe)
   return string.format('"%s" -m midi_drums list options', python_exe)
+end
+
+-- Same shell-arg sanitizing as sections.lua/riff_lock.lua/
+-- additive_rhythm.lua's own M.shell_escape (duplicated per-module in
+-- this codebase rather than shared via dofile - see those modules).
+-- `mapping` comes from a dropdown, not free text, but every other
+-- --mapping-carrying command still escapes it, so this does too.
+function M.shell_escape(s)
+  s = s:gsub("[\r\n]", " ")
+  s = s:gsub('"', "'")
+  s = s:gsub("[&|^<>%%]", "")
+  return s
+end
+
+-- `list kit-map --mapping <preset>` - a given mapping preset's resolved
+-- note table (see DrumKit.kit_map()), for the Step Editor panel instead
+-- of a hardcoded Lua drum-note table (same rationale as M.build_cmd
+-- above, applied to note mappings rather than genre/drummer/style).
+function M.build_kit_map_cmd(python_exe, mapping)
+  return string.format(
+    '"%s" -m midi_drums list kit-map --mapping "%s"',
+    python_exe, M.shell_escape(mapping)
+  )
 end
 
 -- Flat-array parsing, mirroring sections.lua's parse_sidecar/
@@ -79,6 +110,58 @@ function M.styles_for(genre)
     end
   end
   return out
+end
+
+-- Parses `list kit-map --mapping <preset>`'s JSON (see
+-- DrumKit.kit_map() / cli.py's handle_list_command "kit-map" branch):
+-- {"mapping": "...", "notes": [{"note": N, "instrument": "...",
+-- "label": "...", "group": "...", "family": "...",
+-- "default_velocity": N}, ...]}. Same no-JSON-library, fixed-key-order
+-- gmatch approach as M.parse - relies on DrumKit.kit_map() always
+-- building each note dict in this exact key order (Python dicts
+-- preserve insertion order, and json.dumps doesn't reorder them), same
+-- assumption M.parse already makes about the "options" JSON's shape.
+function M.parse_kit_map(content)
+  local mapping = content:match('"mapping"%s*:%s*"([^"]*)"')
+
+  local notes = {}
+  for note, instrument, label, group, family, default_velocity in
+    content:gmatch(
+      '"note"%s*:%s*(%d+)%s*,%s*"instrument"%s*:%s*"([^"]*)"%s*,'
+        .. '%s*"label"%s*:%s*"([^"]*)"%s*,%s*"group"%s*:%s*"([^"]*)"%s*,'
+        .. '%s*"family"%s*:%s*"([^"]*)"%s*,'
+        .. '%s*"default_velocity"%s*:%s*(%d+)'
+    )
+  do
+    notes[#notes + 1] = {
+      note = tonumber(note),
+      instrument = instrument,
+      label = label,
+      group = group,
+      family = family,
+      default_velocity = tonumber(default_velocity),
+    }
+  end
+
+  if #notes == 0 then
+    return nil, "Could not parse 'notes' from kit-map JSON."
+  end
+
+  return { mapping = mapping, notes = notes }
+end
+
+-- Note table for `mapping`, from the lazily-populated per-mapping cache.
+-- Returns {} (not nil) for a mapping that hasn't been fetched yet (or
+-- failed to parse) so callers can always iterate the result directly,
+-- same convention as M.styles_for. Callers that need to distinguish
+-- "not yet loaded" from "loaded but empty" should check
+-- M.cache.kit_maps[mapping] directly instead.
+function M.kit_map_for(mapping)
+  local entry = M.cache.kit_maps[mapping]
+  if not entry or not entry.loaded then
+    return {}
+  end
+  return entry.notes
 end
 
 return M

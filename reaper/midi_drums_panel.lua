@@ -28,6 +28,7 @@ local sections = dofile(script_path .. "midi_drums/sections.lua")
 local riff_lock = dofile(script_path .. "midi_drums/riff_lock.lua")
 local additive_rhythm = dofile(script_path .. "midi_drums/additive_rhythm.lua")
 local options = dofile(script_path .. "midi_drums/options.lua")
+local step_editor = dofile(script_path .. "midi_drums/step_editor.lua")
 
 local ctx = reaper.ImGui_CreateContext("midi_drums Panel")
 
@@ -130,6 +131,37 @@ local function refresh_options()
     else
       options.cache.error = err or "Could not parse options JSON."
     end
+  end)
+end
+
+-- Forward-declared so refresh_kit_map's on_complete closure (defined
+-- first, below) can call it once a lazily-fetched kit-map finishes
+-- loading - see the Step Editor tab state block for the assignment.
+local se_try_load_pattern
+
+-- Lazily fetches `list kit-map --mapping <mapping>` into
+-- options.cache.kit_maps, same shape as refresh_options() but scoped to
+-- one mapping at a time (see options.lua's own header comment on why
+-- kit-maps are cached lazily per-mapping rather than eagerly like
+-- genres/drummers/mappings). Resumes a pending Step Editor load once the
+-- fetch completes, so "Load Selected Item" only needs one click even
+-- when the mapping's kit-map isn't cached yet.
+local function refresh_kit_map(mapping)
+  if job_runner.is_running() then return end
+  local python_exe = cached_python_exe()
+  if not python_exe then return end
+
+  local cmd = options.build_kit_map_cmd(python_exe, mapping)
+  job_runner.start(cmd, "Load Kit Map", function()
+    local content = table.concat(job_runner.state.log_lines, "\n")
+    local parsed, err = options.parse_kit_map(content)
+    if parsed then
+      options.cache.kit_maps[mapping] = { notes = parsed.notes, loaded = true, error = nil }
+    else
+      options.cache.kit_maps[mapping] =
+        { notes = {}, loaded = false, error = err or "Could not parse kit-map JSON." }
+    end
+    if se_try_load_pattern then se_try_load_pattern() end
   end)
 end
 
@@ -277,6 +309,297 @@ local AR_GROUPING_HELP = {
     .. "bar instead (e.g. '2+2+3|' for a single 7/8 bar). See "
     .. "claudedocs/design_additive_rhythm_grouping.md." },
 }
+
+-- ===== Step Editor tab state =====
+-- ADR 0009 - see claudedocs/design_step_editor_grid.md. `se_data` is nil
+-- until "Load Selected Item" succeeds; `se_item` is the MediaItem it was
+-- read from (commit() writes back to this item, not whatever's selected
+-- at click time - matches riff_lock's "read selection fresh, then hold
+-- it for the run" pattern, but held across many clicks here instead of
+-- one Generate click).
+local se_mapping = settings.get("default_mapping")
+local se_grid = "16th"
+local se_data = nil
+local se_item = nil
+local se_current_bar = 0
+local se_selected_lanes = {}
+local se_reassign_target = ""
+local se_velocity_factor = 1.0
+local se_velocity_style = "flat"
+local se_status = ""
+
+local SE_VELOCITY_STYLE_NAMES = { "flat", "crescendo", "halftime_accent", "backbeat_emphasis" }
+local SE_STEP_CELL_SIZE = 22
+
+local SE_HELP = {
+  { title = "Step Editor", body = "Manually correct a generated drum "
+    .. "pattern on the selected MIDI item. Grid clicks toggle individual "
+    .. "hits; the controls above the grid act on whichever lane(s) are "
+    .. "checked. Every change writes straight back to the item and is "
+    .. "its own undo step - there's no separate Save." },
+}
+
+local SE_AMOUNT_HELP = {
+  { title = "Amount (not yet available)", body = "Density-style +/- "
+    .. "control that adds or removes hits in a lane, mirroring "
+    .. "EZDrummer 3's Amount knob. Needs a new Python-side generative "
+    .. "module and CLI verb that don't exist yet - see ADR 0010 "
+    .. "(docs/adr/0010-amount-density-control-python-roundtrip.md)." },
+}
+
+local function se_kit_map_entry(mapping)
+  return options.cache.kit_maps[mapping]
+end
+
+local function se_kit_map_instruments(mapping)
+  local entry = se_kit_map_entry(mapping)
+  if not entry or not entry.loaded then return {} end
+  local out = {}
+  for _, n in ipairs(entry.notes) do
+    out[#out + 1] = n.instrument
+  end
+  return out
+end
+
+-- Attempts to (re)build se_data from se_pending_item using whatever
+-- kit-map is cached for se_mapping - kicks off a fetch and defers to
+-- itself (via refresh_kit_map's on_complete) instead of reading if the
+-- kit-map isn't cached yet.
+local se_pending_item = nil
+
+se_try_load_pattern = function()
+  local item = se_pending_item
+  if not item then return end
+
+  local entry = se_kit_map_entry(se_mapping)
+  if not entry or not entry.loaded then
+    refresh_kit_map(se_mapping)
+    se_status = "Loading kit-map for '" .. se_mapping .. "'..."
+    return
+  end
+
+  se_pending_item = nil
+  local data, err = step_editor.read_pattern_from_item(item, entry.notes, se_grid)
+  if not data then
+    se_status = "Error: " .. (err or "could not read pattern from item.")
+  else
+    se_data = data
+    se_item = item
+    se_current_bar = 0
+    se_selected_lanes = {}
+    se_status = string.format("Loaded %d bar(s).", data.bars)
+  end
+end
+
+local function se_lane_keys_sorted_by_note(data)
+  local keys = {}
+  for k, _ in pairs(data.lanes) do
+    keys[#keys + 1] = k
+  end
+  table.sort(keys, function(a, b) return data.lanes[a].note < data.lanes[b].note end)
+  return keys
+end
+
+local function se_find_note(lane, bar, step)
+  for _, note in ipairs(lane.notes) do
+    if note.bar == bar and note.step == step then
+      return note
+    end
+  end
+  return nil
+end
+
+local function se_selected_lane_keys()
+  local out = {}
+  for k, v in pairs(se_selected_lanes) do
+    if v then out[#out + 1] = k end
+  end
+  table.sort(out)
+  return out
+end
+
+local function draw_step_editor_tab()
+  reaper.ImGui_Text(ctx, "Step Editor")
+  draw_help_button("se_intro", SE_HELP)
+
+  if not options.cache.loaded then
+    reaper.ImGui_TextColored(ctx, 0xfbbf24ff,
+      "Options not loaded - configure Python exe and click Refresh "
+      .. "Options on the Settings tab."
+    )
+  end
+
+  local changed
+  changed, se_mapping = combo_from_list("Mapping", se_mapping, options.cache.mappings)
+  changed, se_grid = combo_from_list("Grid", se_grid, GRID_VALUES)
+
+  local item_count = reaper.CountSelectedMediaItems(0)
+  local load_disabled = job_runner.is_running() or item_count == 0
+  if load_disabled then reaper.ImGui_BeginDisabled(ctx) end
+  if reaper.ImGui_Button(ctx, "Load Selected Item") then
+    local item = reaper.GetSelectedMediaItem(0, 0)
+    if not item then
+      se_status = "Select a MIDI item first."
+    else
+      se_pending_item = item
+      se_try_load_pattern()
+    end
+  end
+  if load_disabled then reaper.ImGui_EndDisabled(ctx) end
+  if item_count == 0 then
+    reaper.ImGui_SameLine(ctx)
+    reaper.ImGui_TextColored(ctx, 0xfb7185ff, "Select a MIDI item first.")
+  end
+
+  reaper.ImGui_TextWrapped(ctx, se_status)
+  reaper.ImGui_Separator(ctx)
+
+  if not se_data then
+    reaper.ImGui_TextDisabled(ctx, "No pattern loaded yet.")
+    return
+  end
+
+  -- ----- Macro Controls strip (acts on whichever lanes are checked) -----
+  if reaper.ImGui_Button(ctx, "Select All##se") then
+    for k, _ in pairs(se_data.lanes) do se_selected_lanes[k] = true end
+  end
+  reaper.ImGui_SameLine(ctx)
+  if reaper.ImGui_Button(ctx, "Select None##se") then
+    se_selected_lanes = {}
+  end
+
+  local kit_instruments = se_kit_map_instruments(se_mapping)
+
+  reaper.ImGui_AlignTextToFramePadding(ctx)
+  reaper.ImGui_Text(ctx, "Reassign to:")
+  reaper.ImGui_SameLine(ctx)
+  reaper.ImGui_SetNextItemWidth(ctx, 160)
+  changed, se_reassign_target = combo_from_list("##se_reassign", se_reassign_target, kit_instruments)
+  reaper.ImGui_SameLine(ctx)
+  if reaper.ImGui_Button(ctx, "Apply##se_reassign") then
+    local lanes = se_selected_lane_keys()
+    if #lanes == 0 or se_reassign_target == "" then
+      se_status = "Check lane(s) and pick a target first."
+    else
+      local ok, err = step_editor.reassign_lane(se_data, lanes, se_reassign_target)
+      if ok then
+        step_editor.commit(se_item, se_data)
+        se_selected_lanes = {}
+        se_status = "Reassigned."
+      else
+        se_status = "Error: " .. (err or "reassign failed.")
+      end
+    end
+  end
+  reaper.ImGui_SameLine(ctx)
+  if reaper.ImGui_Button(ctx, "Swap Articulation##se") then
+    local lanes = se_selected_lane_keys()
+    if #lanes == 0 or se_reassign_target == "" then
+      se_status = "Check lane(s) and pick a target first."
+    else
+      local ok, err = step_editor.swap_articulation(se_data, lanes, se_reassign_target)
+      if ok then
+        step_editor.commit(se_item, se_data)
+        se_selected_lanes = {}
+        se_status = "Articulation swapped."
+      else
+        se_status = "Error: " .. (err or "swap failed.")
+      end
+    end
+  end
+
+  reaper.ImGui_SetNextItemWidth(ctx, 160)
+  changed, se_velocity_factor = reaper.ImGui_SliderDouble(ctx, "Velocity Scale", se_velocity_factor, 0.5, 2.0)
+  if reaper.ImGui_IsItemDeactivatedAfterEdit(ctx) then
+    local lanes = se_selected_lane_keys()
+    if #lanes == 0 then
+      se_status = "Check lane(s) first."
+    else
+      step_editor.scale_velocity(se_data, lanes, se_velocity_factor)
+      step_editor.commit(se_item, se_data)
+      se_status = "Velocity scaled."
+    end
+    se_velocity_factor = 1.0
+  end
+
+  reaper.ImGui_SetNextItemWidth(ctx, 160)
+  changed, se_velocity_style = combo_from_list("Velocity Style", se_velocity_style, SE_VELOCITY_STYLE_NAMES)
+  reaper.ImGui_SameLine(ctx)
+  if reaper.ImGui_Button(ctx, "Apply##se_style") then
+    local lanes = se_selected_lane_keys()
+    if #lanes == 0 then
+      se_status = "Check lane(s) first."
+    else
+      local ok, err = step_editor.apply_velocity_style(se_data, lanes, se_velocity_style)
+      if ok then
+        step_editor.commit(se_item, se_data)
+        se_status = "Velocity style applied."
+      else
+        se_status = "Error: " .. (err or "apply failed.")
+      end
+    end
+  end
+
+  reaper.ImGui_BeginDisabled(ctx)
+  reaper.ImGui_SetNextItemWidth(ctx, 160)
+  reaper.ImGui_SliderDouble(ctx, "Amount##se", 0.0, -1.0, 1.0)
+  reaper.ImGui_EndDisabled(ctx)
+  draw_help_button("se_amount", SE_AMOUNT_HELP)
+
+  reaper.ImGui_Separator(ctx)
+
+  -- ----- Grid (direct manipulation), one bar at a time -----
+  reaper.ImGui_Text(ctx, string.format("Bar %d / %d", se_current_bar + 1, se_data.bars))
+  reaper.ImGui_SameLine(ctx)
+  if reaper.ImGui_Button(ctx, "< Prev##se") then
+    if se_current_bar > 0 then se_current_bar = se_current_bar - 1 end
+  end
+  reaper.ImGui_SameLine(ctx)
+  if reaper.ImGui_Button(ctx, "Next >##se") then
+    if se_current_bar < se_data.bars - 1 then se_current_bar = se_current_bar + 1 end
+  end
+
+  local steps_per_bar, spb_err = step_editor.steps_per_bar(
+    se_data.grid_resolution, se_data.ts_num, se_data.ts_denom
+  )
+  if not steps_per_bar then
+    reaper.ImGui_TextColored(ctx, 0xfb7185ff, "Error: " .. tostring(spb_err))
+    return
+  end
+
+  for _, lane_key in ipairs(se_lane_keys_sorted_by_note(se_data)) do
+    local lane = se_data.lanes[lane_key]
+    reaper.ImGui_PushID(ctx, lane_key)
+
+    local checked = se_selected_lanes[lane_key] or false
+    local sel_changed, sel_new = reaper.ImGui_Checkbox(ctx, "##sel", checked)
+    if sel_changed then se_selected_lanes[lane_key] = sel_new end
+    reaper.ImGui_SameLine(ctx)
+    reaper.ImGui_Text(ctx, lane.label)
+    -- Fixed X offset (rather than SameLine()'s default spacing) so the
+    -- step buttons line up into columns regardless of label length.
+    reaper.ImGui_SameLine(ctx, 160)
+
+    for step = 0, steps_per_bar - 1 do
+      if step > 0 then reaper.ImGui_SameLine(ctx) end
+      local note = se_find_note(lane, se_current_bar, step)
+      local color = 0x2b2f36ff
+      if note then
+        color = note.off_grid and 0xf59e0bff or 0x38bdf8ff
+      end
+      reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Button(), color)
+      if reaper.ImGui_Button(ctx, "##s" .. step, SE_STEP_CELL_SIZE, SE_STEP_CELL_SIZE) then
+        local kit_entry = se_data.kit_map_by_key[lane_key]
+        local velocity = (kit_entry and kit_entry.default_velocity) or 100
+        step_editor.toggle_step(se_data, lane_key, se_current_bar, step, velocity)
+        step_editor.commit(se_item, se_data)
+      end
+      reaper.ImGui_PopStyleColor(ctx)
+    end
+
+    reaper.ImGui_PopID(ctx)
+  end
+end
 
 local function sidecar_path()
   local override = settings.get("sidecar_path_override")
@@ -806,6 +1129,10 @@ local function loop()
       end
       if reaper.ImGui_BeginTabItem(ctx, "Additive Rhythm") then
         draw_additive_rhythm_tab()
+        reaper.ImGui_EndTabItem(ctx)
+      end
+      if reaper.ImGui_BeginTabItem(ctx, "Step Editor") then
+        draw_step_editor_tab()
         reaper.ImGui_EndTabItem(ctx)
       end
       if reaper.ImGui_BeginTabItem(ctx, "Settings") then
