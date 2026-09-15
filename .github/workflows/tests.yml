@@ -73,7 +73,8 @@ jobs:
 
       - name: Run unit tests with coverage
         run: |
-          uv run pytest tests/unit \
+          source .venv/bin/activate
+          pytest tests/unit \
             --cov=midi_drums \
             --cov-report=xml \
             --cov-report=term-missing \
@@ -81,7 +82,8 @@ jobs:
 
       - name: Run integration tests
         run: |
-          uv run pytest tests/integration \
+          source .venv/bin/activate
+          pytest tests/integration \
             -v
 
       - name: Upload coverage to Codecov
