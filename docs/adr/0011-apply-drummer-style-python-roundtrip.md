@@ -1,6 +1,6 @@
 # 0011. Apply Drummer (Step Editor humanization) is a whole-pattern Python round-trip, mirroring ADR 0010's shape
 
-> **Status**: Accepted (Python side implemented; Lua-side wiring still pending)
+> **Status**: Accepted (fully implemented)
 > **Date**: 2026-09-15
 
 ## Context
@@ -141,9 +141,33 @@ passthrough of unmapped instruments, drummer styling (both a fake
 `PluginManager` and two real-plugin end-to-end checks), humanization, and
 the CLI's file round-trip/error paths.
 
-**Not yet done**: the Lua-side half — `step_editor.lua`'s `M.qn_to_ppq` and
-`M.replace_pattern`, and the Apply Drummer control row + `job_runner`
-wiring in `midi_drums_panel.lua`.
+**Lua-side wiring (2026-09-15)**: `step_editor.lua` gained `M.qn_to_ppq`
+(factored out of the existing private `step_to_ppq`), plus three new
+functions specific to this round-trip — `M.serialize_pattern_json(data)`
+(flattens the whole loaded pattern into the input JSON), `M.parse_pattern_
+json(content)` (parses the output JSON back into `{instrument,
+position_qn, velocity}` entries), and `M.replace_pattern(data, notes)`
+(dirty-marks every existing note "remove" and every returned note "add",
+creating a lane on demand from `data.kit_map_by_key` when needed, e.g. a
+previously note-less lane `GhostNoteLayer` just inserted into). One
+deliberate shape simplification versus the Decision text above:
+`replace_pattern` takes the CLI's actual flat note list directly rather
+than a `notes_by_lane`-grouped table — grouping first would have been
+pure indirection with no benefit, since `replace_pattern` iterates the
+flat list once regardless. `midi_drums_panel.lua`'s Step Editor tab gained
+an Apply Drummer row (Drummer dropdown, Intensity/Timing Variance/
+Velocity Variance sliders, an Apply Drummer button gated the same way
+every other tab's Generate button is) below the Macro Controls strip,
+round-tripping through `job_runner` exactly as decided: write the whole
+pattern to a temp input JSON, run the CLI verb, and on completion read
+the output JSON, `replace_pattern` + `commit()` it back onto the item as
+one undo step. `ghost_note`/`accent` are parsed out of the output JSON
+but not stored — the Step Editor's note model has no field for them yet
+(only velocity), the same limitation already noted above. 6 new Lua tests
+in `reaper/tests/test_step_editor.lua` (22 total) cover `qn_to_ppq`, the
+serialize/parse round-trip, and `replace_pattern` (whole-pattern replace,
+on-demand lane creation, and silently dropping an instrument absent from
+the kit map).
 
 ## References
 

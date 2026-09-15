@@ -328,6 +328,14 @@ local se_velocity_factor = 1.0
 local se_velocity_style = "flat"
 local se_status = ""
 
+-- Apply Drummer (ADR 0011) - always acts on the whole loaded pattern
+-- (unlike the lane-scoped Macro Controls strip above it), so it doesn't
+-- read se_selected_lanes at all.
+local se_drummer = ""
+local se_drummer_intensity = 1.0
+local se_timing_variance = 0.0
+local se_drummer_velocity_variance = 0.0
+
 local SE_VELOCITY_STYLE_NAMES = { "flat", "crescendo", "halftime_accent", "backbeat_emphasis" }
 local SE_STEP_CELL_SIZE = 22
 
@@ -354,6 +362,21 @@ local SE_DUPLICATE_HELP = {
     .. "lane - not just the next bar, all the way to the end of the "
     .. "item. Whatever was in those later bars is replaced, not merged. "
     .. "Disabled on the last bar (nothing after it to fill)." },
+}
+
+local SE_APPLY_DRUMMER_HELP = {
+  { title = "Apply Drummer", body = "Makes the whole loaded pattern feel "
+    .. "like a specific drummer played it, and/or adds random timing/"
+    .. "velocity jitter - both run through the same Python code path "
+    .. "used during initial generation (PluginManager.apply_drummer_style, "
+    .. "Pattern.humanize). Always acts on every lane, not just checked "
+    .. "ones - drummer techniques like ghost-note insertion reason about "
+    .. "the whole kit at once. Replaces the entire pattern rather than "
+    .. "diffing it, so running it twice compounds jitter each time - "
+    .. "REAPER's own undo still works normally if you overdo it. Leave "
+    .. "Drummer blank to humanize only; leave both variances at 0.0 to "
+    .. "apply pure drummer styling with no added jitter. See ADR 0011 "
+    .. "(docs/adr/0011-apply-drummer-style-python-roundtrip.md)." },
 }
 
 local function se_kit_map_entry(mapping)
@@ -554,6 +577,69 @@ local function draw_step_editor_tab()
   reaper.ImGui_SliderDouble(ctx, "Amount##se", 0.0, -1.0, 1.0)
   reaper.ImGui_EndDisabled(ctx)
   draw_help_button("se_amount", SE_AMOUNT_HELP)
+
+  -- ----- Apply Drummer row (ADR 0011) - always whole-pattern -----
+  reaper.ImGui_SetNextItemWidth(ctx, 160)
+  changed, se_drummer = combo_from_list("Drummer (optional)##se", se_drummer, options.cache.drummers, "(none)")
+  reaper.ImGui_SameLine(ctx)
+  reaper.ImGui_SetNextItemWidth(ctx, 120)
+  changed, se_drummer_intensity = reaper.ImGui_SliderDouble(ctx, "Intensity##se", se_drummer_intensity, 0.0, 1.0)
+
+  reaper.ImGui_SetNextItemWidth(ctx, 160)
+  changed, se_timing_variance = reaper.ImGui_SliderDouble(ctx, "Timing Variance##se", se_timing_variance, 0.0, 0.5)
+  reaper.ImGui_SameLine(ctx)
+  reaper.ImGui_SetNextItemWidth(ctx, 160)
+  changed, se_drummer_velocity_variance = reaper.ImGui_SliderDouble(ctx, "Velocity Variance##se", se_drummer_velocity_variance, 0.0, 40.0)
+
+  local apply_drummer_disabled = job_runner.is_running()
+  if apply_drummer_disabled then reaper.ImGui_BeginDisabled(ctx) end
+  if reaper.ImGui_Button(ctx, "Apply Drummer##se") then
+    local python_exe = settings.resolve_python_exe()
+    if not python_exe then
+      se_status = "Cancelled: no Python interpreter configured."
+    else
+      local input_path = step_editor.get_project_dir() .. "/midi_drums_step_editor_apply_drummer_input.json"
+      local output_path = step_editor.get_project_dir() .. "/midi_drums_step_editor_apply_drummer_output.json"
+
+      local f = io.open(input_path, "w")
+      if not f then
+        se_status = "Error: could not write " .. input_path
+      else
+        f:write(step_editor.serialize_pattern_json(se_data))
+        f:close()
+
+        local cmd = step_editor.build_apply_drummer_cmd(python_exe, {
+          input_path = input_path,
+          output_path = output_path,
+          drummer = se_drummer,
+          drummer_intensity = se_drummer_intensity,
+          timing_variance = se_timing_variance,
+          velocity_variance = se_drummer_velocity_variance,
+          ts_num = se_data.ts_num,
+          ts_denom = se_data.ts_denom,
+        })
+
+        job_runner.start(cmd, "Apply Drummer", function()
+          local out = io.open(output_path, "rb")
+          if not out then
+            se_status = "Error: output file not found after Apply Drummer."
+            return
+          end
+          local content = out:read("*a")
+          out:close()
+
+          local notes = step_editor.parse_pattern_json(content)
+          step_editor.replace_pattern(se_data, notes)
+          step_editor.commit(se_item, se_data)
+          se_status = string.format("Applied drummer to %d note(s).", #notes)
+        end)
+        se_status = "Running..."
+      end
+    end
+  end
+  if apply_drummer_disabled then reaper.ImGui_EndDisabled(ctx) end
+  reaper.ImGui_SameLine(ctx)
+  draw_help_button("se_apply_drummer", SE_APPLY_DRUMMER_HELP)
 
   reaper.ImGui_Separator(ctx)
 

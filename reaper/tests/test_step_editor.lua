@@ -287,4 +287,84 @@ t.case("swap_articulation: accepts a same-family target and commits the new pitc
   helpers.assert_true(has_44, "committed take should contain the new PEDAL_HH pitch (44)")
 end)
 
+t.case("qn_to_ppq: converts exact quarter-notes to take-local ppq", function()
+  local _fx, data = build_fixture()
+  helpers.assert_eq(step_editor.qn_to_ppq(data, 0.0), 0, "qn 0.0")
+  helpers.assert_eq(step_editor.qn_to_ppq(data, 2.0), 2.0 * data.ppq_per_qn, "qn 2.0")
+end)
+
+t.case("serialize_pattern_json / parse_pattern_json: round-trips the whole pattern", function()
+  local _fx, data = build_fixture()
+
+  local json = step_editor.serialize_pattern_json(data)
+  local notes = step_editor.parse_pattern_json(json)
+
+  local total = count_notes(data.lanes.KICK) + count_notes(data.lanes.SNARE)
+    + count_notes(data.lanes.CLOSED_HH) + count_notes(data.lanes.unmapped_50)
+  helpers.assert_eq(#notes, total, "parsed note count should match the whole loaded pattern")
+
+  local found_kick_at_2 = false
+  for _, n in ipairs(notes) do
+    if n.instrument == "KICK" and math.abs(n.position_qn - 2.0) < 0.001 then
+      found_kick_at_2 = true
+      helpers.assert_eq(n.velocity, 100, "serialized KICK velocity")
+    end
+  end
+  helpers.assert_true(found_kick_at_2, "KICK note at qn 2.0 missing from round-trip")
+end)
+
+t.case("parse_pattern_json: an empty array parses to an empty list, not an error", function()
+  local notes = step_editor.parse_pattern_json("[]")
+  helpers.assert_eq(#notes, 0, "empty JSON array should parse to zero notes")
+end)
+
+t.case("replace_pattern: replaces the whole pattern across every lane", function()
+  local fx, data = build_fixture()
+
+  local notes = {
+    { instrument = "KICK", position_qn = 0.0, velocity = 90 },
+    { instrument = "KICK", position_qn = 1.5, velocity = 95 },
+    -- SNARE deliberately omitted - replace_pattern must empty it out,
+    -- not leave its old bar0 notes in place.
+  }
+  local ok = step_editor.replace_pattern(data, notes)
+  helpers.assert_true(ok, "replace_pattern returned false")
+  step_editor.commit(fx.item, data)
+
+  helpers.assert_eq(count_notes(data.lanes.KICK), 2, "KICK should have exactly the 2 replacement notes")
+  helpers.assert_eq(count_notes(data.lanes.SNARE), 0, "SNARE should be emptied by replace_pattern")
+
+  local kick_steps = {}
+  for _, n in ipairs(data.lanes.KICK.notes) do
+    kick_steps[#kick_steps + 1] = n.step
+  end
+  table.sort(kick_steps)
+  helpers.assert_eq(kick_steps[1], 0, "first replacement KICK step")
+  helpers.assert_eq(kick_steps[2], 6, "second replacement KICK step (qn 1.5 at 16th grid)")
+end)
+
+t.case("replace_pattern: creates a lane on demand from the kit map", function()
+  local fx, data = build_fixture()
+  helpers.assert_true(data.lanes.OPEN_HH == nil, "fixture should start with no OPEN_HH lane")
+
+  local notes = { { instrument = "OPEN_HH", position_qn = 0.0, velocity = 90 } }
+  local ok = step_editor.replace_pattern(data, notes)
+  helpers.assert_true(ok, "replace_pattern returned false")
+  step_editor.commit(fx.item, data)
+
+  helpers.assert_true(data.lanes.OPEN_HH ~= nil, "OPEN_HH lane should be created on demand")
+  helpers.assert_eq(count_notes(data.lanes.OPEN_HH), 1, "OPEN_HH note count")
+end)
+
+t.case("replace_pattern: an instrument absent from the kit map is silently dropped", function()
+  local fx, data = build_fixture()
+
+  local notes = { { instrument = "not_a_real_lane", position_qn = 0.0, velocity = 90 } }
+  local ok = step_editor.replace_pattern(data, notes)
+  helpers.assert_true(ok, "replace_pattern returned false")
+  step_editor.commit(fx.item, data)
+
+  helpers.assert_true(data.lanes.not_a_real_lane == nil, "unknown lane must not be created")
+end)
+
 t.finish()

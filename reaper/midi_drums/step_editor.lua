@@ -22,13 +22,11 @@
 -- only a direct grid click (toggle_step), which by definition targets a
 -- specific step, assigns a new one.
 --
--- Deliberately NOT implemented in this increment (see conversation/ADR
--- 0009 scoping):
---   - `M.render(ctx, data)` - needs the not-yet-built Step Editor panel
---     tab in midi_drums_panel.lua to call it from.
---   - `M.request_amount_adjustment(...)` - needs ADR 0010's Python
---     round-trip (`density_control.py` + `adjust-density` CLI verb),
---     neither of which exist yet.
+-- Historical note: the panel tab and ADR 0011's Apply Drummer round-trip
+-- (serialize_pattern_json/parse_pattern_json/replace_pattern below) have
+-- since shipped. Still not wired up: ADR 0010's Amount slider - the
+-- Python side (density_control.py, the `adjust-density` CLI verb) exists,
+-- but nothing here calls it yet.
 local M = {}
 
 -- Mirrors riff-lock's --grid choices (cli.py) - a genuinely fixed set,
@@ -84,14 +82,29 @@ local function mark_dirty(data, note, action)
   end
 end
 
--- bar/step -> take-local ppq, using the conversion factors
--- read_pattern_from_item cached on `data` - keeps this arithmetic-only
--- (no REAPER API calls) so toggle_step/macro mutations stay pure over
--- `data` alone, matching the design's separation between mutation and
--- the REAPER-touching read/commit functions.
+-- qn (quarter-notes from item start) -> take-local ppq, using the
+-- conversion factors read_pattern_from_item cached on `data` -
+-- arithmetic-only (no REAPER API calls) so callers stay pure over `data`
+-- alone, matching the design's separation between mutation and the
+-- REAPER-touching read/commit functions. Public since ADR 0011's
+-- replace_pattern (and the panel's Apply Drummer round-trip) needs it to
+-- resolve a Python-side `position_qn` back to a real take-local ppqpos,
+-- not just this module's own bar/step grid math.
+function M.qn_to_ppq(data, qn)
+  return data.item_start_ppq + math.floor(qn * data.ppq_per_qn + 0.5)
+end
+
+-- Inverse of qn_to_ppq - only needed internally (serialize_pattern_json),
+-- so it stays private.
+local function ppq_to_qn(data, ppq)
+  return (ppq - data.item_start_ppq) / data.ppq_per_qn
+end
+
+-- bar/step -> take-local ppq. Kept private/grid-specific, unlike
+-- qn_to_ppq above which works on an exact qn offset.
 local function step_to_ppq(data, bar, step)
   local qn_offset = bar * data.qn_per_bar + step * data.qn_per_step
-  return data.item_start_ppq + math.floor(qn_offset * data.ppq_per_qn + 0.5)
+  return M.qn_to_ppq(data, qn_offset)
 end
 
 local function new_note_length_ppq(data)
@@ -385,6 +398,139 @@ function M.duplicate_bar_forward(data, source_bar)
         lane.notes[#lane.notes + 1] = note
         mark_dirty(data, note, "add")
       end
+    end
+  end
+
+  return true
+end
+
+-- ===== ADR 0011 (Apply Drummer round-trip) =====
+-- Small helpers duplicated from sections.lua/additive_rhythm.lua rather
+-- than shared via a common util module, matching additive_rhythm.lua's
+-- own precedent for why a third shared-util module isn't worth it here.
+
+function M.get_project_dir()
+  local p = reaper.GetProjectPath("")
+  return (p ~= "") and p or reaper.GetResourcePath()
+end
+
+local function shell_escape(s)
+  s = s:gsub("[\r\n]", " ")
+  s = s:gsub('"', "'")
+  s = s:gsub("[&|^<>%%]", "")
+  return s
+end
+
+-- Flattens the whole loaded pattern (every lane, not just checked ones -
+-- Apply Drummer always acts on the whole pattern per ADR 0011) into the
+-- JSON array `apply-drummer-style --input` expects: one object per note
+-- with `instrument` (the lane key) and `position_qn` (exact quarter-notes
+-- from item start, via ppq_to_qn rather than bar*qn_per_bar+step*qn_per_step
+-- so an already off-grid note's precise position round-trips instead of
+-- being snapped onto the grid before it even reaches Python).
+function M.serialize_pattern_json(data)
+  local parts = {}
+  for lane_key, lane in pairs(data.lanes) do
+    for _, note in ipairs(lane.notes) do
+      local qn = ppq_to_qn(data, note.ppqpos)
+      parts[#parts + 1] = string.format(
+        '  {"instrument": "%s", "position_qn": %.6f, "velocity": %d}',
+        lane_key, qn, note.velocity
+      )
+    end
+  end
+  return "[\n" .. table.concat(parts, ",\n") .. "\n]"
+end
+
+-- Parses the flat note-list JSON `apply-drummer-style --output` writes
+-- (midi_drums/api/cli.py:handle_apply_drummer_style_command). Only pulls
+-- out instrument/position_qn/velocity - `ghost_note`/`accent` are part of
+-- the Python round-trip's shape but have no equivalent field on this
+-- module's note table yet (it only distinguishes velocity), the same
+-- limitation every other macro operation here already has. An empty `[]`
+-- (a totally silent pattern) is not an error - it legitimately parses to
+-- an empty list, same as read_pattern_from_item finding zero notes.
+function M.parse_pattern_json(content)
+  local notes = {}
+  for instrument, position_qn, velocity in content:gmatch(
+    '"instrument"%s*:%s*"([^"]*)"%s*,%s*"position_qn"%s*:%s*([%-%d%.eE]+)%s*,'
+    .. '%s*"velocity"%s*:%s*(%d+)'
+  ) do
+    notes[#notes + 1] = {
+      instrument = instrument,
+      position_qn = tonumber(position_qn),
+      velocity = tonumber(velocity),
+    }
+  end
+  return notes
+end
+
+function M.build_apply_drummer_cmd(python_exe, p)
+  local drummer_flag = ""
+  if p.drummer and p.drummer ~= "" then
+    drummer_flag = string.format(' --drummer "%s"', shell_escape(p.drummer))
+  end
+  return string.format(
+    '"%s" -m midi_drums apply-drummer-style --input "%s" --output "%s"'
+    .. ' --drummer-intensity %g --timing-variance %g --velocity-variance %g'
+    .. ' --ts-num %d --ts-denom %d%s',
+    python_exe, p.input_path, p.output_path,
+    p.drummer_intensity, p.timing_variance, p.velocity_variance,
+    p.ts_num, p.ts_denom, drummer_flag
+  )
+end
+
+-- Replaces the entire loaded pattern (every lane) with `notes` - a flat
+-- list of {instrument, position_qn, velocity} as returned by
+-- parse_pattern_json. Every existing note is dirty-marked "remove" (or
+-- dropped if a pending "add") and every returned note is dirty-marked
+-- "add", mirroring duplicate_bar_forward's replace-not-merge approach but
+-- applied to the whole pattern at once - drummer style application and
+-- humanization return a fundamentally new note list with no reliable
+-- identity mapping back to original note indices (ADR 0011's Decision).
+-- A lane absent from `data.lanes` (e.g. GhostNoteLayer inserting into a
+-- previously note-less lane) is created on demand from
+-- `data.kit_map_by_key`, matching reassign_lane's own lane creation.
+function M.replace_pattern(data, notes)
+  for _, lane in pairs(data.lanes) do
+    for _, note in ipairs(lane.notes) do
+      mark_dirty(data, note, note._idx and "remove" or nil)
+    end
+    lane.notes = {}
+  end
+
+  local steps_per_bar_n = math.floor(data.qn_per_bar / data.qn_per_step + 0.5)
+
+  for _, n in ipairs(notes) do
+    local lane = data.lanes[n.instrument]
+    if not lane then
+      local entry = data.kit_map_by_key[n.instrument]
+      if entry then
+        lane = {
+          label = entry.label, note = entry.note,
+          group = entry.group, family = entry.family, notes = {},
+        }
+        data.lanes[n.instrument] = lane
+      end
+    end
+
+    if lane then
+      local step_float = n.position_qn / data.qn_per_step
+      local step_round = math.floor(step_float + 0.5)
+      local off_grid = math.abs(step_float - step_round) > OFF_GRID_TOLERANCE_STEPS
+      local bar = math.floor(step_round / steps_per_bar_n)
+      local step = step_round % steps_per_bar_n
+      local velocity = math.max(1, math.min(127, math.floor(n.velocity + 0.5)))
+
+      local note = {
+        bar = bar,
+        step = step,
+        ppqpos = M.qn_to_ppq(data, n.position_qn),
+        velocity = velocity,
+        off_grid = off_grid,
+      }
+      lane.notes[#lane.notes + 1] = note
+      mark_dirty(data, note, "add")
     end
   end
 
