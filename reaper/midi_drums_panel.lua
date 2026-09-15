@@ -336,6 +336,14 @@ local se_drummer_intensity = 1.0
 local se_timing_variance = 0.0
 local se_drummer_velocity_variance = 0.0
 
+-- Snapshot of the whole pattern (step_editor.snapshot_pattern's flat note
+-- list) taken immediately before the most recent successful Apply Drummer
+-- run - nil until the first run, and after every "Revert Apply Drummer"
+-- click, since this is a one-level revert, not a stack. Cleared on a fresh
+-- item load (se_try_load_pattern) since se_data itself is replaced then,
+-- so a stale snapshot from a different item could never apply cleanly.
+local se_apply_drummer_snapshot = nil
+
 local SE_VELOCITY_STYLE_NAMES = { "flat", "crescendo", "halftime_accent", "backbeat_emphasis" }
 local SE_STEP_CELL_SIZE = 22
 
@@ -372,11 +380,16 @@ local SE_APPLY_DRUMMER_HELP = {
     .. "Pattern.humanize). Always acts on every lane, not just checked "
     .. "ones - drummer techniques like ghost-note insertion reason about "
     .. "the whole kit at once. Replaces the entire pattern rather than "
-    .. "diffing it, so running it twice compounds jitter each time - "
-    .. "REAPER's own undo still works normally if you overdo it. Leave "
+    .. "diffing it, so running it twice compounds jitter each time. Leave "
     .. "Drummer blank to humanize only; leave both variances at 0.0 to "
     .. "apply pure drummer styling with no added jitter. See ADR 0011 "
     .. "(docs/adr/0011-apply-drummer-style-python-roundtrip.md)." },
+  { title = "Revert Apply Drummer", body = "Restores the pattern exactly "
+    .. "as it was immediately before the last successful Apply Drummer "
+    .. "run - a dedicated one-level undo for this button specifically, on "
+    .. "top of (not instead of) REAPER's own undo stack. Disabled until "
+    .. "Apply Drummer has run at least once, and cleared by loading a "
+    .. "different item or reverting once - it is not a multi-step stack." },
 }
 
 local function se_kit_map_entry(mapping)
@@ -419,6 +432,7 @@ se_try_load_pattern = function()
     se_item = item
     se_current_bar = 0
     se_selected_lanes = {}
+    se_apply_drummer_snapshot = nil
     se_status = string.format("Loaded %d bar(s).", data.bars)
   end
 end
@@ -619,6 +633,10 @@ local function draw_step_editor_tab()
           ts_denom = se_data.ts_denom,
         })
 
+        -- Captured now, before se_data is mutated - only promoted to
+        -- se_apply_drummer_snapshot on success, inside on_complete.
+        local pre_apply_snapshot = step_editor.snapshot_pattern(se_data)
+
         job_runner.start(cmd, "Apply Drummer", function()
           local out = io.open(output_path, "rb")
           if not out then
@@ -631,6 +649,7 @@ local function draw_step_editor_tab()
           local notes = step_editor.parse_pattern_json(content)
           step_editor.replace_pattern(se_data, notes)
           step_editor.commit(se_item, se_data)
+          se_apply_drummer_snapshot = pre_apply_snapshot
           se_status = string.format("Applied drummer to %d note(s).", #notes)
         end)
         se_status = "Running..."
@@ -638,6 +657,17 @@ local function draw_step_editor_tab()
     end
   end
   if apply_drummer_disabled then reaper.ImGui_EndDisabled(ctx) end
+  reaper.ImGui_SameLine(ctx)
+
+  local revert_disabled = apply_drummer_disabled or se_apply_drummer_snapshot == nil
+  if revert_disabled then reaper.ImGui_BeginDisabled(ctx) end
+  if reaper.ImGui_Button(ctx, "Revert Apply Drummer##se") then
+    step_editor.replace_pattern(se_data, se_apply_drummer_snapshot)
+    step_editor.commit(se_item, se_data)
+    se_apply_drummer_snapshot = nil
+    se_status = "Reverted to pre-Apply-Drummer state."
+  end
+  if revert_disabled then reaper.ImGui_EndDisabled(ctx) end
   reaper.ImGui_SameLine(ctx)
   draw_help_button("se_apply_drummer", SE_APPLY_DRUMMER_HELP)
 

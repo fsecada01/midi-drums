@@ -442,6 +442,26 @@ function M.serialize_pattern_json(data)
   return "[\n" .. table.concat(parts, ",\n") .. "\n]"
 end
 
+-- Flattens the whole loaded pattern into the same shape M.parse_pattern_
+-- json returns (a plain Lua table, not JSON - no serialize/parse round-trip
+-- needed since this never leaves the Lua process). Used to snapshot the
+-- pattern immediately before an Apply Drummer run so a later "Revert
+-- Apply Drummer" click has something to hand back to M.replace_pattern -
+-- see midi_drums_panel.lua's se_apply_drummer_snapshot.
+function M.snapshot_pattern(data)
+  local notes = {}
+  for lane_key, lane in pairs(data.lanes) do
+    for _, note in ipairs(lane.notes) do
+      notes[#notes + 1] = {
+        instrument = lane_key,
+        position_qn = ppq_to_qn(data, note.ppqpos),
+        velocity = note.velocity,
+      }
+    end
+  end
+  return notes
+end
+
 -- Parses the flat note-list JSON `apply-drummer-style --output` writes
 -- (midi_drums/api/cli.py:handle_apply_drummer_style_command). Only pulls
 -- out instrument/position_qn/velocity - `ghost_note`/`accent` are part of

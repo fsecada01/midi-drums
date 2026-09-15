@@ -313,6 +313,47 @@ t.case("serialize_pattern_json / parse_pattern_json: round-trips the whole patte
   helpers.assert_true(found_kick_at_2, "KICK note at qn 2.0 missing from round-trip")
 end)
 
+t.case("snapshot_pattern: matches parse_pattern_json's shape without a JSON round-trip", function()
+  local _fx, data = build_fixture()
+
+  local snapshot = step_editor.snapshot_pattern(data)
+  local via_json = step_editor.parse_pattern_json(step_editor.serialize_pattern_json(data))
+
+  helpers.assert_eq(#snapshot, #via_json, "snapshot_pattern note count should match the JSON round-trip")
+
+  local found_kick_at_2 = false
+  for _, n in ipairs(snapshot) do
+    if n.instrument == "KICK" and math.abs(n.position_qn - 2.0) < 0.001 then
+      found_kick_at_2 = true
+      helpers.assert_eq(n.velocity, 100, "snapshot KICK velocity")
+    end
+  end
+  helpers.assert_true(found_kick_at_2, "KICK note at qn 2.0 missing from snapshot")
+end)
+
+t.case("snapshot_pattern + replace_pattern: round-trips as a revert", function()
+  local fx, data = build_fixture()
+
+  local snapshot = step_editor.snapshot_pattern(data)
+  local before_kick = count_notes(data.lanes.KICK)
+  local before_snare = count_notes(data.lanes.SNARE)
+
+  -- Simulate an Apply Drummer run that changes the pattern...
+  step_editor.replace_pattern(data, {
+    { instrument = "KICK", position_qn = 0.0, velocity = 90 },
+  })
+  step_editor.commit(fx.item, data)
+  helpers.assert_eq(count_notes(data.lanes.KICK), 1, "sanity: replace_pattern should have shrunk KICK")
+
+  -- ...then revert using the snapshot taken before that run.
+  local ok = step_editor.replace_pattern(data, snapshot)
+  helpers.assert_true(ok, "replace_pattern (revert) returned false")
+  step_editor.commit(fx.item, data)
+
+  helpers.assert_eq(count_notes(data.lanes.KICK), before_kick, "KICK should be restored after revert")
+  helpers.assert_eq(count_notes(data.lanes.SNARE), before_snare, "SNARE should be restored after revert")
+end)
+
 t.case("parse_pattern_json: an empty array parses to an empty list, not an error", function()
   local notes = step_editor.parse_pattern_json("[]")
   helpers.assert_eq(#notes, 0, "empty JSON array should parse to zero notes")

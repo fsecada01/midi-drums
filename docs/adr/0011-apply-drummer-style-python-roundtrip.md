@@ -192,6 +192,23 @@ the normal generation pipeline already used.
 updated since it had locked in the old all-slots-filled-at-density=1.0
 behavior as an explicit invariant.
 
+## Follow-up (2026-09-15): dedicated Revert
+
+The same round of real-world use also surfaced that a user who over-applies
+Apply Drummer had no obvious way back - the Consequences section above
+already accepted REAPER's own undo stack as the only safety net, but that
+wasn't discoverable/reassuring enough on its own. Added a "Revert Apply
+Drummer" button next to Apply Drummer, backed by `step_editor.lua`'s new
+`M.snapshot_pattern(data)` (the whole pattern flattened to the same shape
+`M.parse_pattern_json` returns, no JSON round-trip needed since it never
+leaves the Lua process). The panel captures a snapshot immediately before
+each Apply Drummer run and, on success, holds it as
+`se_apply_drummer_snapshot`; clicking Revert calls `M.replace_pattern` with
+that snapshot and commits, then clears it - a one-level revert (not a
+stack), cleared on a fresh item load. This sits alongside, not instead of,
+REAPER's own undo stack (still one `commit()` per click either way) - it's
+a more discoverable, purpose-built complement to it, not a replacement.
+
 ## References
 
 - [ADR 0009](0009-unified-step-editor-panel.md) — the Step Editor panel
