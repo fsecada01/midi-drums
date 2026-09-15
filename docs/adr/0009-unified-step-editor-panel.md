@@ -1,6 +1,7 @@
 # 0009. Unified Step Editor panel: one data model over the live REAPER MIDI item, no parallel pattern format
 
-> **Status**: Proposed
+> **Status**: Accepted (grid + macro controls shipped; Amount's Lua-side
+> wiring still pending, tracked in [ADR 0010](0010-amount-density-control-python-roundtrip.md))
 > **Date**: 2026-09-14
 
 ## Context
@@ -131,6 +132,11 @@ model, is recorded separately in [ADR 0010](0010-amount-density-control-python-r
 - Related: [ADR 0001](0001-unified-reaper-panel.md) (panel architecture
   this tab extends), [ADR 0008](0008-vendor-midi-note-map-corrections.md)
   (why note-mapping accuracy is treated as load-bearing, not guessed)
-- Not yet implemented; source design/research docs remain active in
-  `claudedocs/` until this ships, at which point this ADR's status moves
-  to Accepted and those docs are archived per `claudedocs/README.md`.
+- Shipped: `reaper/midi_drums/step_editor.lua` (data model - read/toggle/
+  reassign/swap/scale-velocity/velocity-style/duplicate-bar-forward/
+  commit), the Step Editor tab in `reaper/midi_drums_panel.lua`, and a
+  real-interpreter Lua test harness (`reaper/tests/`, see its README) that
+  runs the data model's logic against a fake REAPER environment rather
+  than only checking syntax balance. Source design/research docs stay
+  active in `claudedocs/` until Amount's Lua wiring also lands (ADR 0010),
+  since they still describe that remaining piece.
