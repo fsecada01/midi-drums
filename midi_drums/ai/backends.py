@@ -34,6 +34,7 @@ class AIProvider(str, Enum):
     OPENAI = "openai"
     GROQ = "groq"
     COHERE = "cohere"
+    GEMINI = "gemini"
 
 
 class AIBackendConfig(BaseModel):
@@ -61,7 +62,7 @@ class AIBackendConfig(BaseModel):
         Create configuration from environment variables.
 
         Environment Variables:
-            AI_PROVIDER: Provider name (anthropic, openai, groq, cohere)
+            AI_PROVIDER: Provider name (anthropic, openai, groq, cohere, gemini)
             AI_MODEL: Model identifier
             AI_TEMPERATURE: Temperature (0.0-2.0)
             AI_MAX_TOKENS: Maximum tokens
@@ -69,6 +70,7 @@ class AIBackendConfig(BaseModel):
             OPENAI_API_KEY: OpenAI API key
             GROQ_API_KEY: Groq API key
             COHERE_API_KEY: Cohere API key
+            GEMINI_API_KEY: Google Gemini API key
 
         Returns:
             Configured AIBackendConfig instance
@@ -91,6 +93,7 @@ class AIBackendConfig(BaseModel):
             AIProvider.OPENAI: "gpt-4o",
             AIProvider.GROQ: "llama-3.3-70b-versatile",
             AIProvider.COHERE: "command-r-plus",
+            AIProvider.GEMINI: "gemini-3.8-flash",
         }
 
         model = os.getenv("AI_MODEL", default_models[provider])
@@ -170,6 +173,19 @@ class AIBackendFactory:
                 provider=GroqProvider(**provider_kwargs),
             )
 
+        elif config.provider == AIProvider.GEMINI:
+            from pydantic_ai.models.google import GoogleModel
+            from pydantic_ai.providers.google import GoogleProvider
+
+            logger.debug(f"Creating Gemini model: {config.model}")
+            provider_kwargs = {}
+            if config.api_key:
+                provider_kwargs["api_key"] = config.api_key
+            return GoogleModel(
+                config.model,
+                provider=GoogleProvider(**provider_kwargs),
+            )
+
         else:
             raise ValueError(
                 f"Unsupported provider for Pydantic AI: {config.provider}"
@@ -189,7 +205,12 @@ class AIBackendFactory:
         if config is None:
             config = AIBackendConfig.from_env()
 
-        _supported = {AIProvider.ANTHROPIC, AIProvider.OPENAI, AIProvider.GROQ}
+        _supported = {
+            AIProvider.ANTHROPIC,
+            AIProvider.OPENAI,
+            AIProvider.GROQ,
+            AIProvider.GEMINI,
+        }
         if config.provider not in _supported:
             raise ValueError(
                 f"Unsupported provider for Langchain: {config.provider}. "
@@ -206,8 +227,15 @@ class AIBackendFactory:
             env_key = f"{config.provider.value.upper()}_API_KEY"
             os.environ[env_key] = config.api_key
 
+        # init_chat_model's provider prefixes don't always match our
+        # AIProvider enum values (e.g. Gemini is "google_genai" there).
+        _langchain_provider_prefix = {AIProvider.GEMINI: "google_genai"}
+        provider_prefix = _langchain_provider_prefix.get(
+            config.provider, config.provider.value
+        )
+
         # Format: "provider:model"
-        model_string = f"{config.provider.value}:{config.model}"
+        model_string = f"{provider_prefix}:{config.model}"
 
         # Some reasoning models (e.g., OpenAI o1/o3 family) do not support
         # the temperature parameter and will raise a 400 error if passed.

@@ -52,7 +52,7 @@ MIDI Drums Generator is a Python system that creates professional-quality drum t
 - 🤖 **AI-Powered Generation**
   - Natural language pattern generation with Pydantic AI
   - Intelligent multi-section composition with Langchain agents
-  - Provider-agnostic backend (Anthropic, OpenAI, Groq, Cohere)
+  - Provider-agnostic backend (Anthropic, OpenAI, Gemini, Groq, Cohere)
   - Environment-driven configuration for production use
 
 ## 🚀 Quick Start
@@ -140,7 +140,7 @@ Generate drum patterns from natural language using AI! The system supports multi
 uv sync --group ai
 # or: pip install -e ".[ai]"
 
-export AI_PROVIDER="anthropic"  # or openai, groq, cohere
+export AI_PROVIDER="anthropic"  # or openai, gemini, groq, cohere
 export ANTHROPIC_API_KEY="your-api-key"
 export AI_MODEL="claude-sonnet-5"  # optional, has smart defaults
 ```
@@ -230,17 +230,23 @@ groq_config = AIBackendConfig(
     provider=AIProvider.GROQ, model="llama-3.3-70b-versatile", api_key="gsk-..."
 )
 ai_groq = DrumGeneratorAI(backend_config=groq_config)
+
+gemini_config = AIBackendConfig(
+    provider=AIProvider.GEMINI, model="gemini-3.8-flash", api_key="..."
+)
+ai_gemini = DrumGeneratorAI(backend_config=gemini_config)
 ```
 
 | Provider | Models | Best For |
 |----------|--------|----------|
 | **Anthropic** | Claude Sonnet 5 | High-quality, nuanced generation |
 | **OpenAI** | GPT-4o, GPT-4 Turbo | Versatile, well-tested |
+| **Gemini** | Gemini 3.8 Flash | Fast, low-cost multimodal-capable generation |
 | **Groq** | Llama 3.3 70B | Fast inference, cost-effective |
 
 > Cohere is defined in the provider config (`AIProvider.COHERE`) but not yet wired into the Pydantic AI / Langchain backends — `AIBackendFactory` raises for it today. Support is tracked as a future item.
 
-**Environment Variables:** `AI_PROVIDER`, `AI_MODEL`, `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `GROQ_API_KEY`, `AI_TEMPERATURE` (0.0-2.0, default 0.7), `AI_MAX_TOKENS` (default 4096)
+**Environment Variables:** `AI_PROVIDER`, `AI_MODEL`, `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `GEMINI_API_KEY` / `GROQ_API_KEY`, `AI_TEMPERATURE` (0.0-2.0, default 0.7), `AI_MAX_TOKENS` (default 4096)
 
 See [docs/AI_INTEGRATION.md](docs/AI_INTEGRATION.md) for complete documentation.
 
